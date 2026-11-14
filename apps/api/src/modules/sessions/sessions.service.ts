@@ -4,7 +4,7 @@ import { Injectable } from '@nestjs/common';
 import { DomainError } from '../../common/errors/domain-error.js';
 import { fieldError } from '../../common/errors/field-error.js';
 import { omitUndefined } from '../../common/objects.js';
-import { orderByOf, type ListQuery } from '../../common/pagination/list-query.js';
+import { orderByOf, type DateRange, type ListQuery } from '../../common/pagination/list-query.js';
 import { containsInsensitive } from '../../common/pagination/search.js';
 import { isValidRange, isWithin, type TimeRange } from '../../domain/schedule.js';
 import { Prisma, type Event, type Session, type User } from '../../generated/prisma/client.js';
@@ -24,8 +24,7 @@ export type SessionSortField = 'startsAt' | 'title' | 'capacity' | 'confirmedCou
 export interface SessionFilters {
   eventId?: string | undefined;
   almostFull?: boolean | undefined;
-  startsFrom?: Date | undefined;
-  startsTo?: Date | undefined;
+  startsAt?: DateRange | undefined;
 }
 
 const NOT_FOUND_MESSAGE = 'Session not found';
@@ -44,16 +43,12 @@ export class SessionsService {
     actor: User,
   ): Promise<ListResult<SessionWithRelations>> {
     const almostFullIds = filters.almostFull === true ? await this.almostFullIds(actor) : undefined;
-    const startsAt: Prisma.DateTimeFilter = omitUndefined({
-      gte: filters.startsFrom,
-      lte: filters.startsTo,
-    });
     const where: Prisma.SessionWhereInput = {
       AND: [
         sessionScope(actor),
         filters.eventId === undefined ? {} : { eventId: filters.eventId },
         almostFullIds === undefined ? {} : { id: { in: almostFullIds } },
-        Object.keys(startsAt).length === 0 ? {} : { startsAt },
+        filters.startsAt === undefined ? {} : { startsAt: filters.startsAt },
         query.search === undefined
           ? {}
           : {

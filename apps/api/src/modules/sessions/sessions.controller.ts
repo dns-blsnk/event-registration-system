@@ -17,7 +17,7 @@ import {
 import { RequirePermission } from '../../common/auth/access.decorator.js';
 import { CurrentAuth } from '../../common/auth/current-user.decorator.js';
 import {
-  dateFilter,
+  dateRangeFilter,
   enumFilter,
   parseListQuery,
   uuidFilter,
@@ -38,8 +38,7 @@ function filtersOf(query: Record<string, unknown>): SessionFilters {
   return {
     eventId: uuidFilter(query.eventId, 'eventId'),
     almostFull: enumFilter(query.almostFull, 'almostFull', ['true']) === 'true',
-    startsFrom: dateFilter(query.startsFrom, 'startsFrom'),
-    startsTo: dateFilter(query.startsTo, 'startsTo'),
+    startsAt: dateRangeFilter(query, 'startsFrom', 'startsTo'),
   };
 }
 

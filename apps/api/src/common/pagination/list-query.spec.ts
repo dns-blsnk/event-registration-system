@@ -2,7 +2,13 @@ import { describe, expect, it } from 'vitest';
 
 import { DomainError } from '../errors/domain-error.js';
 
-import { enumFilter, orderByOf, parseListQuery } from './list-query.js';
+import {
+  dateRangeFilter,
+  enumFilter,
+  integerFilter,
+  orderByOf,
+  parseListQuery,
+} from './list-query.js';
 
 const SPEC = {
   sortable: ['name', 'createdAt'] as const,
@@ -129,5 +135,60 @@ describe('orderByOf edge cases', () => {
         field === 'eventCount' ? { events: { _count: direction } } : undefined,
       ),
     ).toEqual([{ events: { _count: 'desc' } }, { name: 'asc' }, { id: 'asc' }]);
+  });
+});
+
+describe('integerFilter', () => {
+  const range = { min: 100, max: 599 };
+
+  it('reads a whole number in range', () => {
+    expect(integerFilter('503', 'statusCode', range)).toBe(503);
+  });
+
+  it.each([undefined, ''])('returns undefined for %p', (raw) => {
+    expect(integerFilter(raw, 'statusCode', range)).toBeUndefined();
+  });
+
+  it.each(['99', '600', '5.5', '-1', 'abc', '1e3', ['503']])('rejects %p', (raw) => {
+    expect(() => integerFilter(raw, 'statusCode', range)).toThrow(DomainError);
+  });
+});
+
+describe('dateRangeFilter', () => {
+  it('returns undefined without either end', () => {
+    expect(dateRangeFilter({}, 'from', 'to')).toBeUndefined();
+  });
+
+  it('reads both ends', () => {
+    expect(
+      dateRangeFilter({ from: '2026-11-01T10:00:00Z', to: '2026-11-02T10:00:00Z' }, 'from', 'to'),
+    ).toEqual({
+      gte: new Date('2026-11-01T10:00:00Z'),
+      lte: new Date('2026-11-02T10:00:00Z'),
+    });
+  });
+
+  it('includes the whole day for a date-only end', () => {
+    expect(dateRangeFilter({ to: '2026-11-14' }, 'from', 'to')).toEqual({
+      lte: new Date('2026-11-14T23:59:59.999Z'),
+    });
+  });
+
+  it('rejects a range that ends before it starts', () => {
+    try {
+      dateRangeFilter({ from: '2026-11-14', to: '2026-11-13' }, 'from', 'to');
+      expect.unreachable();
+    } catch (error) {
+      expect((error as DomainError).details).toEqual([
+        { field: 'to', messages: ['to must not be before from'] },
+      ]);
+    }
+  });
+
+  it('accepts a single day given as the same date on both ends', () => {
+    expect(dateRangeFilter({ from: '2026-11-14', to: '2026-11-14' }, 'from', 'to')).toEqual({
+      gte: new Date('2026-11-14T00:00:00Z'),
+      lte: new Date('2026-11-14T23:59:59.999Z'),
+    });
   });
 });

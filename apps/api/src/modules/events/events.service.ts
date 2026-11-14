@@ -4,7 +4,7 @@ import { Injectable } from '@nestjs/common';
 import { DomainError } from '../../common/errors/domain-error.js';
 import { fieldError } from '../../common/errors/field-error.js';
 import { omitUndefined } from '../../common/objects.js';
-import { orderByOf, type ListQuery } from '../../common/pagination/list-query.js';
+import { orderByOf, type DateRange, type ListQuery } from '../../common/pagination/list-query.js';
 import { containsInsensitive } from '../../common/pagination/search.js';
 import { isValidRange } from '../../domain/schedule.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
@@ -26,8 +26,7 @@ export interface EventFilters {
   city?: string | undefined;
   tagId?: string | undefined;
   organizerId?: string | undefined;
-  startsFrom?: Date | undefined;
-  startsTo?: Date | undefined;
+  startsAt?: DateRange | undefined;
 }
 
 const LOCKED_STATUSES: readonly EventStatus[] = [EventStatus.COMPLETED, EventStatus.CANCELLED];
@@ -36,16 +35,12 @@ function filtersToWhere(
   filters: EventFilters,
   search: string | undefined,
 ): Prisma.EventWhereInput[] {
-  const startsAt: Prisma.DateTimeFilter = {
-    ...(filters.startsFrom === undefined ? {} : { gte: filters.startsFrom }),
-    ...(filters.startsTo === undefined ? {} : { lte: filters.startsTo }),
-  };
   return [
     filters.status === undefined ? {} : { status: filters.status },
     filters.city === undefined ? {} : { city: { equals: filters.city, mode: 'insensitive' } },
     filters.tagId === undefined ? {} : { tags: { some: { tagId: filters.tagId } } },
     filters.organizerId === undefined ? {} : { organizerId: filters.organizerId },
-    Object.keys(startsAt).length === 0 ? {} : { startsAt },
+    filters.startsAt === undefined ? {} : { startsAt: filters.startsAt },
     search === undefined
       ? {}
       : {

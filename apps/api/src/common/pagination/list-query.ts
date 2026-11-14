@@ -130,6 +130,24 @@ export function uuidFilter(raw: unknown, field: string): string | undefined {
   return raw;
 }
 
+const DIGITS_PATTERN = /^\d+$/;
+
+/** Reads an optional whole-number filter within [min, max]. */
+export function integerFilter(
+  raw: unknown,
+  field: string,
+  { min, max }: { min: number; max: number },
+): number | undefined {
+  if (raw === undefined || raw === '') {
+    return undefined;
+  }
+  const value = typeof raw === 'string' && DIGITS_PATTERN.test(raw) ? Number(raw) : Number.NaN;
+  if (Number.isNaN(value) || value < min || value > max) {
+    throw invalid(field, `${field} must be a whole number from ${String(min)} to ${String(max)}`);
+  }
+  return value;
+}
+
 /** Reads an optional ISO date filter. */
 export function dateFilter(raw: unknown, field: string): Date | undefined {
   if (raw === undefined || raw === '') {
@@ -140,6 +158,41 @@ export function dateFilter(raw: unknown, field: string): Date | undefined {
     throw invalid(field, `${field} must be an ISO date`);
   }
   return date;
+}
+
+const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const END_OF_DAY_SUFFIX = 'T23:59:59.999Z';
+
+export interface DateRange {
+  gte?: Date;
+  lte?: Date;
+}
+
+/**
+ * Reads an optional `from`/`to` range from two query fields. A date-only `to` (2026-11-14, as date
+ * pickers send) includes that whole day in UTC. A range that ends before it starts is rejected
+ * rather than silently matching nothing.
+ */
+export function dateRangeFilter(
+  query: Record<string, unknown>,
+  fromField: string,
+  toField: string,
+): DateRange | undefined {
+  const from = dateFilter(query[fromField], fromField);
+  const rawTo = query[toField];
+  const to = dateFilter(
+    typeof rawTo === 'string' && DATE_ONLY_PATTERN.test(rawTo)
+      ? `${rawTo}${END_OF_DAY_SUFFIX}`
+      : rawTo,
+    toField,
+  );
+  if (from !== undefined && to !== undefined && to.getTime() < from.getTime()) {
+    throw invalid(toField, `${toField} must not be before ${fromField}`);
+  }
+  if (from === undefined && to === undefined) {
+    return undefined;
+  }
+  return { ...(from === undefined ? {} : { gte: from }), ...(to === undefined ? {} : { lte: to }) };
 }
 
 /** Reads an optional exact-match text filter (trimmed, length-capped). */

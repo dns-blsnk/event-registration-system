@@ -23,7 +23,7 @@ import {
 import { RequirePermission } from '../../common/auth/access.decorator.js';
 import { CurrentAuth } from '../../common/auth/current-user.decorator.js';
 import {
-  dateFilter,
+  dateRangeFilter,
   enumFilter,
   parseListQuery,
   textFilter,
@@ -48,8 +48,7 @@ function filtersOf(query: Record<string, unknown>): EventFilters {
     city: textFilter(query.city, 'city'),
     tagId: uuidFilter(query.tagId, 'tagId'),
     organizerId: uuidFilter(query.organizerId, 'organizerId'),
-    startsFrom: dateFilter(query.startsFrom, 'startsFrom'),
-    startsTo: dateFilter(query.startsTo, 'startsTo'),
+    startsAt: dateRangeFilter(query, 'startsFrom', 'startsTo'),
   };
 }
 
