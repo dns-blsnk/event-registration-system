@@ -63,10 +63,11 @@ export function RegistrationBulkActions({
         onSuccess: ({ data }) => {
           open?.(bulkSummary(data));
           onDone(data.results.filter((result) => !result.ok).map((result) => result.id));
-          // Cancelling frees seats and may promote the waitlist, so session and event numbers change too.
+          // Cancelling frees seats and may promote the waitlist, so session and event numbers change
+          // too, on any page showing them: rows may belong to several sessions, hence every cached one.
           void invalidate({ resource: Resource.REGISTRATIONS, invalidates: ['list'] });
-          void invalidate({ resource: Resource.SESSIONS, invalidates: ['list'] });
-          void invalidate({ resource: Resource.EVENTS, invalidates: ['list', 'detail'] });
+          void invalidate({ resource: Resource.SESSIONS, invalidates: ['resourceAll'] });
+          void invalidate({ resource: Resource.EVENTS, invalidates: ['resourceAll'] });
         },
       },
     );
