@@ -112,10 +112,10 @@ describe('toErrorResponse', () => {
   });
 
   it('uses a generic message for unknown transport errors', () => {
-    const unknown = Object.assign(new Error('raw detail'), { status: 415 });
+    const unknown = Object.assign(new Error('raw detail'), { status: 406 });
 
     expect(toErrorResponse(unknown, REQUEST_ID).body).toMatchObject({
-      statusCode: 415,
+      statusCode: 406,
       code: 'BAD_REQUEST',
       message: 'Request could not be processed',
     });

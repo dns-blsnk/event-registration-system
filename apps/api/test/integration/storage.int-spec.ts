@@ -71,7 +71,7 @@ describe('object storage', () => {
     const key = newKey();
 
     expect(await codeOf(() => storage.putImage(key, Buffer.from('<svg onload=alert(1)>')))).toBe(
-      'VALIDATION_FAILED',
+      'UNSUPPORTED_MEDIA_TYPE',
     );
     expect((await fetch(await storage.presignedGetUrl(key))).status).toBe(HttpStatus.NOT_FOUND);
   });

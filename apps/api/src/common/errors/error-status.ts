@@ -19,6 +19,7 @@ export const ERROR_STATUS: Readonly<Record<ErrorCode, number>> = {
   [ErrorCode.SCHEDULE_CONFLICT]: HttpStatus.CONFLICT,
   [ErrorCode.ALREADY_REGISTERED]: HttpStatus.CONFLICT,
   [ErrorCode.PAYLOAD_TOO_LARGE]: HttpStatus.PAYLOAD_TOO_LARGE,
+  [ErrorCode.UNSUPPORTED_MEDIA_TYPE]: HttpStatus.UNSUPPORTED_MEDIA_TYPE,
   [ErrorCode.RATE_LIMITED]: HttpStatus.TOO_MANY_REQUESTS,
   [ErrorCode.INTERNAL_ERROR]: HttpStatus.INTERNAL_SERVER_ERROR,
   [ErrorCode.SERVICE_UNAVAILABLE]: HttpStatus.SERVICE_UNAVAILABLE,
@@ -31,6 +32,7 @@ const CODE_BY_HTTP_STATUS: ReadonlyMap<number, ErrorCode> = new Map<number, Erro
   [HttpStatus.NOT_FOUND, ErrorCode.NOT_FOUND],
   [HttpStatus.CONFLICT, ErrorCode.CONFLICT],
   [HttpStatus.PAYLOAD_TOO_LARGE, ErrorCode.PAYLOAD_TOO_LARGE],
+  [HttpStatus.UNSUPPORTED_MEDIA_TYPE, ErrorCode.UNSUPPORTED_MEDIA_TYPE],
   [HttpStatus.TOO_MANY_REQUESTS, ErrorCode.RATE_LIMITED],
   [HttpStatus.SERVICE_UNAVAILABLE, ErrorCode.SERVICE_UNAVAILABLE],
 ]);

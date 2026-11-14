@@ -9,7 +9,6 @@ import { BANNER_MAX_BYTES, BANNER_MIME_TYPES, ErrorCode, type BannerMimeType } f
 import { Injectable, type OnModuleDestroy } from '@nestjs/common';
 
 import { DomainError } from '../../common/errors/domain-error.js';
-import { fieldError } from '../../common/errors/field-error.js';
 import { MINUTE_MS, SECOND_MS } from '../../common/time.js';
 import { InjectConfig } from '../../config/config.module.js';
 
@@ -62,7 +61,10 @@ export class StorageService implements OnModuleDestroy {
     }
     const contentType = detectImageType(body);
     if (contentType === undefined) {
-      throw fieldError('file', `The image must be one of: ${BANNER_MIME_TYPES.join(', ')}`);
+      throw new DomainError(
+        ErrorCode.UNSUPPORTED_MEDIA_TYPE,
+        `The image must be one of: ${BANNER_MIME_TYPES.join(', ')}`,
+      );
     }
     await this.client.send(
       new PutObjectCommand({ Bucket: this.bucket, Key: key, Body: body, ContentType: contentType }),

@@ -8,10 +8,15 @@ import { DomainError } from './domain-error.js';
 import type { AppLogEntry } from '../../modules/app-logs/app-log-entry.js';
 import type { Request } from 'express';
 
-/** Responses that signal a possible attack or abuse and belong in the security journal. */
+/**
+ * Responses that signal a possible attack or abuse and belong in the security journal: denied
+ * access, throttling and rejected uploads (oversized or not a real image).
+ */
 const SECURITY_STATUSES: ReadonlySet<number> = new Set([
   HttpStatus.UNAUTHORIZED,
   HttpStatus.FORBIDDEN,
+  HttpStatus.PAYLOAD_TOO_LARGE,
+  HttpStatus.UNSUPPORTED_MEDIA_TYPE,
   HttpStatus.TOO_MANY_REQUESTS,
 ]);
 
@@ -20,7 +25,7 @@ function routeOf(request: Request): string {
   return typeof template === 'string' ? template : pathOf(request);
 }
 
-/** 401/403/429, unless the code that raised it marked it as a routine outcome. */
+/** One of SECURITY_STATUSES, unless the code that raised it marked it as a routine outcome. */
 function isSecurityEvent(exception: unknown, statusCode: number): boolean {
   const isRoutine = exception instanceof DomainError && exception.isRoutine;
   return SECURITY_STATUSES.has(statusCode) && !isRoutine;

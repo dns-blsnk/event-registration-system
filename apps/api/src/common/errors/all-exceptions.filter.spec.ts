@@ -81,7 +81,7 @@ describe('AllExceptionsFilter', () => {
     );
   });
 
-  it.each([401, 403, 429])(
+  it.each([401, 403, 413, 415, 429])(
     'records a %i response as a security event without a stack',
     (status) => {
       const { filter, record, error } = createFilter();

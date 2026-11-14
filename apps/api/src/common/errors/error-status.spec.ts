@@ -19,12 +19,13 @@ describe('codeForHttpStatus', () => {
     [404, 'NOT_FOUND'],
     [409, 'CONFLICT'],
     [413, 'PAYLOAD_TOO_LARGE'],
+    [415, 'UNSUPPORTED_MEDIA_TYPE'],
     [429, 'RATE_LIMITED'],
     [503, 'SERVICE_UNAVAILABLE'],
     [500, 'INTERNAL_ERROR'],
     [502, 'INTERNAL_ERROR'],
     [405, 'BAD_REQUEST'],
-    [415, 'BAD_REQUEST'],
+    [406, 'BAD_REQUEST'],
   ])('maps %i to %s', (status, code) => {
     expect(codeForHttpStatus(status)).toBe(code);
   });
