@@ -1,0 +1,74 @@
+# Local development only. Production uses managed Postgres (Render) and Cloudflare R2.
+name: ers
+
+services:
+  postgres:
+    image: postgres:17.7-alpine
+    environment:
+      POSTGRES_USER: ers
+      POSTGRES_PASSWORD: ers_local_only
+      POSTGRES_DB: ers
+    ports:
+      - '127.0.0.1:5442:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ers -d ers']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  postgres-test:
+    image: postgres:17.7-alpine
+    environment:
+      POSTGRES_USER: ers
+      POSTGRES_PASSWORD: ers_local_only
+      POSTGRES_DB: ers_test
+    ports:
+      - '127.0.0.1:5443:5432'
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ers -d ers_test']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # S3-compatible storage (SeaweedFS). Stands in for Cloudflare R2 locally and in CI.
+  s3:
+    image: chrislusf/seaweedfs:4.53
+    command: server -s3 -s3.port=8333 -s3.config=/etc/seaweedfs/s3.json -dir=/data -master.volumeSizeLimitMB=64
+    ports:
+      - '127.0.0.1:8333:8333'
+    volumes:
+      - ./docker/s3.json:/etc/seaweedfs/s3.json:ro
+      - s3-data:/data
+
+  s3-setup:
+    image: amazon/aws-cli:2.40.3
+    depends_on:
+      - s3
+    environment:
+      AWS_ACCESS_KEY_ID: ers_local_key
+      AWS_SECRET_ACCESS_KEY: ers_local_only_secret
+      AWS_DEFAULT_REGION: auto
+    # Fails loudly: exits non-zero if storage never becomes ready or a bucket cannot be created.
+    entrypoint:
+      - sh
+      - -ec
+      - |
+        S3="aws --endpoint-url http://s3:8333"
+        ready=0
+        for i in $$(seq 1 60); do
+          if $$S3 s3 ls >/dev/null 2>&1; then ready=1; break; fi
+          sleep 1
+        done
+        [ "$$ready" = 1 ] || { echo "S3 storage did not become ready" >&2; exit 1; }
+        for bucket in ers-uploads ers-uploads-test; do
+          $$S3 s3api head-bucket --bucket "$$bucket" 2>/dev/null || $$S3 s3 mb "s3://$$bucket"
+        done
+        $$S3 s3 ls
+
+volumes:
+  postgres-data:
+  s3-data:

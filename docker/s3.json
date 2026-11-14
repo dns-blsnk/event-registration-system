@@ -1,0 +1,9 @@
+{
+  "identities": [
+    {
+      "name": "ers-local",
+      "credentials": [{ "accessKey": "ers_local_key", "secretKey": "ers_local_only_secret" }],
+      "actions": ["Admin", "Read", "Write", "List", "Tagging"]
+    }
+  ]
+}
