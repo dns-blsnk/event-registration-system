@@ -5,6 +5,7 @@ import { DomainError } from '../../common/errors/domain-error.js';
 import { assertEventTransition } from '../../domain/status-transitions.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 
+import { EventBannerService } from './event-banner.service.js';
 import { lockEventSessions, lockScopedEvent } from './event-lock.js';
 import { EVENT_INCLUDE, type EventWithRelations } from './event-view.js';
 
@@ -13,7 +14,10 @@ import type { User } from '../../generated/prisma/client.js';
 /** Status changes of an event: publish, complete, cancel, and admin deletion. */
 @Injectable()
 export class EventLifecycleService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly banners: EventBannerService,
+  ) {}
 
   /** DRAFT -> PUBLISHED: must not have started and needs at least one session. */
   async publish(id: string, actor: User, now: Date = new Date()): Promise<EventWithRelations> {
@@ -85,8 +89,8 @@ export class EventLifecycleService {
 
   /** Admin only. Bookings are history, so an event anyone registered for is cancelled, never deleted. */
   async remove(id: string, actor: User): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
-      await lockScopedEvent(tx, id, actor);
+    const bannerKey = await this.prisma.$transaction(async (tx) => {
+      const event = await lockScopedEvent(tx, id, actor);
       await lockEventSessions(tx, id);
       const registrations = await tx.registration.count({ where: { session: { eventId: id } } });
       if (registrations > 0) {
@@ -96,6 +100,8 @@ export class EventLifecycleService {
         );
       }
       await tx.event.delete({ where: { id } });
+      return event.bannerKey;
     });
+    await this.banners.deleteQuietly(bannerKey);
   }
 }

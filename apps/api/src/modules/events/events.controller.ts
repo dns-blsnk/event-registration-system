@@ -33,8 +33,9 @@ import { sendList } from '../../common/pagination/list-result.js';
 
 import { CreateEventDto } from './dto/create-event.dto.js';
 import { UpdateEventDto } from './dto/update-event.dto.js';
+import { EventBannerService } from './event-banner.service.js';
 import { EventLifecycleService } from './event-lifecycle.service.js';
-import { toEventDetail, toEventListItem } from './event-view.js';
+import { toEventDetail, toEventListItem, type EventWithRelations } from './event-view.js';
 import { EventsService, type EventFilters, type EventSortField } from './events.service.js';
 
 import type { AuthContext } from '../../common/auth/auth-context.js';
@@ -57,6 +58,7 @@ export class EventsController {
   constructor(
     private readonly events: EventsService,
     private readonly lifecycle: EventLifecycleService,
+    private readonly banners: EventBannerService,
   ) {}
 
   @RequirePermission(Resource.EVENTS, Action.LIST)
@@ -80,7 +82,7 @@ export class EventsController {
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentAuth() auth: AuthContext,
   ): Promise<EventDetail> {
-    return toEventDetail(await this.events.get(id, auth.user));
+    return this.detail(await this.events.get(id, auth.user));
   }
 
   @RequirePermission(Resource.EVENTS, Action.CREATE)
@@ -89,7 +91,7 @@ export class EventsController {
     @Body() dto: CreateEventDto,
     @CurrentAuth() auth: AuthContext,
   ): Promise<EventDetail> {
-    return toEventDetail(await this.events.create(dto, auth.user));
+    return this.detail(await this.events.create(dto, auth.user));
   }
 
   @RequirePermission(Resource.EVENTS, Action.EDIT)
@@ -99,7 +101,7 @@ export class EventsController {
     @Body() dto: UpdateEventDto,
     @CurrentAuth() auth: AuthContext,
   ): Promise<EventDetail> {
-    return toEventDetail(await this.events.update(id, dto, auth.user));
+    return this.detail(await this.events.update(id, dto, auth.user));
   }
 
   @RequirePermission(Resource.EVENTS, Action.PUBLISH)
@@ -109,7 +111,7 @@ export class EventsController {
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentAuth() auth: AuthContext,
   ): Promise<EventDetail> {
-    return toEventDetail(await this.lifecycle.publish(id, auth.user));
+    return this.detail(await this.lifecycle.publish(id, auth.user));
   }
 
   @RequirePermission(Resource.EVENTS, Action.COMPLETE)
@@ -119,7 +121,7 @@ export class EventsController {
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentAuth() auth: AuthContext,
   ): Promise<EventDetail> {
-    return toEventDetail(await this.lifecycle.complete(id, auth.user));
+    return this.detail(await this.lifecycle.complete(id, auth.user));
   }
 
   @RequirePermission(Resource.EVENTS, Action.CANCEL)
@@ -129,7 +131,7 @@ export class EventsController {
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentAuth() auth: AuthContext,
   ): Promise<EventDetail> {
-    return toEventDetail(await this.lifecycle.cancel(id, auth.user));
+    return this.detail(await this.lifecycle.cancel(id, auth.user));
   }
 
   @RequirePermission(Resource.EVENTS, Action.DELETE)
@@ -140,5 +142,9 @@ export class EventsController {
     @CurrentAuth() auth: AuthContext,
   ): Promise<void> {
     await this.lifecycle.remove(id, auth.user);
+  }
+
+  private async detail(event: EventWithRelations): Promise<EventDetail> {
+    return toEventDetail(event, await this.banners.urlOf(event.bannerKey));
   }
 }

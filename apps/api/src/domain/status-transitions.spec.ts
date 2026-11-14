@@ -8,6 +8,7 @@ import {
   assertRegistrationTransition,
   canTransitionEvent,
   canTransitionRegistration,
+  assertEventEditable,
 } from './status-transitions.js';
 
 const STARTED = {
@@ -142,5 +143,19 @@ describe('registration transitions', () => {
 
   it.each(REGISTRATION_STATUSES)('forbids staying in %s', (status) => {
     expect(canTransitionRegistration(status, status, { manual: false })).toBe(false);
+  });
+});
+
+describe('assertEventEditable', () => {
+  it.each(['DRAFT', 'PUBLISHED'] as const)('allows editing a %s event', (status) => {
+    expect(() => {
+      assertEventEditable({ status });
+    }).not.toThrow();
+  });
+
+  it.each(['COMPLETED', 'CANCELLED'] as const)('refuses editing a %s event', (status) => {
+    expect(() => {
+      assertEventEditable({ status });
+    }).toThrow('Completed or cancelled events cannot be edited');
   });
 });

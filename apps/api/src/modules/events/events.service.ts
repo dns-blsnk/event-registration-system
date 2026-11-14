@@ -7,6 +7,7 @@ import { omitUndefined } from '../../common/objects.js';
 import { orderByOf, type DateRange, type ListQuery } from '../../common/pagination/list-query.js';
 import { containsInsensitive } from '../../common/pagination/search.js';
 import { isValidRange } from '../../domain/schedule.js';
+import { assertEventEditable } from '../../domain/status-transitions.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 
 import { EVENT_NOT_FOUND_MESSAGE, lockScopedEvent } from './event-lock.js';
@@ -28,8 +29,6 @@ export interface EventFilters {
   organizerId?: string | undefined;
   startsAt?: DateRange | undefined;
 }
-
-const LOCKED_STATUSES: readonly EventStatus[] = [EventStatus.COMPLETED, EventStatus.CANCELLED];
 
 function filtersToWhere(
   filters: EventFilters,
@@ -131,9 +130,7 @@ export class EventsService {
   ): Promise<EventWithRelations> {
     return this.prisma.$transaction(async (tx) => {
       const event = await lockScopedEvent(tx, id, actor);
-      if (LOCKED_STATUSES.includes(event.status)) {
-        throw new DomainError(ErrorCode.CONFLICT, 'Completed or cancelled events cannot be edited');
-      }
+      assertEventEditable(event);
       const startsAt = dto.startsAt ?? event.startsAt;
       const endsAt = dto.endsAt ?? event.endsAt;
       this.assertDates(startsAt, endsAt);

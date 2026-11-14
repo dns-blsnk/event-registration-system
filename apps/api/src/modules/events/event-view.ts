@@ -36,10 +36,11 @@ export function toEventListItem(event: EventWithRelations): EventListItem {
   };
 }
 
-export function toEventDetail(event: EventWithRelations): EventDetail {
+export function toEventDetail(event: EventWithRelations, bannerUrl: string | null): EventDetail {
   return {
     ...toEventListItem(event),
     description: event.description,
+    bannerUrl,
     createdAt: event.createdAt.toISOString(),
     updatedAt: event.updatedAt.toISOString(),
   };
