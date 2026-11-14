@@ -1,10 +1,11 @@
 import { Module } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD, APP_PIPE } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
 
 import { AuthGuard } from './common/auth/auth.guard.js';
 import { CsrfGuard } from './common/auth/csrf.guard.js';
+import { HttpThrottlerGuard } from './common/auth/http-throttler.guard.js';
 import { PermissionGuard } from './common/auth/permission.guard.js';
 import { AllExceptionsFilter } from './common/errors/all-exceptions.filter.js';
 import { LoggingModule } from './common/logging/logging.module.js';
@@ -52,7 +53,7 @@ const REQUESTS_PER_MINUTE_PER_IP = 300;
   ],
   providers: [
     // Order matters: rate limit, resolve the session, check CSRF, then check the role's permission.
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: HttpThrottlerGuard },
     { provide: APP_GUARD, useClass: AuthGuard },
     { provide: APP_GUARD, useClass: CsrfGuard },
     { provide: APP_GUARD, useClass: PermissionGuard },

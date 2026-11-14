@@ -40,6 +40,7 @@ function contextFor(
     auth: signedIn ? { session: { csrfToken: CSRF } } : undefined,
   };
   return {
+    getType: () => 'http',
     switchToHttp: () => ({ getRequest: () => request }),
     getHandler: () => handler,
     getClass: () => AnyController,

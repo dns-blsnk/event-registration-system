@@ -48,6 +48,7 @@ function contextFor(controller: object, method: string, role: Role | undefined):
   const prototype = (controller as { prototype: Record<string, () => void> }).prototype;
   const request = { auth: role === undefined ? undefined : { user: { role } } };
   return {
+    getType: () => 'http',
     switchToHttp: () => ({ getRequest: () => request }),
     getHandler: () => prototype[method],
     getClass: () => controller,

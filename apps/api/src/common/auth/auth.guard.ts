@@ -12,6 +12,7 @@ import { SessionService } from '../../modules/auth/session.service.js';
 import { DomainError } from '../errors/domain-error.js';
 
 import { accessRuleOf } from './access-rule.js';
+import { isAuthenticatedSocket, isHttpContext } from './http-context.js';
 
 import type { Config } from '../../config/config.schema.js';
 import type { Request, Response } from 'express';
@@ -26,6 +27,7 @@ export class AuthGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    if (!isHttpContext(context)) return isAuthenticatedSocket(context);
     const http = context.switchToHttp();
     const request = http.getRequest<Request>();
     const token = readSessionToken(request, this.config);

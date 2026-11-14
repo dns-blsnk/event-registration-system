@@ -6,6 +6,7 @@ import { InjectConfig } from '../../config/config.module.js';
 import { tokensMatch } from '../../modules/auth/session-tokens.js';
 import { DomainError } from '../errors/domain-error.js';
 
+import { isHttpContext } from './http-context.js';
 import { SKIP_CSRF_TOKEN_KEY } from './skip-csrf-token.decorator.js';
 
 import type { Config } from '../../config/config.schema.js';
@@ -26,6 +27,8 @@ export class CsrfGuard implements CanActivate {
   ) {}
 
   canActivate(context: ExecutionContext): boolean {
+    // Sockets have no CSRF or route rules; AuthGuard only lets authenticated ones through.
+    if (!isHttpContext(context)) return true;
     const request = context.switchToHttp().getRequest<Request>();
     if (SAFE_METHODS.has(request.method)) {
       return true;

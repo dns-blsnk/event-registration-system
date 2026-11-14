@@ -5,6 +5,7 @@ import { Reflector } from '@nestjs/core';
 import { DomainError } from '../errors/domain-error.js';
 
 import { accessRuleOf } from './access-rule.js';
+import { isHttpContext } from './http-context.js';
 
 import type { Request } from 'express';
 
@@ -17,6 +18,8 @@ export class PermissionGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
+    // Sockets have no CSRF or route rules; AuthGuard only lets authenticated ones through.
+    if (!isHttpContext(context)) return true;
     const rule = accessRuleOf(this.reflector, context);
     if (rule?.kind === 'public' || rule?.kind === 'signed-in') {
       return true;
