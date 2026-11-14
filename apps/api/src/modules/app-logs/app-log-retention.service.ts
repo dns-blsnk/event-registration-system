@@ -3,9 +3,9 @@ import { Injectable, type OnApplicationBootstrap, type OnModuleDestroy } from '@
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PinoLogger } from 'nestjs-pino';
 
+import { DAY_MS } from '../../common/time.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 
-const DAY_MS = 86_400_000;
 export const DELETE_BATCH_SIZE = 5000;
 
 export function retentionCutoff(now: Date): Date {

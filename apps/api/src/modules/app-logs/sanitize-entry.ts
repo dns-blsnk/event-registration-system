@@ -1,3 +1,5 @@
+import { clip } from '../../common/text.js';
+
 import type { AppLogEntry } from './app-log-entry.js';
 
 /** Column limits from the app_logs table. */
@@ -17,7 +19,6 @@ export const FIELD_LIMITS = {
 const MIN_HTTP_STATUS = 100;
 const MAX_HTTP_STATUS = 599;
 const MAX_INT32 = 2_147_483_647;
-const TRUNCATION_MARK = '…';
 const REDACTED = '[redacted]';
 
 // Single-line fields: every control character, including newlines, so a value cannot forge a line.
@@ -30,12 +31,6 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const URL_CREDENTIALS = /:\/\/[^\s:/@]+:[^\s@]+@/g;
 const SECRET_ASSIGNMENTS = /\b(password|passwd|secret|token|api[_-]?key)(\s*[=:]\s*)\S+/gi;
 
-function truncate(value: string, limit: number): string {
-  return value.length <= limit
-    ? value
-    : value.slice(0, limit - TRUNCATION_MARK.length) + TRUNCATION_MARK;
-}
-
 /** Masks credentials that driver and library error messages sometimes echo. */
 export function redactSecrets(value: string): string {
   return value
@@ -44,11 +39,11 @@ export function redactSecrets(value: string): string {
 }
 
 export function cleanText(value: string, limit: number): string {
-  return truncate(redactSecrets(value.replace(CONTROL_CHARS, ' ')), limit);
+  return clip(redactSecrets(value.replace(CONTROL_CHARS, ' ')), limit);
 }
 
 export function cleanMultiline(value: string, limit: number): string {
-  return truncate(redactSecrets(value.replace(CONTROL_CHARS_EXCEPT_LINES, '')), limit);
+  return clip(redactSecrets(value.replace(CONTROL_CHARS_EXCEPT_LINES, '')), limit);
 }
 
 function inRange(value: number | undefined, min: number, max: number): number | undefined {

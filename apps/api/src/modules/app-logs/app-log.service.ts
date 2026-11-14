@@ -3,6 +3,7 @@ import { Injectable, type OnModuleDestroy, type OnModuleInit } from '@nestjs/com
 import { PinoLogger } from 'nestjs-pino';
 
 import { translatePrismaError } from '../../common/errors/prisma-errors.js';
+import { MINUTE_MS } from '../../common/time.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 
 import { LogBuffer } from './log-buffer.js';
@@ -17,7 +18,6 @@ export const FLUSH_INTERVAL_MS = 2000;
 export const FLUSH_BATCH_SIZE = 200;
 /** Per category, so a flood of security events cannot crowd real server errors out. */
 export const MAX_ENTRIES_PER_MINUTE = 600;
-const MINUTE_MS = 60_000;
 
 function isDatabaseDown(error: unknown): boolean {
   return translatePrismaError(error)?.code === 'SERVICE_UNAVAILABLE';
