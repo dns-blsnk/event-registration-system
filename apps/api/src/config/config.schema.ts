@@ -34,6 +34,9 @@ const envSchema = z.object({
   S3_FORCE_PATH_STYLE: booleanString,
   ANTHROPIC_API_KEY: z.string().optional(),
   ANTHROPIC_MODEL: z.string().min(1).default('claude-haiku-5-5'),
+  /** Password of the demo accounts the seed creates. Only the seed reads and checks it, so a bad
+   * value never stops the API from starting. */
+  SEED_DEMO_PASSWORD: z.string().optional(),
   GITHUB_CLIENT_ID: z.string().optional(),
   GITHUB_CLIENT_SECRET: z.string().optional(),
 });
@@ -59,6 +62,7 @@ export interface Config {
     readonly forcePathStyle: boolean;
   };
   readonly ai: { readonly apiKey: string | undefined; readonly model: string };
+  readonly seedDemoPassword: string | undefined;
   readonly github: { readonly clientId: string; readonly clientSecret: string } | undefined;
 }
 
@@ -114,6 +118,7 @@ export function parseConfig(env: RawEnv): Config {
       forcePathStyle: values.S3_FORCE_PATH_STYLE,
     },
     ai: { apiKey: values.ANTHROPIC_API_KEY, model: values.ANTHROPIC_MODEL },
+    seedDemoPassword: values.SEED_DEMO_PASSWORD,
     github:
       githubClientId !== undefined && githubClientSecret !== undefined
         ? { clientId: githubClientId, clientSecret: githubClientSecret }

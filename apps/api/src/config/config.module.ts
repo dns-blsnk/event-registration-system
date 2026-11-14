@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 
 import { Global, Inject, Module } from '@nestjs/common';
 
-import { parseConfig } from './config.schema.js';
+import { parseConfig, type Config } from './config.schema.js';
 
 export const APP_CONFIG = Symbol('APP_CONFIG');
 
@@ -26,17 +26,15 @@ function loadLocalEnvFile(): void {
   }
 }
 
+/** The validated config, for code outside Nest DI (the seed script). Same rules as the app. */
+export function loadConfig(): Config {
+  loadLocalEnvFile();
+  return parseConfig(process.env);
+}
+
 @Global()
 @Module({
-  providers: [
-    {
-      provide: APP_CONFIG,
-      useFactory: () => {
-        loadLocalEnvFile();
-        return parseConfig(process.env);
-      },
-    },
-  ],
+  providers: [{ provide: APP_CONFIG, useFactory: loadConfig }],
   exports: [APP_CONFIG],
 })
 export class ConfigModule {}
