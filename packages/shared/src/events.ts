@@ -32,6 +32,8 @@ export interface EventListItem {
 
 export interface EventDetail extends EventListItem {
   description: string;
+  /** Short-lived presigned link to the banner image; null when there is none. */
+  bannerUrl: string | null;
   createdAt: string;
   updatedAt: string;
 }
