@@ -8,4 +8,5 @@ export * from './permissions.js';
 export * from './registrations.js';
 export * from './roles.js';
 export * from './sessions.js';
+export * from './tags.js';
 export * from './users.js';
