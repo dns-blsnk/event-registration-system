@@ -81,6 +81,13 @@ export class ChatAnswerService {
     return this.client !== undefined;
   }
 
+  /** Refuses up front when no model is configured; the admin then shows "assistant unavailable". */
+  assertAvailable(): void {
+    if (this.client === undefined) {
+      throw new DomainError(ErrorCode.SERVICE_UNAVAILABLE, CHAT_MESSAGES.unavailable);
+    }
+  }
+
   async answer(
     prompt: ChatPrompt,
     { signal, onText }: { signal: AbortSignal; onText: (text: string) => void },
