@@ -4,6 +4,7 @@ export * from './customers.js';
 export * from './domain.js';
 export * from './errors.js';
 export * from './events.js';
+export * from './field-descriptions.js';
 export * from './files.js';
 export * from './lists.js';
 export * from './permissions.js';
