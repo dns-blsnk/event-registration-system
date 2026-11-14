@@ -187,3 +187,28 @@ export const APP_LOG_CATEGORY_LABELS: Readonly<Record<AppLogCategory, string>> =
   ERROR: 'Error',
   SECURITY: 'Security',
 };
+
+export const TAG_FIELDS = {
+  name: { label: 'Name', help: 'Short topic label; unique regardless of letter case.' },
+  eventCount: { label: 'Events', help: 'How many events use the tag.' },
+} as const satisfies Record<string, FieldDescription>;
+
+export const CUSTOMER_FIELDS = {
+  name: { label: 'Name', help: 'The customer’s name.' },
+  email: { label: 'Email', help: 'Sign-in email of the customer.' },
+  createdAt: { label: 'Joined', help: 'When the customer created the account.' },
+  registrationCount: {
+    label: 'Registrations',
+    help: 'Bookings you can see: all of them for admins, those for your events for organizers.',
+  },
+} as const satisfies Record<string, FieldDescription>;
+
+/** Controls of the tags list that are not fields of a tag. */
+export const TAG_LIST_CONTROLS = {
+  search: { label: 'Search', help: 'Matches the name.' },
+} as const satisfies Record<string, FieldDescription>;
+
+/** Controls of the customers list; people are searched the same way as on the users list. */
+export const CUSTOMER_LIST_CONTROLS = {
+  search: USER_LIST_CONTROLS.search,
+} as const satisfies Record<string, FieldDescription>;

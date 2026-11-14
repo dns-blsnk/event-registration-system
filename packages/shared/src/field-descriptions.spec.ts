@@ -8,6 +8,10 @@ import {
   APP_LOG_FIELDS,
   APP_LOG_LEVEL_LABELS,
   APP_LOG_LIST_CONTROLS,
+  CUSTOMER_FIELDS,
+  CUSTOMER_LIST_CONTROLS,
+  TAG_FIELDS,
+  TAG_LIST_CONTROLS,
   EVENT_FIELDS,
   EVENT_LIST_CONTROLS,
   EVENT_STATUS_LABELS,
@@ -36,6 +40,10 @@ describe('field descriptions', () => {
       ...Object.values(USER_LIST_CONTROLS),
       ...Object.values(APP_LOG_FIELDS),
       ...Object.values(APP_LOG_LIST_CONTROLS),
+      ...Object.values(TAG_FIELDS),
+      ...Object.values(CUSTOMER_FIELDS),
+      ...Object.values(TAG_LIST_CONTROLS),
+      ...Object.values(CUSTOMER_LIST_CONTROLS),
     ]) {
       expect(description.label.length).toBeGreaterThan(0);
       expect(description.help.length).toBeGreaterThan(0);
