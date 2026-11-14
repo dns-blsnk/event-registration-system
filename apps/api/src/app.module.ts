@@ -15,6 +15,7 @@ import { AppLogsModule } from './modules/app-logs/app-logs.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { EventsModule } from './modules/events/events.module.js';
 import { HealthModule } from './modules/health/health.module.js';
+import { SessionsModule } from './modules/sessions/sessions.module.js';
 import { UsersModule } from './modules/users/users.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 
@@ -34,6 +35,7 @@ const REQUESTS_PER_MINUTE_PER_IP = 300;
     AuthModule,
     UsersModule,
     EventsModule,
+    SessionsModule,
     HealthModule,
   ],
   providers: [
