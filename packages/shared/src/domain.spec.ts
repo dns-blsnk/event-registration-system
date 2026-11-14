@@ -4,6 +4,8 @@ import {
   EVENT_STATUSES,
   EVENT_TRANSITIONS,
   EventStatus,
+  HELD_REGISTRATION_STATUSES,
+  REGISTRATION_STATUSES,
   eventTimingProblem,
   isEventLocked,
   sessionPhase,
@@ -63,5 +65,11 @@ describe('eventTimingProblem', () => {
       endsAt: new Date('2026-12-01T10:00:00Z'),
     };
     expect(sessionPhase(session, new Date(now))).toBe(phase);
+  });
+
+  it('lets only a cancelled registration be booked again', () => {
+    expect(
+      REGISTRATION_STATUSES.filter((status) => !HELD_REGISTRATION_STATUSES.includes(status)),
+    ).toEqual(['CANCELLED']);
   });
 });

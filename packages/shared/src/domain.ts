@@ -92,5 +92,15 @@ export type RegistrationStatus = (typeof RegistrationStatus)[keyof typeof Regist
 export const REGISTRATION_STATUSES: readonly RegistrationStatus[] =
   Object.values(RegistrationStatus);
 
+/**
+ * Registrations that hold, or held, a place in a session. A customer with one of these cannot book
+ * the session again; only after cancelling can they book it anew (the same row is reused).
+ */
+export const HELD_REGISTRATION_STATUSES: readonly RegistrationStatus[] = [
+  RegistrationStatus.CONFIRMED,
+  RegistrationStatus.WAITLISTED,
+  RegistrationStatus.ATTENDED,
+];
+
 /** A session counts as "almost full" from this share of seats taken. */
 export const ALMOST_FULL_RATIO = 0.9;

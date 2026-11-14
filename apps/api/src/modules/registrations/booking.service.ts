@@ -1,4 +1,4 @@
-import { ErrorCode, RegistrationStatus } from '@ers/shared';
+import { ErrorCode, HELD_REGISTRATION_STATUSES, RegistrationStatus } from '@ers/shared';
 import { Injectable } from '@nestjs/common';
 
 import { DomainError } from '../../common/errors/domain-error.js';
@@ -20,12 +20,6 @@ import {
 import { confirmedSessionsOf, promoteFromWaitlist } from './waitlist.js';
 
 import type { Prisma, Registration, Session } from '../../generated/prisma/client.js';
-
-const ACTIVE_STATUSES: readonly RegistrationStatus[] = [
-  RegistrationStatus.CONFIRMED,
-  RegistrationStatus.WAITLISTED,
-  RegistrationStatus.ATTENDED,
-];
 
 /**
  * Seat booking: one seat per customer and session, a confirmed seat while any are free, the
@@ -56,7 +50,7 @@ export class BookingService {
       const existing = await tx.registration.findUnique({
         where: { sessionId_customerId: { sessionId, customerId } },
       });
-      if (existing !== null && ACTIVE_STATUSES.includes(existing.status)) {
+      if (existing !== null && HELD_REGISTRATION_STATUSES.includes(existing.status)) {
         throw new DomainError(
           ErrorCode.ALREADY_REGISTERED,
           'You are already registered for this session',
