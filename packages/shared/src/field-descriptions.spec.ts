@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { PASSWORD_MIN_LENGTH } from './auth.js';
 import { ALMOST_FULL_RATIO, EVENT_STATUSES, REGISTRATION_STATUSES } from './domain.js';
 import {
   EVENT_FIELDS,
@@ -9,9 +10,13 @@ import {
   REGISTRATION_LIST_CONTROLS,
   REGISTRATION_STATUS_LABELS,
   SESSION_FIELDS,
+  ROLE_LABELS,
   SESSION_LIST_CONTROLS,
+  USER_FIELDS,
+  USER_LIST_CONTROLS,
 } from './field-descriptions.js';
 import { formatPercent } from './format.js';
+import { ROLES } from './roles.js';
 
 describe('field descriptions', () => {
   it('give every field a label and a help text', () => {
@@ -22,6 +27,8 @@ describe('field descriptions', () => {
       ...Object.values(SESSION_LIST_CONTROLS),
       ...Object.values(REGISTRATION_FIELDS),
       ...Object.values(REGISTRATION_LIST_CONTROLS),
+      ...Object.values(USER_FIELDS),
+      ...Object.values(USER_LIST_CONTROLS),
     ]) {
       expect(description.label.length).toBeGreaterThan(0);
       expect(description.help.length).toBeGreaterThan(0);
@@ -40,5 +47,13 @@ describe('field descriptions', () => {
     expect(Object.keys(REGISTRATION_STATUS_LABELS).sort()).toEqual(
       [...REGISTRATION_STATUSES].sort(),
     );
+  });
+
+  it('name every role', () => {
+    expect(Object.keys(ROLE_LABELS).sort()).toEqual([...ROLES].sort());
+  });
+
+  it('state the password minimum from the shared limit', () => {
+    expect(USER_FIELDS.password.help).toContain(String(PASSWORD_MIN_LENGTH));
   });
 });

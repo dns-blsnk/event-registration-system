@@ -1,5 +1,8 @@
+import { PASSWORD_MIN_LENGTH } from './auth.js';
 import { ALMOST_FULL_RATIO, type EventStatus, type RegistrationStatus } from './domain.js';
 import { formatPercent } from './format.js';
+
+import type { Role } from './roles.js';
 
 /**
  * Label and help text of a field. The admin shows them in forms and tables, and the AI help chat
@@ -109,4 +112,32 @@ export const REGISTRATION_STATUS_LABELS: Readonly<Record<RegistrationStatus, str
   WAITLISTED: 'Waitlisted',
   CANCELLED: 'Cancelled',
   ATTENDED: 'Attended',
+};
+
+export const USER_FIELDS = {
+  name: { label: 'Name', help: 'Shown in the admin and on bookings.' },
+  email: { label: 'Email', help: 'Used to sign in; unique, stored in lower case.' },
+  role: {
+    label: 'Role',
+    help: 'Admin manages everything; organizer manages own events; customer books seats.',
+  },
+  password: {
+    label: 'Password',
+    help: `At least ${String(PASSWORD_MIN_LENGTH)} characters; the user can change it later.`,
+  },
+  createdAt: { label: 'Created', help: 'When the account was created.' },
+} as const satisfies Record<string, FieldDescription>;
+
+/** Shown instead of the role help on one's own account: the API refuses changing one's own role. */
+export const OWN_ROLE_LOCKED_HELP = 'You cannot change your own role.';
+
+/** Controls of the users list that are not fields of a user. */
+export const USER_LIST_CONTROLS = {
+  search: { label: 'Search', help: 'Matches the name or email.' },
+} as const satisfies Record<string, FieldDescription>;
+
+export const ROLE_LABELS: Readonly<Record<Role, string>> = {
+  ADMIN: 'Admin',
+  ORGANIZER: 'Organizer',
+  CUSTOMER: 'Customer',
 };
