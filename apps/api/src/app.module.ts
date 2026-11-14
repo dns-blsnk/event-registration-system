@@ -14,6 +14,7 @@ import { ConfigModule } from './config/config.module.js';
 import { AppLogsModule } from './modules/app-logs/app-logs.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { HealthModule } from './modules/health/health.module.js';
+import { UsersModule } from './modules/users/users.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 
 /** Generous default per IP; sensitive routes (login, signup, chat) set stricter limits. */
@@ -30,6 +31,7 @@ const REQUESTS_PER_MINUTE_PER_IP = 300;
     PrismaModule,
     AppLogsModule,
     AuthModule,
+    UsersModule,
     HealthModule,
   ],
   providers: [
