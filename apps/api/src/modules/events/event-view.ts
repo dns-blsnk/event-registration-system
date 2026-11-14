@@ -3,13 +3,16 @@ import { fillRate } from '../../domain/capacity.js';
 import type { Prisma } from '../../generated/prisma/client.js';
 import type { EventDetail, EventListItem } from '@ers/shared';
 
+/** An event's tags as every view shows them: id and name, alphabetical. */
+export const EVENT_TAGS_INCLUDE = {
+  select: { tag: { select: { id: true, name: true } } },
+  orderBy: { tag: { name: 'asc' } },
+} satisfies Prisma.Event$tagsArgs;
+
 /** What every event query loads: organizer, tags and per-session seat numbers. */
 export const EVENT_INCLUDE = {
   organizer: { select: { id: true, name: true } },
-  tags: {
-    select: { tag: { select: { id: true, name: true } } },
-    orderBy: { tag: { name: 'asc' } },
-  },
+  tags: EVENT_TAGS_INCLUDE,
   sessions: { select: { capacity: true, confirmedCount: true } },
 } satisfies Prisma.EventInclude;
 
