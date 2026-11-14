@@ -82,7 +82,7 @@ export class MyRegistrationsController {
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentAuth() auth: AuthContext,
   ): Promise<MyRegistration> {
-    await this.booking.cancel(id, { customerId: auth.user.id });
+    await this.booking.cancel(id, { scope: { customerId: auth.user.id }, byStaff: false });
     return this.mine(auth.user.id, id);
   }
 

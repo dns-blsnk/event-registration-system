@@ -11,7 +11,12 @@ import {
 import { assertRegistrationTransition } from '../../domain/status-transitions.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 
-import { lockSession, releaseSeat, takeSeat } from './registration-locks.js';
+import {
+  lockSession,
+  lockVisibleRegistration,
+  releaseSeat,
+  takeSeat,
+} from './registration-locks.js';
 import { confirmedSessionsOf, promoteFromWaitlist } from './waitlist.js';
 
 import type { Prisma, Registration, Session } from '../../generated/prisma/client.js';
@@ -64,27 +69,20 @@ export class BookingService {
 
   /**
    * Cancels an active registration. A freed confirmed seat goes to the waitlist at once.
-   * `scope` narrows which registrations the caller may cancel (a customer: their own).
+   * `scope` narrows which registrations the caller may cancel (a customer: their own; staff: their
+   * events), `byStaff` relaxes the timing rule for leftover waitlist places.
    */
   async cancel(
     registrationId: string,
-    scope: Prisma.RegistrationWhereInput,
-    now: Date = new Date(),
+    {
+      scope,
+      byStaff,
+      now = new Date(),
+    }: { scope: Prisma.RegistrationWhereInput; byStaff: boolean; now?: Date },
   ): Promise<Registration> {
     return this.prisma.$transaction(async (tx) => {
-      const visible = await tx.registration.findFirst({
-        where: { AND: [{ id: registrationId }, scope] },
-        select: { sessionId: true },
-      });
-      if (visible === null) {
-        throw new DomainError(ErrorCode.NOT_FOUND, 'Registration not found');
-      }
-      await lockSession(tx, visible.sessionId);
-      const registration = await tx.registration.findUniqueOrThrow({
-        where: { id: registrationId },
-        include: { session: true },
-      });
-      assertCanCancel(registration.session, now);
+      const registration = await lockVisibleRegistration(tx, registrationId, scope);
+      assertCanCancel(registration, registration.session, { byStaff, now });
       assertRegistrationTransition(registration.status, RegistrationStatus.CANCELLED, {
         manual: true,
         timing: { startsAt: registration.session.startsAt, now },
