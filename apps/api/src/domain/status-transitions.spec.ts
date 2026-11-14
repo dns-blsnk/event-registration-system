@@ -13,10 +13,12 @@ import {
 
 const STARTED = {
   startsAt: new Date('2026-12-01T09:00:00Z'),
+  endsAt: new Date('2026-12-02T18:00:00Z'),
   now: new Date('2026-12-01T12:00:00Z'),
 };
 const UPCOMING = {
   startsAt: new Date('2026-12-01T09:00:00Z'),
+  endsAt: new Date('2026-12-02T18:00:00Z'),
   now: new Date('2026-11-30T12:00:00Z'),
 };
 

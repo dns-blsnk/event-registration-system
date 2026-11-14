@@ -23,7 +23,11 @@ export class EventLifecycleService {
   async publish(id: string, actor: User, now: Date = new Date()): Promise<EventWithRelations> {
     return this.prisma.$transaction(async (tx) => {
       const event = await lockScopedEvent(tx, id, actor);
-      assertEventTransition(event.status, EventStatus.PUBLISHED, { startsAt: event.startsAt, now });
+      assertEventTransition(event.status, EventStatus.PUBLISHED, {
+        startsAt: event.startsAt,
+        endsAt: event.endsAt,
+        now,
+      });
       if ((await tx.session.count({ where: { eventId: id } })) === 0) {
         throw new DomainError(
           ErrorCode.CONFLICT,
@@ -42,7 +46,11 @@ export class EventLifecycleService {
   async complete(id: string, actor: User, now: Date = new Date()): Promise<EventWithRelations> {
     return this.prisma.$transaction(async (tx) => {
       const event = await lockScopedEvent(tx, id, actor);
-      assertEventTransition(event.status, EventStatus.COMPLETED, { startsAt: event.startsAt, now });
+      assertEventTransition(event.status, EventStatus.COMPLETED, {
+        startsAt: event.startsAt,
+        endsAt: event.endsAt,
+        now,
+      });
       return tx.event.update({
         where: { id },
         data: { status: EventStatus.COMPLETED },

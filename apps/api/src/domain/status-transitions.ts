@@ -1,14 +1,13 @@
-import { ErrorCode, EventStatus, RegistrationStatus } from '@ers/shared';
+import {
+  ErrorCode,
+  EVENT_TRANSITIONS,
+  eventTimingProblem,
+  EventStatus,
+  RegistrationStatus,
+  type EventTiming,
+} from '@ers/shared';
 
 import { DomainError } from '../common/errors/domain-error.js';
-
-/** Allowed next statuses. Anything not listed is forbidden; terminal states have none. */
-const EVENT_TRANSITIONS: Readonly<Record<EventStatus, readonly EventStatus[]>> = {
-  [EventStatus.DRAFT]: [EventStatus.PUBLISHED, EventStatus.CANCELLED],
-  [EventStatus.PUBLISHED]: [EventStatus.COMPLETED, EventStatus.CANCELLED],
-  [EventStatus.COMPLETED]: [],
-  [EventStatus.CANCELLED]: [],
-};
 
 /** What staff may do by hand (admin and bulk actions). */
 const MANUAL_REGISTRATION_TRANSITIONS: Readonly<
@@ -52,35 +51,15 @@ export function canTransitionRegistration(
   return table[from].includes(to);
 }
 
-const EVENT_TIMING_RULES: Partial<
-  Record<EventStatus, (timing: TransitionTiming) => string | undefined>
-> = {
-  // Publishing a past event would open bookings for something that already happened.
-  [EventStatus.PUBLISHED]: ({ startsAt, now }) =>
-    now.getTime() >= startsAt.getTime()
-      ? 'An event that has already started cannot be published'
-      : undefined,
-  // Completing early would close the event for good.
-  [EventStatus.COMPLETED]: ({ startsAt, now }) =>
-    now.getTime() < startsAt.getTime()
-      ? 'An event cannot be completed before it starts'
-      : undefined,
-  // Cancelling a finished event would rewrite its attendance history; complete it instead.
-  [EventStatus.CANCELLED]: ({ endsAt, now }) =>
-    endsAt !== undefined && now.getTime() >= endsAt.getTime()
-      ? 'An event that has already ended cannot be cancelled'
-      : undefined,
-};
-
 export function assertEventTransition(
   from: EventStatus,
   to: EventStatus,
-  timing: TransitionTiming,
+  timing: EventTiming,
 ): void {
   if (!canTransitionEvent(from, to)) {
     throw new DomainError(ErrorCode.INVALID_TRANSITION, `An event cannot go from ${from} to ${to}`);
   }
-  const problem = EVENT_TIMING_RULES[to]?.(timing);
+  const problem = eventTimingProblem(to, timing);
   if (problem !== undefined) {
     throw new DomainError(ErrorCode.INVALID_TRANSITION, problem);
   }
