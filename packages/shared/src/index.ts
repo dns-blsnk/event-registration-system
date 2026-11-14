@@ -5,6 +5,7 @@ export * from './errors.js';
 export * from './events.js';
 export * from './lists.js';
 export * from './permissions.js';
+export * from './registrations.js';
 export * from './roles.js';
 export * from './sessions.js';
 export * from './users.js';
