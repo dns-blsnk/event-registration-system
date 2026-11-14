@@ -2,12 +2,13 @@ import {
   ErrorCode,
   EVENT_TRANSITIONS,
   eventTimingProblem,
-  EventStatus,
+  isEventLocked,
   RegistrationStatus,
-  type EventTiming,
 } from '@ers/shared';
 
 import { DomainError } from '../common/errors/domain-error.js';
+
+import type { EventStatus, EventTiming } from '@ers/shared';
 
 /** What staff may do by hand (admin and bulk actions). */
 const MANUAL_REGISTRATION_TRANSITIONS: Readonly<
@@ -85,14 +86,9 @@ export function assertRegistrationTransition(
   }
 }
 
-const LOCKED_EVENT_STATUSES: readonly EventStatus[] = [
-  EventStatus.COMPLETED,
-  EventStatus.CANCELLED,
-];
-
 /** Completed and cancelled events are history: their details and banner no longer change. */
 export function assertEventEditable(event: { status: EventStatus }): void {
-  if (LOCKED_EVENT_STATUSES.includes(event.status)) {
+  if (isEventLocked(event.status)) {
     throw new DomainError(ErrorCode.CONFLICT, 'Completed or cancelled events cannot be edited');
   }
 }

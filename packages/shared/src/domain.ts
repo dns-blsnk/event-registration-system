@@ -21,6 +21,33 @@ export const EVENT_TRANSITIONS: Readonly<Record<EventStatus, readonly EventStatu
   [EventStatus.CANCELLED]: [],
 };
 
+/** Completed and cancelled events are history: their details, banner and sessions no longer change. */
+export const LOCKED_EVENT_STATUSES: readonly EventStatus[] = [
+  EventStatus.COMPLETED,
+  EventStatus.CANCELLED,
+];
+
+export function isEventLocked(status: EventStatus): boolean {
+  return LOCKED_EVENT_STATUSES.includes(status);
+}
+
+export const SessionPhase = {
+  UPCOMING: 'UPCOMING',
+  RUNNING: 'RUNNING',
+  ENDED: 'ENDED',
+} as const;
+export type SessionPhase = (typeof SessionPhase)[keyof typeof SessionPhase];
+
+/**
+ * Where a session is in time. Upcoming sessions change freely; once running, their time and
+ * capacity are history; once ended, nothing about them changes.
+ */
+export function sessionPhase(session: { startsAt: Date; endsAt: Date }, now: Date): SessionPhase {
+  if (now.getTime() >= session.endsAt.getTime()) return SessionPhase.ENDED;
+  if (now.getTime() >= session.startsAt.getTime()) return SessionPhase.RUNNING;
+  return SessionPhase.UPCOMING;
+}
+
 export interface EventTiming {
   startsAt: Date;
   endsAt: Date;

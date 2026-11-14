@@ -1,4 +1,12 @@
-import { ALMOST_FULL_RATIO, ErrorCode, EventStatus, RegistrationStatus, Role } from '@ers/shared';
+import {
+  ALMOST_FULL_RATIO,
+  ErrorCode,
+  isEventLocked,
+  RegistrationStatus,
+  Role,
+  sessionPhase,
+  SessionPhase,
+} from '@ers/shared';
 import { Injectable } from '@nestjs/common';
 
 import { DomainError } from '../../common/errors/domain-error.js';
@@ -28,10 +36,6 @@ export interface SessionFilters {
 }
 
 const NOT_FOUND_MESSAGE = 'Session not found';
-const LOCKED_EVENT_STATUSES: readonly EventStatus[] = [
-  EventStatus.COMPLETED,
-  EventStatus.CANCELLED,
-];
 
 @Injectable()
 export class SessionsService {
@@ -225,12 +229,13 @@ export class SessionsService {
   }
 
   private assertEditableNow(session: Session, dto: UpdateSessionDto, now: Date): void {
-    if (now.getTime() >= session.endsAt.getTime()) {
+    const phase = sessionPhase(session, now);
+    if (phase === SessionPhase.ENDED) {
       throw new DomainError(ErrorCode.CONFLICT, 'Sessions that have ended cannot be changed');
     }
     const changesSchedule =
       dto.startsAt !== undefined || dto.endsAt !== undefined || dto.capacity !== undefined;
-    if (now.getTime() >= session.startsAt.getTime() && changesSchedule) {
+    if (phase === SessionPhase.RUNNING && changesSchedule) {
       throw new DomainError(
         ErrorCode.CONFLICT,
         'The time and capacity of a session cannot change once it has started',
@@ -239,7 +244,7 @@ export class SessionsService {
   }
 
   private assertEventEditable(event: Event): void {
-    if (LOCKED_EVENT_STATUSES.includes(event.status)) {
+    if (isEventLocked(event.status)) {
       throw new DomainError(
         ErrorCode.CONFLICT,
         'Sessions of completed or cancelled events cannot be changed',

@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { EVENT_STATUSES, EVENT_TRANSITIONS, eventTimingProblem } from './domain.js';
+import {
+  EVENT_STATUSES,
+  EVENT_TRANSITIONS,
+  EventStatus,
+  eventTimingProblem,
+  isEventLocked,
+  sessionPhase,
+} from './domain.js';
 
 describe('EVENT_TRANSITIONS', () => {
   it('covers every status', () => {
@@ -29,5 +36,32 @@ describe('eventTimingProblem', () => {
     ['DRAFT', '2026-12-05T00:00:00Z', undefined],
   ] as const)('moving to %s at %s', (to, now, problem) => {
     expect(eventTimingProblem(to, { ...timing, now: new Date(now) })).toBe(problem);
+  });
+
+  it.each([
+    [EventStatus.DRAFT, false],
+    [EventStatus.PUBLISHED, false],
+    [EventStatus.COMPLETED, true],
+    [EventStatus.CANCELLED, true],
+  ])('treats a %s event as locked: %p', (status, locked) => {
+    expect(isEventLocked(status)).toBe(locked);
+  });
+
+  it('never lets a locked event move to another status', () => {
+    for (const status of EVENT_STATUSES.filter(isEventLocked)) {
+      expect(EVENT_TRANSITIONS[status]).toEqual([]);
+    }
+  });
+
+  it.each([
+    ['2026-12-01T08:59:59Z', 'UPCOMING'],
+    ['2026-12-01T09:00:00Z', 'RUNNING'],
+    ['2026-12-01T10:00:00Z', 'ENDED'],
+  ])('puts a 09:00-10:00 session at %s in phase %s', (now, phase) => {
+    const session = {
+      startsAt: new Date('2026-12-01T09:00:00Z'),
+      endsAt: new Date('2026-12-01T10:00:00Z'),
+    };
+    expect(sessionPhase(session, new Date(now))).toBe(phase);
   });
 });
