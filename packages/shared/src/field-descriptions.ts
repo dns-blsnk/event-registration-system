@@ -1,4 +1,4 @@
-import { ALMOST_FULL_RATIO, type EventStatus } from './domain.js';
+import { ALMOST_FULL_RATIO, type EventStatus, type RegistrationStatus } from './domain.js';
 import { formatPercent } from './format.js';
 
 /**
@@ -86,4 +86,27 @@ export const EVENT_STATUS_LABELS: Readonly<Record<EventStatus, string>> = {
   PUBLISHED: 'Published',
   COMPLETED: 'Completed',
   CANCELLED: 'Cancelled',
+};
+
+export const REGISTRATION_FIELDS = {
+  customer: { label: 'Customer', help: 'Who booked the seat.' },
+  session: { label: 'Session', help: 'The session the seat is in.' },
+  event: { label: 'Event', help: 'The event the session belongs to.' },
+  status: {
+    label: 'Status',
+    help: 'Confirmed holds a seat; waitlisted waits for one; attended and cancelled are final.',
+  },
+  createdAt: { label: 'Booked', help: 'When the customer made the booking.' },
+} as const satisfies Record<string, FieldDescription>;
+
+/** Controls of the registrations list that are not fields of a registration. */
+export const REGISTRATION_LIST_CONTROLS = {
+  search: { label: 'Search', help: "Matches the customer's name or email." },
+} as const satisfies Record<string, FieldDescription>;
+
+export const REGISTRATION_STATUS_LABELS: Readonly<Record<RegistrationStatus, string>> = {
+  CONFIRMED: 'Confirmed',
+  WAITLISTED: 'Waitlisted',
+  CANCELLED: 'Cancelled',
+  ATTENDED: 'Attended',
 };
