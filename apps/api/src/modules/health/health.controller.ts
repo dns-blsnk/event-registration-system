@@ -1,6 +1,6 @@
 import { Controller, Get, HttpStatus, Res } from '@nestjs/common';
 
-import { Public } from '../../common/auth/public.decorator.js';
+import { Public } from '../../common/auth/access.decorator.js';
 
 import { HealthService, type HealthStatus } from './health.service.js';
 

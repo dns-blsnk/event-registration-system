@@ -5,6 +5,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 
 import { AuthGuard } from './common/auth/auth.guard.js';
 import { CsrfGuard } from './common/auth/csrf.guard.js';
+import { PermissionGuard } from './common/auth/permission.guard.js';
 import { AllExceptionsFilter } from './common/errors/all-exceptions.filter.js';
 import { LoggingModule } from './common/logging/logging.module.js';
 import { MINUTE_MS } from './common/time.js';
@@ -32,10 +33,11 @@ const REQUESTS_PER_MINUTE_PER_IP = 300;
     HealthModule,
   ],
   providers: [
-    // Order matters: rate limit first, then resolve the session, then check CSRF.
+    // Order matters: rate limit, resolve the session, check CSRF, then check the role's permission.
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: AuthGuard },
     { provide: APP_GUARD, useClass: CsrfGuard },
+    { provide: APP_GUARD, useClass: PermissionGuard },
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
     { provide: APP_PIPE, useFactory: createValidationPipe },
   ],

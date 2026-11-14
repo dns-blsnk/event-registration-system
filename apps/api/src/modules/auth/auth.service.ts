@@ -9,7 +9,7 @@ import type { User } from '../../generated/prisma/client.js';
 import type { LoginDto } from './dto/login.dto.js';
 import type { SignupDto } from './dto/signup.dto.js';
 
-export interface SignedIn {
+export interface SignInResult {
   user: User;
   session: CreatedSession;
 }
@@ -25,7 +25,7 @@ export class AuthService {
     this.logger.setContext(AuthService.name);
   }
 
-  async signup(dto: SignupDto, meta: SessionMeta): Promise<SignedIn> {
+  async signup(dto: SignupDto, meta: SessionMeta): Promise<SignInResult> {
     const user = await this.registration.registerCustomer(dto);
     this.logger.info({ userId: user.id }, 'user signed up');
     return { user, session: await this.sessions.create(user.id, meta) };
@@ -39,7 +39,7 @@ export class AuthService {
     dto: LoginDto,
     meta: SessionMeta,
     previousToken: string | undefined,
-  ): Promise<SignedIn> {
+  ): Promise<SignInResult> {
     // Verify first: a failed attempt must not sign out whoever is currently signed in.
     const user = await this.credentials.verify(dto.email, dto.password, meta.ip);
     if (previousToken !== undefined) {

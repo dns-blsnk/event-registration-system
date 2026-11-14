@@ -1,13 +1,13 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req, Res } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 
+import { Public, SignedIn } from '../../common/auth/access.decorator.js';
 import { CurrentAuth } from '../../common/auth/current-user.decorator.js';
-import { Public } from '../../common/auth/public.decorator.js';
 import { SkipCsrfToken } from '../../common/auth/skip-csrf-token.decorator.js';
 import { MINUTE_MS } from '../../common/time.js';
 import { InjectConfig } from '../../config/config.module.js';
 
-import { AuthService, type SignedIn } from './auth.service.js';
+import { AuthService, type SignInResult } from './auth.service.js';
 import { LoginDto } from './dto/login.dto.js';
 import { SignupDto } from './dto/signup.dto.js';
 import { toPublicUser } from './public-user.js';
@@ -85,12 +85,13 @@ export class AuthController {
     response.clearCookie(sessionCookieName(this.config), clearSessionCookieOptions(this.config));
   }
 
+  @SignedIn()
   @Get('me')
   me(@CurrentAuth() auth: AuthContext): AuthResponse {
     return { user: toPublicUser(auth.user), csrfToken: auth.session.csrfToken };
   }
 
-  private startSession({ user, session }: SignedIn, response: Response): AuthResponse {
+  private startSession({ user, session }: SignInResult, response: Response): AuthResponse {
     response.cookie(
       sessionCookieName(this.config),
       session.token,

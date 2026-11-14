@@ -11,7 +11,7 @@ import {
 import { SessionService } from '../../modules/auth/session.service.js';
 import { DomainError } from '../errors/domain-error.js';
 
-import { IS_PUBLIC_KEY } from './public.decorator.js';
+import { accessRuleOf } from './access-rule.js';
 
 import type { Config } from '../../config/config.schema.js';
 import type { Request, Response } from 'express';
@@ -43,11 +43,8 @@ export class AuthGuard implements CanActivate {
           .clearCookie(sessionCookieName(this.config), clearSessionCookieOptions(this.config));
       }
     }
-    const isPublic = this.reflector.getAllAndOverride<boolean | undefined>(IS_PUBLIC_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
-    if (isPublic === true || request.auth !== undefined) {
+    const isPublic = accessRuleOf(this.reflector, context)?.kind === 'public';
+    if (isPublic || request.auth !== undefined) {
       return true;
     }
     throw new DomainError(ErrorCode.UNAUTHENTICATED, 'Sign in required', undefined, !isSuspicious);
