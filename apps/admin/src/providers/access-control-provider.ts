@@ -1,19 +1,8 @@
-import { Action, can, Resource } from '@ers/shared';
+import { can, isAction, isResource } from '@ers/shared';
 
 import { loadUser } from './auth-provider';
 
 import type { AccessControlProvider } from '@refinedev/core';
-
-const RESOURCES: ReadonlySet<string> = new Set(Object.values(Resource));
-const ACTIONS: ReadonlySet<string> = new Set(Object.values(Action));
-
-function isResource(value: string): value is Resource {
-  return RESOURCES.has(value);
-}
-
-function isAction(value: string): value is Action {
-  return ACTIONS.has(value);
-}
 
 /**
  * Deny by default: anything that is not a known resource and action of the matrix is refused.
