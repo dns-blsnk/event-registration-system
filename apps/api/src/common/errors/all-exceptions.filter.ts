@@ -1,16 +1,26 @@
 import { Catch, type ArgumentsHost, type ExceptionFilter } from '@nestjs/common';
-import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
+import { PinoLogger } from 'nestjs-pino';
 
+import { AppLogService } from '../../modules/app-logs/app-log.service.js';
 import { requestIdOf } from '../logging/request-id.js';
 
+import { errorLogEntry } from './error-log-entry.js';
 import { toErrorResponse } from './to-error-response.js';
 
 import type { Request, Response } from 'express';
 
-/** The only place that turns HTTP errors into responses. Logs server errors once, with the stack. */
+/**
+ * The only place that turns HTTP errors into responses. Server errors are logged once with the
+ * stack (stdout) and, like security-relevant failures, recorded in the admin-visible journal.
+ */
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
-  constructor(@InjectPinoLogger(AllExceptionsFilter.name) private readonly logger: PinoLogger) {}
+  constructor(
+    private readonly logger: PinoLogger,
+    private readonly appLogs: AppLogService,
+  ) {
+    this.logger.setContext(AllExceptionsFilter.name);
+  }
 
   catch(exception: unknown, host: ArgumentsHost): void {
     if (host.getType() !== 'http') {
@@ -27,6 +37,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
         { err: exception, code: body.code, requestId: body.requestId },
         'request failed',
       );
+    }
+    const entry = errorLogEntry(exception, body, request, isServerError);
+    if (entry !== undefined) {
+      this.appLogs.record(entry);
     }
     if (response.headersSent) {
       response.end();

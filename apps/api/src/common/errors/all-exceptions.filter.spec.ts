@@ -2,19 +2,37 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { AllExceptionsFilter } from './all-exceptions.filter.js';
 
+import type { AppLogService } from '../../modules/app-logs/app-log.service.js';
 import type { ArgumentsHost } from '@nestjs/common';
 import type { PinoLogger } from 'nestjs-pino';
+
+const REQUEST = {
+  id: 'req-1',
+  method: 'POST',
+  ip: '10.0.0.1',
+  get: () => 'test-agent',
+  originalUrl: '/api/x',
+};
 
 function httpHost(response: Record<string, unknown>): ArgumentsHost {
   return {
     getType: () => 'http',
-    switchToHttp: () => ({ getRequest: () => ({ id: 'req-1' }), getResponse: () => response }),
+    switchToHttp: () => ({ getRequest: () => REQUEST, getResponse: () => response }),
   } as unknown as ArgumentsHost;
 }
 
-function createFilter(): { filter: AllExceptionsFilter; error: ReturnType<typeof vi.fn> } {
+function createFilter(): {
+  filter: AllExceptionsFilter;
+  error: ReturnType<typeof vi.fn>;
+  record: ReturnType<typeof vi.fn>;
+} {
   const error = vi.fn();
-  return { filter: new AllExceptionsFilter({ error } as unknown as PinoLogger), error };
+  const record = vi.fn();
+  const filter = new AllExceptionsFilter(
+    { error, setContext: vi.fn() } as unknown as PinoLogger,
+    { record } as unknown as AppLogService,
+  );
+  return { filter, error, record };
 }
 
 function jsonResponse(): {
@@ -43,12 +61,48 @@ describe('AllExceptionsFilter', () => {
     expect(response.status).toHaveBeenCalledWith(500);
   });
 
-  it('does not log client errors', () => {
-    const { filter, error } = createFilter();
+  it('records a server error in the journal with the real cause', () => {
+    const { filter, record } = createFilter();
 
-    filter.catch(Object.assign(new Error('bad json'), { status: 400 }), httpHost(jsonResponse()));
+    filter.catch(new Error('db pool exhausted'), httpHost(jsonResponse()));
+
+    expect(record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        level: 'ERROR',
+        category: 'ERROR',
+        message: 'db pool exhausted',
+        statusCode: 500,
+        requestId: 'req-1',
+        method: 'POST',
+        ip: '10.0.0.1',
+        userAgent: 'test-agent',
+        stack: expect.stringContaining('db pool exhausted'),
+      }),
+    );
+  });
+
+  it.each([401, 403, 429])(
+    'records a %i response as a security event without a stack',
+    (status) => {
+      const { filter, record, error } = createFilter();
+
+      filter.catch(Object.assign(new Error('denied'), { status }), httpHost(jsonResponse()));
+
+      expect(error).not.toHaveBeenCalled();
+      expect(record).toHaveBeenCalledWith(
+        expect.objectContaining({ level: 'WARN', category: 'SECURITY', statusCode: status }),
+      );
+      expect(record.mock.calls[0]?.[0]).not.toHaveProperty('stack');
+    },
+  );
+
+  it.each([400, 404, 409])('does not journal an ordinary %i client error', (status) => {
+    const { filter, record, error } = createFilter();
+
+    filter.catch(Object.assign(new Error('client'), { status }), httpHost(jsonResponse()));
 
     expect(error).not.toHaveBeenCalled();
+    expect(record).not.toHaveBeenCalled();
   });
 
   it('only ends the response when headers were already sent', () => {

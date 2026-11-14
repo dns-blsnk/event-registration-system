@@ -14,6 +14,8 @@ export default defineConfig({
         extends: true,
         test: {
           name: 'integration',
+          // All files share one test database, so they run one after another.
+          fileParallelism: false,
           include: ['test/integration/**/*.int-spec.ts'],
           setupFiles: ['test/helpers/integration-setup.ts'],
           globalSetup: ['test/helpers/global-setup.ts'],
