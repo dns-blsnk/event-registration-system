@@ -21,6 +21,7 @@ import { BrowserRouter, Outlet, Route, Routes } from 'react-router';
 import { AppLogList } from './pages/app-logs/app-log-list';
 import { AppLogShow } from './pages/app-logs/app-log-show';
 import { LoginPage } from './pages/auth/login-page';
+import { SignupPage } from './pages/auth/signup-page';
 import { CatalogList } from './pages/catalog/catalog-list';
 import { CatalogShow } from './pages/catalog/catalog-show';
 import { CustomerList } from './pages/customers/customer-list';
@@ -35,7 +36,7 @@ import { SessionList } from './pages/sessions/session-list';
 import { TagList } from './pages/tags/tag-list';
 import { UserList } from './pages/users/user-list';
 import { accessControlProvider } from './providers/access-control-provider';
-import { authProvider, HOME_PATH, LOGIN_PATH } from './providers/auth-provider';
+import { authProvider, HOME_PATH, LOGIN_PATH, REGISTER_PATH } from './providers/auth-provider';
 import { dataProvider } from './providers/data-provider';
 import { resources } from './resources';
 
@@ -109,6 +110,7 @@ export function App(): React.JSX.Element {
                 }
               >
                 <Route path={LOGIN_PATH} element={<LoginPage />} />
+                <Route path={REGISTER_PATH} element={<SignupPage />} />
               </Route>
             </Routes>
             <UnsavedChangesNotifier />

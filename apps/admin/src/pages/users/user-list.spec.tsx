@@ -113,7 +113,10 @@ describe('UserList', () => {
     await userEvent.type(within(dialog).getByLabelText(/^Password/), 'short');
     await userEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
 
-    expect(await within(dialog).findByText(/At least 10 characters/)).toBeInTheDocument();
+    expect(
+      await within(dialog).findByText('Too short: use at least 10 characters'),
+    ).toBeInTheDocument();
+    expect(within(dialog).getByLabelText(/^Password/)).toHaveAttribute('aria-invalid', 'true');
     expect(calls.some((call) => call.method === 'post')).toBe(false);
   });
 

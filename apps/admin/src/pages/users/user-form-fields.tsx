@@ -2,8 +2,6 @@ import {
   EMAIL_MAX_LENGTH,
   NAME_MAX_LENGTH,
   OWN_ROLE_LOCKED_HELP,
-  PASSWORD_MAX_LENGTH,
-  PASSWORD_MIN_LENGTH,
   ROLE_LABELS,
   ROLES,
   USER_FIELDS,
@@ -13,7 +11,7 @@ import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import { Controller, type Control, type FieldErrors, type UseFormRegister } from 'react-hook-form';
 
-import { EMAIL_RULES, fieldHelp, REQUIRED, REQUIRED_TEXT } from '../../components/forms';
+import { EMAIL_RULES, fieldHelp, NEW_PASSWORD_RULES, REQUIRED_TEXT } from '../../components/forms';
 
 import type { UserFormValues } from './user-form-values';
 
@@ -25,11 +23,6 @@ interface UserFormFieldsProps {
   /** Own account, or no change-role permission: the API would refuse, so the form does not offer it. */
   isRoleLocked: boolean;
 }
-
-const PASSWORD_RULES = {
-  required: REQUIRED,
-  minLength: { value: PASSWORD_MIN_LENGTH, message: USER_FIELDS.password.help },
-};
 
 /** The fields of the user form; email and password only when creating, limits from packages/shared. */
 export function UserFormFields({
@@ -85,13 +78,12 @@ export function UserFormFields({
       />
       {isNew && (
         <TextField
-          {...register('password', PASSWORD_RULES)}
+          {...register('password', NEW_PASSWORD_RULES)}
           type="password"
           autoComplete="new-password"
           label={USER_FIELDS.password.label}
           helperText={fieldHelp(errors.password, USER_FIELDS.password.help)}
           error={errors.password !== undefined}
-          slotProps={{ htmlInput: { maxLength: PASSWORD_MAX_LENGTH } }}
           required
         />
       )}

@@ -1,12 +1,13 @@
 import { HttpStatusCode } from 'axios';
 
-import { messageOf, statusOf } from '../api/errors';
+import { apiErrorOf, messageOf, statusOf } from '../api/errors';
 import { http, ME_PATH, onSessionRefreshed, setCsrfToken } from '../api/http';
 
 import type { AuthResponse, PublicUser } from '@ers/shared';
 import type { AuthProvider } from '@refinedev/core';
 
 export const LOGIN_PATH = '/login';
+export const REGISTER_PATH = '/register';
 export const HOME_PATH = '/';
 
 const AUTH_PATHS = {
@@ -69,7 +70,16 @@ async function signIn(path: string, body: Record<string, unknown>, failure: stri
     remember((await http.post<AuthResponse>(path, body)).data);
     return { success: true, redirectTo: HOME_PATH };
   } catch (error) {
-    return { success: false, error: { name: failure, message: messageOf(error, failure) } };
+    // Field details go along, so a form can mark the field the API refused.
+    const details = apiErrorOf(error)?.details;
+    return {
+      success: false,
+      error: {
+        name: failure,
+        message: messageOf(error, failure),
+        ...(details === undefined ? {} : { details }),
+      },
+    };
   }
 }
 
