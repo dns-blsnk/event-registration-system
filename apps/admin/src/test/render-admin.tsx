@@ -1,6 +1,6 @@
 import { ThemeProvider } from '@mui/material/styles';
 import { Refine } from '@refinedev/core';
-import { RefineThemes } from '@refinedev/mui';
+import { RefineSnackbarProvider, RefineThemes, useNotificationProvider } from '@refinedev/mui';
 import routerProvider from '@refinedev/react-router';
 import { render, type RenderResult } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
@@ -23,22 +23,25 @@ export function renderAdminPage({
   return render(
     <MemoryRouter initialEntries={[path]}>
       <ThemeProvider theme={RefineThemes.Blue}>
-        <Refine
-          routerProvider={routerProvider}
-          authProvider={authProvider}
-          dataProvider={dataProvider}
-          accessControlProvider={accessControlProvider}
-          resources={resources}
-          // No retries in tests: a failed request should show its error state right away.
-          options={{
-            disableTelemetry: true,
-            reactQuery: { clientConfig: { defaultOptions: { queries: { retry: false } } } },
-          }}
-        >
-          <Routes>
-            <Route path={route} element={element} />
-          </Routes>
-        </Refine>
+        <RefineSnackbarProvider>
+          <Refine
+            routerProvider={routerProvider}
+            authProvider={authProvider}
+            dataProvider={dataProvider}
+            accessControlProvider={accessControlProvider}
+            notificationProvider={useNotificationProvider}
+            resources={resources}
+            // No retries in tests: a failed request should show its error state right away.
+            options={{
+              disableTelemetry: true,
+              reactQuery: { clientConfig: { defaultOptions: { queries: { retry: false } } } },
+            }}
+          >
+            <Routes>
+              <Route path={route} element={element} />
+            </Routes>
+          </Refine>
+        </RefineSnackbarProvider>
       </ThemeProvider>
     </MemoryRouter>,
   );
