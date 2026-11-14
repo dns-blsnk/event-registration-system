@@ -47,6 +47,11 @@ function isUnavailable(error: unknown): boolean {
 
 const CHECK_VIOLATION = '23514';
 
+export const PrismaErrorCode = {
+  UNIQUE_VIOLATION: 'P2002',
+  NOT_FOUND: 'P2025',
+} as const;
+
 /** Public meaning of each CHECK constraint, so a violation is a clear 4xx instead of a 500. */
 const CHECK_CONSTRAINT_ERRORS: Readonly<
   Record<string, { code: ErrorCode; message: string; field?: string }>
@@ -108,6 +113,11 @@ function checkViolationError(error: Prisma.PrismaClientKnownRequestError): Domai
   return new DomainError(known.code, known.message, details);
 }
 
+/** The Prisma error code (P2002, P2025, ...) of a known request error, for services that translate one case themselves. */
+export function prismaErrorCode(error: unknown): string | undefined {
+  return error instanceof Prisma.PrismaClientKnownRequestError ? error.code : undefined;
+}
+
 /**
  * Maps database failures to domain errors; returns undefined for anything else.
  * P2003 means a referenced row is missing or still referenced; services check references
@@ -125,11 +135,11 @@ export function translatePrismaError(error: unknown): DomainError | undefined {
     return checkError;
   }
   switch (error.code) {
-    case 'P2002':
+    case PrismaErrorCode.UNIQUE_VIOLATION:
       return new DomainError(ErrorCode.CONFLICT, 'A record with these values already exists');
     case 'P2003':
       return new DomainError(ErrorCode.CONFLICT, 'A related record is missing or still in use');
-    case 'P2025':
+    case PrismaErrorCode.NOT_FOUND:
       return new DomainError(ErrorCode.NOT_FOUND, 'Record not found');
     case 'P2028':
     case 'P2034':

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { Prisma } from '../../generated/prisma/client.js';
 
 import { DomainError } from './domain-error.js';
-import { translatePrismaError } from './prisma-errors.js';
+import { prismaErrorCode, translatePrismaError } from './prisma-errors.js';
 import { toErrorResponse } from './to-error-response.js';
 
 function knownError(code: string): Prisma.PrismaClientKnownRequestError {
@@ -126,5 +126,15 @@ describe('CHECK constraint violations', () => {
     expect(isServerError).toBe(false);
     expect(body.code).toBe('VALIDATION_FAILED');
     expect(body.message).not.toContain('something_new_check');
+  });
+});
+
+describe('prismaErrorCode', () => {
+  it('returns the code of a known request error', () => {
+    expect(prismaErrorCode(knownError('P2002'))).toBe('P2002');
+  });
+
+  it.each([new Error('plain'), 'text', undefined])('returns undefined for %p', (error) => {
+    expect(prismaErrorCode(error)).toBeUndefined();
   });
 });
