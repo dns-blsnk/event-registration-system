@@ -1,4 +1,4 @@
-import dayjs from 'dayjs';
+import { fromInputDateTime, toInputDateTime } from '../../components/date-input';
 
 import type { EventDetail, TagRef } from '@ers/shared';
 
@@ -24,8 +24,6 @@ export interface EventPayload {
   tagIds: string[];
 }
 
-const INPUT_DATE_TIME = 'YYYY-MM-DDTHH:mm';
-
 export const EMPTY_EVENT_FORM: EventFormValues = {
   title: '',
   description: '',
@@ -35,15 +33,6 @@ export const EMPTY_EVENT_FORM: EventFormValues = {
   endsAt: '',
   tags: [],
 };
-
-export function toInputDateTime(iso: string): string {
-  return dayjs(iso).format(INPUT_DATE_TIME);
-}
-
-/** A `datetime-local` value (local time) as the ISO instant the API stores. */
-export function fromInputDateTime(local: string): string {
-  return new Date(local).toISOString();
-}
 
 export function toEventFormValues(event: EventDetail): EventFormValues {
   return {

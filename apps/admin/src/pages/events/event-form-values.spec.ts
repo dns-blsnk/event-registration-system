@@ -1,22 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  fromInputDateTime,
-  toEventFormValues,
-  toEventPatch,
-  toEventPayload,
-  toInputDateTime,
-} from './event-form-values';
+import { toEventFormValues, toEventPatch, toEventPayload } from './event-form-values';
 
 import type { EventDetail } from '@ers/shared';
 
 describe('event form values', () => {
-  it('round-trips a date through the datetime-local input', () => {
-    const iso = '2026-12-01T09:30:00.000Z';
-
-    expect(fromInputDateTime(toInputDateTime(iso))).toBe(iso);
-  });
-
   it('turns an event into form values and back into the API payload', () => {
     const event = {
       title: 'Summit',

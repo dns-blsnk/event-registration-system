@@ -14,19 +14,14 @@ import TextField, { type TextFieldProps } from '@mui/material/TextField';
 import { useAutocomplete } from '@refinedev/mui';
 import { Controller, type Control, type FieldErrors, type UseFormRegister } from 'react-hook-form';
 
+import { fieldHelp, REQUIRED } from '../../components/forms';
+
 import type { EventFormValues } from './event-form-values';
 
 interface EventFormFieldsProps {
   register: UseFormRegister<EventFormValues>;
   control: Control<EventFormValues>;
   errors: FieldErrors<EventFormValues>;
-}
-
-const REQUIRED = 'Required';
-
-/** Helper text: the error when there is one, otherwise the shared description of the field. */
-function help(error: { message?: string } | undefined, description: string): string {
-  return error?.message ?? description;
 }
 
 /** The fields of the event form, shared by create and edit; limits and texts come from packages/shared. */
@@ -45,7 +40,7 @@ export function EventFormFields({
       <TextField
         {...register('title', { required: REQUIRED })}
         label={EVENT_FIELDS.title.label}
-        helperText={help(errors.title, EVENT_FIELDS.title.help)}
+        helperText={fieldHelp(errors.title, EVENT_FIELDS.title.help)}
         error={errors.title !== undefined}
         slotProps={{ htmlInput: { maxLength: EVENT_TITLE_MAX_LENGTH } }}
         required
@@ -53,7 +48,7 @@ export function EventFormFields({
       <TextField
         {...register('description', { required: REQUIRED })}
         label={EVENT_FIELDS.description.label}
-        helperText={help(errors.description, EVENT_FIELDS.description.help)}
+        helperText={fieldHelp(errors.description, EVENT_FIELDS.description.help)}
         error={errors.description !== undefined}
         slotProps={{ htmlInput: { maxLength: EVENT_DESCRIPTION_MAX_LENGTH } }}
         multiline
@@ -64,7 +59,7 @@ export function EventFormFields({
         <TextField
           {...register('city', { required: REQUIRED })}
           label={EVENT_FIELDS.city.label}
-          helperText={help(errors.city, EVENT_FIELDS.city.help)}
+          helperText={fieldHelp(errors.city, EVENT_FIELDS.city.help)}
           error={errors.city !== undefined}
           slotProps={{ htmlInput: { maxLength: EVENT_CITY_MAX_LENGTH } }}
           required
@@ -73,7 +68,7 @@ export function EventFormFields({
         <TextField
           {...register('venue', { required: REQUIRED })}
           label={EVENT_FIELDS.venue.label}
-          helperText={help(errors.venue, EVENT_FIELDS.venue.help)}
+          helperText={fieldHelp(errors.venue, EVENT_FIELDS.venue.help)}
           error={errors.venue !== undefined}
           slotProps={{ htmlInput: { maxLength: EVENT_VENUE_MAX_LENGTH } }}
           required
@@ -85,7 +80,7 @@ export function EventFormFields({
           {...register('startsAt', { required: REQUIRED })}
           type="datetime-local"
           label={EVENT_FIELDS.startsAt.label}
-          helperText={help(errors.startsAt, EVENT_FIELDS.startsAt.help)}
+          helperText={fieldHelp(errors.startsAt, EVENT_FIELDS.startsAt.help)}
           error={errors.startsAt !== undefined}
           slotProps={{ inputLabel: { shrink: true } }}
           required
@@ -95,7 +90,7 @@ export function EventFormFields({
           {...register('endsAt', { required: REQUIRED })}
           type="datetime-local"
           label={EVENT_FIELDS.endsAt.label}
-          helperText={help(errors.endsAt, EVENT_FIELDS.endsAt.help)}
+          helperText={fieldHelp(errors.endsAt, EVENT_FIELDS.endsAt.help)}
           error={errors.endsAt !== undefined}
           slotProps={{ inputLabel: { shrink: true } }}
           required
