@@ -7,6 +7,7 @@ import { LoggingModule } from './common/logging/logging.module.js';
 import { createValidationPipe } from './common/validation/validation.pipe.js';
 import { ConfigModule } from './config/config.module.js';
 import { AppLogsModule } from './modules/app-logs/app-logs.module.js';
+import { AuthModule } from './modules/auth/auth.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 
@@ -17,6 +18,7 @@ import { PrismaModule } from './prisma/prisma.module.js';
     ScheduleModule.forRoot(),
     PrismaModule,
     AppLogsModule,
+    AuthModule,
     HealthModule,
   ],
   providers: [

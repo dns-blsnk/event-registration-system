@@ -9,6 +9,52 @@ datasource db {
   provider = "postgresql"
 }
 
+/// Values match the Role constants in @ers/shared.
+enum Role {
+  ADMIN
+  ORGANIZER
+  CUSTOMER
+}
+
+/// Admins, organizers and customers. Customers book seats; organizers run their own events.
+model User {
+  id           String        @id @default(uuid()) @db.Uuid
+  /// Stored lower-cased and trimmed (CHECK constraint in the migration), so uniqueness is case-insensitive.
+  email        String        @unique @db.VarChar(254)
+  name         String        @db.VarChar(120)
+  /// argon2id hash; null for accounts that only sign in through OAuth.
+  passwordHash String?       @map("password_hash") @db.VarChar(255)
+  role         Role          @default(CUSTOMER)
+  githubId     String?       @unique @map("github_id") @db.VarChar(64)
+  avatarKey    String?       @map("avatar_key") @db.VarChar(512)
+  createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+  sessions     AuthSession[]
+
+  @@index([role])
+  @@map("users")
+}
+
+/// Server-side session. The cookie holds a random token; only its SHA-256 is stored here.
+model AuthSession {
+  id         String   @id @default(uuid()) @db.Uuid
+  tokenHash  String   @unique @map("token_hash") @db.Char(64)
+  /// Sent to the client and echoed in X-CSRF-Token on every state-changing request.
+  csrfToken  String   @map("csrf_token") @db.Char(64)
+  userId     String   @map("user_id") @db.Uuid
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  lastSeenAt DateTime @default(now()) @map("last_seen_at") @db.Timestamptz(3)
+  expiresAt  DateTime @map("expires_at") @db.Timestamptz(3)
+  ip         String?  @db.VarChar(64)
+  userAgent  String?  @map("user_agent") @db.VarChar(512)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([lastSeenAt])
+  @@map("auth_sessions")
+}
+
 enum LogLevel {
   WARN
   ERROR
