@@ -5,7 +5,12 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { PrismaService } from '../../src/prisma/prisma.service.js';
 import { signedInAgent, type SignedInAgent, TEST_PASSWORD } from '../helpers/auth.js';
 import { createTestApp } from '../helpers/create-test-app.js';
-import { createUser } from '../helpers/factories.js';
+import {
+  createEvent,
+  createRegistration,
+  createSession,
+  createUser,
+} from '../helpers/factories.js';
 
 import type { INestApplication } from '@nestjs/common';
 
@@ -213,6 +218,31 @@ describe('users API (admin only)', () => {
 
       await admin.agent.get(`/api/users/${target.userId}`).expect(404);
       await target.agent.get('/api/auth/me').expect(401);
+    });
+
+    it('refuses to delete an organizer who owns events', async () => {
+      const event = await createEvent(prisma);
+
+      const response = await admin.agent
+        .delete(`/api/users/${event.organizerId}`)
+        .set('x-csrf-token', admin.csrfToken)
+        .expect(409);
+
+      expect(response.body.message).toBe(
+        'This user owns events or has registrations and cannot be deleted',
+      );
+    });
+
+    it('refuses to delete a customer who has registrations', async () => {
+      const registration = await createRegistration(
+        prisma,
+        await createSession(prisma, await createEvent(prisma)),
+      );
+
+      await admin.agent
+        .delete(`/api/users/${registration.customerId}`)
+        .set('x-csrf-token', admin.csrfToken)
+        .expect(409);
     });
 
     it('does not let an admin delete their own account', async () => {

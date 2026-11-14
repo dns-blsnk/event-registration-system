@@ -127,6 +127,7 @@ export class UsersService {
         throw new DomainError(ErrorCode.FORBIDDEN, 'You do not have permission to delete users');
       }
       await this.assertNotLastAdmin(tx, target);
+      await this.assertHasNoHistory(tx, id);
       await tx.user.delete({ where: { id } });
     }, LOCKING_TRANSACTION);
   }
@@ -158,6 +159,20 @@ export class UsersService {
       throw new DomainError(ErrorCode.UNAUTHENTICATED, 'Sign in required');
     }
     return { target, actorNow };
+  }
+
+  /** Events and bookings are history: their owner cannot be deleted, only demoted. */
+  private async assertHasNoHistory(tx: Prisma.TransactionClient, id: string): Promise<void> {
+    const [events, registrations] = await Promise.all([
+      tx.event.count({ where: { organizerId: id } }),
+      tx.registration.count({ where: { customerId: id } }),
+    ]);
+    if (events > 0 || registrations > 0) {
+      throw new DomainError(
+        ErrorCode.CONFLICT,
+        'This user owns events or has registrations and cannot be deleted',
+      );
+    }
   }
 
   /** Keeps at least one admin, so the system can never lock itself out of user management. */

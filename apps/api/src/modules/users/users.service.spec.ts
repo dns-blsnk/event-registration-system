@@ -19,6 +19,7 @@ function setup(
   target: User,
   adminCount: number,
   actorNow: User = actor,
+  history: { events: number; registrations: number } = { events: 0, registrations: 0 },
 ): {
   service: UsersService;
   tx: { $queryRaw: ReturnType<typeof vi.fn>; user: Record<string, ReturnType<typeof vi.fn>> };
@@ -34,6 +35,8 @@ function setup(
       update: vi.fn().mockResolvedValue(target),
       delete: vi.fn().mockResolvedValue(target),
     },
+    event: { count: vi.fn().mockResolvedValue(history.events) },
+    registration: { count: vi.fn().mockResolvedValue(history.registrations) },
   };
   const prisma = {
     ...tx,
@@ -148,5 +151,27 @@ describe('UsersService deletion', () => {
     tx.user.findUnique?.mockResolvedValue(null);
 
     expect(await messageOf(() => service.remove('gone', actor))).toBe('User not found');
+  });
+});
+
+describe('UsersService history protection', () => {
+  it.each([
+    ['owns events', { events: 2, registrations: 0 }],
+    ['has registrations', { events: 0, registrations: 1 }],
+  ])('refuses to delete a user who %s', async (_label, history) => {
+    const { service, tx } = setup(user('target', 'CUSTOMER'), 2, actor, history);
+
+    expect(await messageOf(() => service.remove('target', actor))).toBe(
+      'This user owns events or has registrations and cannot be deleted',
+    );
+    expect(tx.user.delete).not.toHaveBeenCalled();
+  });
+
+  it('deletes a user without history', async () => {
+    const { service, tx } = setup(user('target', 'CUSTOMER'), 2);
+
+    await service.remove('target', actor);
+
+    expect(tx.user.delete).toHaveBeenCalledWith({ where: { id: 'target' } });
   });
 });
