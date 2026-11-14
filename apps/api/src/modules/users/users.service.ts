@@ -2,13 +2,13 @@ import { Action, can, ErrorCode, Resource, Role } from '@ers/shared';
 import { Injectable } from '@nestjs/common';
 
 import { DomainError } from '../../common/errors/domain-error.js';
+import { orderByOf, type ListQuery } from '../../common/pagination/list-query.js';
 import { containsInsensitive } from '../../common/pagination/search.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { normalizeEmail } from '../auth/email.js';
 import { PasswordService } from '../auth/password.service.js';
 import { SessionService } from '../auth/session.service.js';
 
-import type { ListQuery } from '../../common/pagination/list-query.js';
 import type { ListResult } from '../../common/pagination/list-result.js';
 import type { Prisma, User } from '../../generated/prisma/client.js';
 import type { CreateUserDto } from './dto/create-user.dto.js';
@@ -53,11 +53,7 @@ export class UsersService {
     const [items, total] = await this.prisma.$transaction([
       this.prisma.user.findMany({
         where,
-        // id as tiebreaker keeps offset pagination stable when sort values repeat.
-        orderBy: [
-          ...query.sort.map(({ field, direction }) => ({ [field]: direction })),
-          { id: 'asc' },
-        ],
+        orderBy: orderByOf(query),
         skip: query.skip,
         take: query.take,
       }),

@@ -1,11 +1,11 @@
 import { RegistrationStatus } from '@ers/shared';
 import { Injectable } from '@nestjs/common';
 
+import { orderByOf, type ListQuery } from '../../common/pagination/list-query.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 
 import { MY_REGISTRATION_INCLUDE, toMyRegistration } from './my-registration-view.js';
 
-import type { ListQuery } from '../../common/pagination/list-query.js';
 import type { ListResult } from '../../common/pagination/list-result.js';
 import type { Prisma } from '../../generated/prisma/client.js';
 import type { MyRegistration } from '@ers/shared';
@@ -30,10 +30,7 @@ export class MyRegistrationsService {
       this.prisma.registration.findMany({
         where,
         include: MY_REGISTRATION_INCLUDE,
-        orderBy: [
-          ...query.sort.map(({ field, direction }) => ({ [field]: direction })),
-          { id: 'asc' },
-        ],
+        orderBy: orderByOf(query),
         skip: query.skip,
         take: query.take,
       }),

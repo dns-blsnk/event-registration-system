@@ -14,6 +14,22 @@ export interface ListQuery<TField extends string> {
   search: string | undefined;
 }
 
+/**
+ * Prisma `orderBy` for a parsed list query. The id tiebreaker keeps offset pagination stable when
+ * sort values repeat. `mapField` translates computed fields (such as a relation count) that are
+ * not plain columns; it returns undefined for plain ones.
+ */
+export function orderByOf<TField extends string, TOrder extends object = never>(
+  query: ListQuery<TField>,
+  mapField?: (field: TField, direction: SortDirection) => TOrder | undefined,
+): (TOrder | Record<string, SortDirection>)[] {
+  const fields = query.sort.map(
+    ({ field, direction }) => mapField?.(field, direction) ?? { [field]: direction },
+  );
+  const sortsById = query.sort.some(({ field }) => field === 'id');
+  return sortsById ? fields : [...fields, { id: 'asc' }];
+}
+
 export interface ListQuerySpec<TField extends string> {
   sortable: readonly TField[];
   defaultSort: { field: TField; direction: SortDirection };

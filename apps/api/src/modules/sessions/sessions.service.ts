@@ -4,6 +4,7 @@ import { Injectable } from '@nestjs/common';
 import { DomainError } from '../../common/errors/domain-error.js';
 import { fieldError } from '../../common/errors/field-error.js';
 import { omitUndefined } from '../../common/objects.js';
+import { orderByOf, type ListQuery } from '../../common/pagination/list-query.js';
 import { containsInsensitive } from '../../common/pagination/search.js';
 import { isValidRange, isWithin, type TimeRange } from '../../domain/schedule.js';
 import { Prisma, type Event, type Session, type User } from '../../generated/prisma/client.js';
@@ -14,7 +15,6 @@ import { promoteFromWaitlist } from '../registrations/waitlist.js';
 import { sessionScope } from './session-scope.js';
 import { SESSION_INCLUDE, type SessionWithRelations } from './session-view.js';
 
-import type { ListQuery } from '../../common/pagination/list-query.js';
 import type { ListResult } from '../../common/pagination/list-result.js';
 import type { CreateSessionDto } from './dto/create-session.dto.js';
 import type { UpdateSessionDto } from './dto/update-session.dto.js';
@@ -69,10 +69,7 @@ export class SessionsService {
       this.prisma.session.findMany({
         where,
         include: SESSION_INCLUDE,
-        orderBy: [
-          ...query.sort.map(({ field, direction }) => ({ [field]: direction })),
-          { id: 'asc' },
-        ],
+        orderBy: orderByOf(query),
         skip: query.skip,
         take: query.take,
       }),

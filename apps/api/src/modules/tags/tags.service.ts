@@ -3,10 +3,10 @@ import { Injectable } from '@nestjs/common';
 
 import { DomainError } from '../../common/errors/domain-error.js';
 import { PrismaErrorCode, prismaErrorCode } from '../../common/errors/prisma-errors.js';
+import { orderByOf, type ListQuery } from '../../common/pagination/list-query.js';
 import { containsInsensitive } from '../../common/pagination/search.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 
-import type { ListQuery } from '../../common/pagination/list-query.js';
 import type { ListResult } from '../../common/pagination/list-result.js';
 import type { Prisma } from '../../generated/prisma/client.js';
 import type { TagDto } from './dto/tag.dto.js';
@@ -38,10 +38,9 @@ export class TagsService {
       this.prisma.tag.findMany({
         where,
         select: TAG_SELECT,
-        orderBy: [
-          ...query.sort.map(({ field, direction }) => ({ [field]: direction })),
-          { id: 'asc' },
-        ],
+        orderBy: orderByOf(query, (field, direction) =>
+          field === 'eventCount' ? { events: { _count: direction } } : undefined,
+        ),
         skip: query.skip,
         take: query.take,
       }),

@@ -4,6 +4,7 @@ import { Injectable } from '@nestjs/common';
 import { DomainError } from '../../common/errors/domain-error.js';
 import { fieldError } from '../../common/errors/field-error.js';
 import { omitUndefined } from '../../common/objects.js';
+import { orderByOf, type ListQuery } from '../../common/pagination/list-query.js';
 import { containsInsensitive } from '../../common/pagination/search.js';
 import { isValidRange } from '../../domain/schedule.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
@@ -13,7 +14,6 @@ import { eventScope } from './event-scope.js';
 import { EVENT_INCLUDE, type EventWithRelations } from './event-view.js';
 import { makeSlug } from './slug.js';
 
-import type { ListQuery } from '../../common/pagination/list-query.js';
 import type { ListResult } from '../../common/pagination/list-result.js';
 import type { Prisma, User } from '../../generated/prisma/client.js';
 import type { CreateEventDto } from './dto/create-event.dto.js';
@@ -74,10 +74,7 @@ export class EventsService {
       this.prisma.event.findMany({
         where,
         include: EVENT_INCLUDE,
-        orderBy: [
-          ...query.sort.map(({ field, direction }) => ({ [field]: direction })),
-          { id: 'asc' },
-        ],
+        orderBy: orderByOf(query),
         skip: query.skip,
         take: query.take,
       }),

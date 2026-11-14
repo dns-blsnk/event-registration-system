@@ -2,13 +2,13 @@ import { ErrorCode, type RegistrationStatus } from '@ers/shared';
 import { Injectable } from '@nestjs/common';
 
 import { DomainError } from '../../common/errors/domain-error.js';
+import { orderByOf, type ListQuery } from '../../common/pagination/list-query.js';
 import { containsInsensitive } from '../../common/pagination/search.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 
 import { registrationScope } from './registration-scope.js';
 import { REGISTRATION_INCLUDE, type RegistrationWithRelations } from './registration-view.js';
 
-import type { ListQuery } from '../../common/pagination/list-query.js';
 import type { ListResult } from '../../common/pagination/list-result.js';
 import type { Prisma, User } from '../../generated/prisma/client.js';
 
@@ -54,10 +54,7 @@ export class RegistrationsService {
       this.prisma.registration.findMany({
         where,
         include: REGISTRATION_INCLUDE,
-        orderBy: [
-          ...query.sort.map(({ field, direction }) => ({ [field]: direction })),
-          { id: 'asc' },
-        ],
+        orderBy: orderByOf(query),
         skip: query.skip,
         take: query.take,
       }),

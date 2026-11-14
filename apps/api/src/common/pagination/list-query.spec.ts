@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { DomainError } from '../errors/domain-error.js';
 
-import { enumFilter, parseListQuery } from './list-query.js';
+import { enumFilter, orderByOf, parseListQuery } from './list-query.js';
 
 const SPEC = {
   sortable: ['name', 'createdAt'] as const,
@@ -80,5 +80,54 @@ describe('enumFilter', () => {
 
   it.each(['SUPERUSER', ['ADMIN', 'CUSTOMER']])('rejects %p', (raw) => {
     expect(failureField(() => enumFilter(raw, 'role', ['ADMIN']))).toBe('role');
+  });
+});
+
+describe('orderByOf', () => {
+  it('maps each sort field and appends the id tiebreaker', () => {
+    expect(
+      orderByOf({
+        skip: 0,
+        take: 10,
+        search: undefined,
+        sort: [
+          { field: 'name', direction: 'desc' },
+          { field: 'createdAt', direction: 'asc' },
+        ],
+      }),
+    ).toEqual([{ name: 'desc' }, { createdAt: 'asc' }, { id: 'asc' }]);
+  });
+});
+
+describe('orderByOf edge cases', () => {
+  const base = { skip: 0, take: 10, search: undefined };
+
+  it('adds the tiebreaker to a single default sort', () => {
+    expect(orderByOf({ ...base, sort: [{ field: 'name', direction: 'asc' }] })).toEqual([
+      { name: 'asc' },
+      { id: 'asc' },
+    ]);
+  });
+
+  it('does not repeat id when the list is already sorted by it', () => {
+    expect(orderByOf({ ...base, sort: [{ field: 'id', direction: 'desc' }] })).toEqual([
+      { id: 'desc' },
+    ]);
+  });
+
+  it('lets a computed field map to its own orderBy and keeps plain fields as columns', () => {
+    const query = {
+      ...base,
+      sort: [
+        { field: 'eventCount' as 'eventCount' | 'name', direction: 'desc' as const },
+        { field: 'name' as 'eventCount' | 'name', direction: 'asc' as const },
+      ],
+    };
+
+    expect(
+      orderByOf(query, (field, direction) =>
+        field === 'eventCount' ? { events: { _count: direction } } : undefined,
+      ),
+    ).toEqual([{ events: { _count: 'desc' } }, { name: 'asc' }, { id: 'asc' }]);
   });
 });
