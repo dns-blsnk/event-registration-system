@@ -19,6 +19,7 @@ import {
   REGISTRATION_LIST_CONTROLS,
   REGISTRATION_STATUS_LABELS,
   SESSION_FIELDS,
+  SIGNUP_FIELDS,
   ROLE_LABELS,
   SESSION_LIST_CONTROLS,
   USER_FIELDS,
@@ -44,6 +45,7 @@ describe('field descriptions', () => {
       ...Object.values(CUSTOMER_FIELDS),
       ...Object.values(TAG_LIST_CONTROLS),
       ...Object.values(CUSTOMER_LIST_CONTROLS),
+      ...Object.values(SIGNUP_FIELDS),
     ]) {
       expect(description.label.length).toBeGreaterThan(0);
       expect(description.help.length).toBeGreaterThan(0);

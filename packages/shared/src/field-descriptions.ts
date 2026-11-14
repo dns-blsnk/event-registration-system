@@ -212,3 +212,16 @@ export const TAG_LIST_CONTROLS = {
 export const CUSTOMER_LIST_CONTROLS = {
   search: USER_LIST_CONTROLS.search,
 } as const satisfies Record<string, FieldDescription>;
+
+/** The self sign-up form: new accounts are always customers. */
+export const SIGNUP_FIELDS = {
+  name: { label: 'Name', help: 'How organizers will see you on your bookings.' },
+  email: { label: 'Email', help: 'You will sign in with it.' },
+  password: {
+    label: 'Password',
+    help: `At least ${String(PASSWORD_MIN_LENGTH)} characters.`,
+  },
+} as const satisfies Record<string, FieldDescription>;
+
+/** The error a new password below the minimum gets, distinct from the help text it replaces. */
+export const PASSWORD_TOO_SHORT_MESSAGE = `Too short: use at least ${String(PASSWORD_MIN_LENGTH)} characters`;
