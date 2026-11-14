@@ -74,6 +74,10 @@ export const SESSION_FIELDS = {
 /** Controls of the events list that are not fields of an event. */
 export const EVENT_LIST_CONTROLS = {
   search: { label: 'Search', help: 'Matches the title, city or venue.' },
+  tag: { label: 'Tag', help: 'Only events with this tag.' },
+  startsFrom: { label: 'Starts from', help: 'Events starting on or after this day.' },
+  startsTo: { label: 'Starts until', help: 'Events starting on or before this day (whole day).' },
+  organizer: { label: 'Organizer', help: 'Only this organizer’s events.' },
 } as const satisfies Record<string, FieldDescription>;
 
 /** Controls of the sessions list that are not fields of a session. */
