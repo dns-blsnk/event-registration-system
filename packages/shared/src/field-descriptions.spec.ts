@@ -1,8 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
+import { AppLogCategory, AppLogLevel } from './app-logs.js';
 import { PASSWORD_MIN_LENGTH } from './auth.js';
 import { ALMOST_FULL_RATIO, EVENT_STATUSES, REGISTRATION_STATUSES } from './domain.js';
 import {
+  APP_LOG_CATEGORY_LABELS,
+  APP_LOG_FIELDS,
+  APP_LOG_LEVEL_LABELS,
+  APP_LOG_LIST_CONTROLS,
   EVENT_FIELDS,
   EVENT_LIST_CONTROLS,
   EVENT_STATUS_LABELS,
@@ -29,6 +34,8 @@ describe('field descriptions', () => {
       ...Object.values(REGISTRATION_LIST_CONTROLS),
       ...Object.values(USER_FIELDS),
       ...Object.values(USER_LIST_CONTROLS),
+      ...Object.values(APP_LOG_FIELDS),
+      ...Object.values(APP_LOG_LIST_CONTROLS),
     ]) {
       expect(description.label.length).toBeGreaterThan(0);
       expect(description.help.length).toBeGreaterThan(0);
@@ -55,5 +62,12 @@ describe('field descriptions', () => {
 
   it('state the password minimum from the shared limit', () => {
     expect(USER_FIELDS.password.help).toContain(String(PASSWORD_MIN_LENGTH));
+  });
+
+  it('name every log level and category', () => {
+    expect(Object.keys(APP_LOG_LEVEL_LABELS).sort()).toEqual(Object.values(AppLogLevel).sort());
+    expect(Object.keys(APP_LOG_CATEGORY_LABELS).sort()).toEqual(
+      Object.values(AppLogCategory).sort(),
+    );
   });
 });

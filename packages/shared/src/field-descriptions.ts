@@ -1,3 +1,4 @@
+import { APP_LOG_RETENTION_DAYS, type AppLogCategory, type AppLogLevel } from './app-logs.js';
 import { PASSWORD_MIN_LENGTH } from './auth.js';
 import { ALMOST_FULL_RATIO, type EventStatus, type RegistrationStatus } from './domain.js';
 import { formatPercent } from './format.js';
@@ -140,4 +141,49 @@ export const ROLE_LABELS: Readonly<Record<Role, string>> = {
   ADMIN: 'Admin',
   ORGANIZER: 'Organizer',
   CUSTOMER: 'Customer',
+};
+
+export const APP_LOG_FIELDS = {
+  createdAt: {
+    label: 'Time',
+    help: `When it happened; entries are kept ${String(APP_LOG_RETENTION_DAYS)} days.`,
+  },
+  level: {
+    label: 'Level',
+    help: 'Error: something broke on the server. Warn: refused on purpose.',
+  },
+  category: {
+    label: 'Category',
+    help: 'Error: server failures. Security: failed sign-ins, refused access, rejected uploads.',
+  },
+  requestId: {
+    label: 'Request id',
+    help: 'Shown to the user with every error; paste it here to find the entry.',
+  },
+  method: { label: 'Method', help: 'HTTP method of the request.' },
+  route: { label: 'Route', help: 'The route pattern that was called, without the query string.' },
+  statusCode: { label: 'Status', help: 'HTTP status code of the response.' },
+  errorCode: { label: 'Error code', help: 'The API error code the client received.' },
+  message: { label: 'Message', help: 'What went wrong, without secrets or request bodies.' },
+  user: { label: 'User', help: 'Who made the request, if signed in.' },
+  durationMs: { label: 'Duration', help: 'How long the request took, in milliseconds.' },
+  stack: { label: 'Stack', help: 'Where in the code the error was thrown (server errors only).' },
+  ip: { label: 'IP', help: 'Client address as seen through the trusted proxies.' },
+  userAgent: { label: 'User agent', help: 'Browser or client that made the request.' },
+  context: { label: 'Context', help: 'Extra structured details recorded with the entry.' },
+} as const satisfies Record<string, FieldDescription>;
+
+/** Controls of the logs list that are not fields of an entry. */
+export const APP_LOG_LIST_CONTROLS = {
+  search: { label: 'Search', help: 'Matches the message or the route.' },
+} as const satisfies Record<string, FieldDescription>;
+
+export const APP_LOG_LEVEL_LABELS: Readonly<Record<AppLogLevel, string>> = {
+  WARN: 'Warn',
+  ERROR: 'Error',
+};
+
+export const APP_LOG_CATEGORY_LABELS: Readonly<Record<AppLogCategory, string>> = {
+  ERROR: 'Error',
+  SECURITY: 'Security',
 };
