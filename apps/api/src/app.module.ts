@@ -13,6 +13,7 @@ import { createValidationPipe } from './common/validation/validation.pipe.js';
 import { ConfigModule } from './config/config.module.js';
 import { AppLogsModule } from './modules/app-logs/app-logs.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
+import { CustomersModule } from './modules/customers/customers.module.js';
 import { EventsModule } from './modules/events/events.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { RegistrationsModule } from './modules/registrations/registrations.module.js';
@@ -40,6 +41,7 @@ const REQUESTS_PER_MINUTE_PER_IP = 300;
     SessionsModule,
     RegistrationsModule,
     TagsModule,
+    CustomersModule,
     HealthModule,
   ],
   providers: [
