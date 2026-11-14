@@ -94,7 +94,7 @@ Tests, migrations and seed are exempt from size limits and `no-magic-numbers`.
 - Controllers are thin: validate the DTO, read the current user, call one service method, return. No Prisma and no business rules in controllers
 - Business rules live in `src/domain/` as pure functions (no Nest, no Prisma) and in services that orchestrate them in transactions
 - Only services use Prisma. Multi-step writes run in `prisma.$transaction`. Capacity checks use a conditional `UPDATE`, never read-then-write
-- Every endpoint declares its access: `@Public()` or `@Roles(...)`; data is scoped in the service query (organizer sees own events only), not filtered after loading
+- Every route requires a session by default (global AuthGuard). Mark open routes with `@Public()` and restrict by role with `@Roles(...)`; data is scoped in the service query (organizer sees own events only), not filtered after loading
 - DTOs use class-validator with `whitelist` and `forbidNonWhitelisted`. Lists are paginated on the server with a maximum page size
 - Config only through the typed config service validated with zod at startup; no `process.env` elsewhere **[lint]**
 
