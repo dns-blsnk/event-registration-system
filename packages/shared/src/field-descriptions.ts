@@ -41,6 +41,30 @@ export const EVENT_FIELDS = {
   },
 } as const satisfies Record<string, FieldDescription>;
 
+export const SESSION_FIELDS = {
+  title: { label: 'Title', help: 'Name of the talk or workshop.' },
+  speaker: { label: 'Speaker', help: 'Who leads the session; optional.' },
+  room: { label: 'Room', help: 'Where in the venue it happens; optional.' },
+  startsAt: {
+    label: 'Starts',
+    help: 'Must be inside the event dates and in the future when created.',
+  },
+  endsAt: { label: 'Ends', help: 'Must be after the start and inside the event dates.' },
+  capacity: {
+    label: 'Capacity',
+    help: 'Seats available; never lower than the seats already confirmed.',
+  },
+  confirmedCount: { label: 'Confirmed', help: 'Seats taken by confirmed and attended bookings.' },
+  seatsLeft: {
+    label: 'Seats left',
+    help: 'Capacity minus confirmed seats; at zero new bookings join the waitlist.',
+  },
+  waitlistCount: {
+    label: 'Waitlist',
+    help: 'People waiting; the oldest is promoted when a seat frees up.',
+  },
+} as const satisfies Record<string, FieldDescription>;
+
 /** Controls of the events list that are not fields of an event. */
 export const EVENT_LIST_CONTROLS = {
   search: { label: 'Search', help: 'Matches the title, city or venue.' },
