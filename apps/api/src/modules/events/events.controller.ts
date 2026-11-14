@@ -8,7 +8,10 @@ import {
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -30,6 +33,7 @@ import { sendList } from '../../common/pagination/list-result.js';
 
 import { CreateEventDto } from './dto/create-event.dto.js';
 import { UpdateEventDto } from './dto/update-event.dto.js';
+import { EventLifecycleService } from './event-lifecycle.service.js';
 import { toEventDetail, toEventListItem } from './event-view.js';
 import { EventsService, type EventFilters, type EventSortField } from './events.service.js';
 
@@ -51,7 +55,10 @@ function filtersOf(query: Record<string, unknown>): EventFilters {
 
 @Controller(Resource.EVENTS)
 export class EventsController {
-  constructor(private readonly events: EventsService) {}
+  constructor(
+    private readonly events: EventsService,
+    private readonly lifecycle: EventLifecycleService,
+  ) {}
 
   @RequirePermission(Resource.EVENTS, Action.LIST)
   @Get()
@@ -94,5 +101,45 @@ export class EventsController {
     @CurrentAuth() auth: AuthContext,
   ): Promise<EventDetail> {
     return toEventDetail(await this.events.update(id, dto, auth.user));
+  }
+
+  @RequirePermission(Resource.EVENTS, Action.PUBLISH)
+  @Post(':id/publish')
+  @HttpCode(HttpStatus.OK)
+  async publish(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentAuth() auth: AuthContext,
+  ): Promise<EventDetail> {
+    return toEventDetail(await this.lifecycle.publish(id, auth.user));
+  }
+
+  @RequirePermission(Resource.EVENTS, Action.COMPLETE)
+  @Post(':id/complete')
+  @HttpCode(HttpStatus.OK)
+  async complete(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentAuth() auth: AuthContext,
+  ): Promise<EventDetail> {
+    return toEventDetail(await this.lifecycle.complete(id, auth.user));
+  }
+
+  @RequirePermission(Resource.EVENTS, Action.CANCEL)
+  @Post(':id/cancel')
+  @HttpCode(HttpStatus.OK)
+  async cancel(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentAuth() auth: AuthContext,
+  ): Promise<EventDetail> {
+    return toEventDetail(await this.lifecycle.cancel(id, auth.user));
+  }
+
+  @RequirePermission(Resource.EVENTS, Action.DELETE)
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentAuth() auth: AuthContext,
+  ): Promise<void> {
+    await this.lifecycle.remove(id, auth.user);
   }
 }

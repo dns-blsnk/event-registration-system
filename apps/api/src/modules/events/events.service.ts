@@ -8,13 +8,14 @@ import { containsInsensitive } from '../../common/pagination/search.js';
 import { isValidRange } from '../../domain/schedule.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 
+import { EVENT_NOT_FOUND_MESSAGE, lockScopedEvent } from './event-lock.js';
 import { eventScope } from './event-scope.js';
 import { EVENT_INCLUDE, type EventWithRelations } from './event-view.js';
 import { makeSlug } from './slug.js';
 
 import type { ListQuery } from '../../common/pagination/list-query.js';
 import type { ListResult } from '../../common/pagination/list-result.js';
-import type { Event, Prisma, User } from '../../generated/prisma/client.js';
+import type { Prisma, User } from '../../generated/prisma/client.js';
 import type { CreateEventDto } from './dto/create-event.dto.js';
 import type { UpdateEventDto } from './dto/update-event.dto.js';
 
@@ -29,7 +30,6 @@ export interface EventFilters {
   startsTo?: Date | undefined;
 }
 
-const NOT_FOUND_MESSAGE = 'Event not found';
 const LOCKED_STATUSES: readonly EventStatus[] = [EventStatus.COMPLETED, EventStatus.CANCELLED];
 
 function filtersToWhere(
@@ -93,7 +93,7 @@ export class EventsService {
       include: EVENT_INCLUDE,
     });
     if (event === null) {
-      throw new DomainError(ErrorCode.NOT_FOUND, NOT_FOUND_MESSAGE);
+      throw new DomainError(ErrorCode.NOT_FOUND, EVENT_NOT_FOUND_MESSAGE);
     }
     return event;
   }
@@ -138,7 +138,7 @@ export class EventsService {
     now: Date = new Date(),
   ): Promise<EventWithRelations> {
     return this.prisma.$transaction(async (tx) => {
-      const event = await this.lockScoped(tx, id, actor);
+      const event = await lockScopedEvent(tx, id, actor);
       if (LOCKED_STATUSES.includes(event.status)) {
         throw new DomainError(ErrorCode.CONFLICT, 'Completed or cancelled events cannot be edited');
       }
@@ -171,16 +171,6 @@ export class EventsService {
         include: EVENT_INCLUDE,
       });
     });
-  }
-
-  /** Locks the event row (FOR NO KEY UPDATE) after checking the actor may see it. */
-  private async lockScoped(tx: Prisma.TransactionClient, id: string, actor: User): Promise<Event> {
-    const event = await tx.event.findFirst({ where: { id, ...eventScope(actor) } });
-    if (event === null) {
-      throw new DomainError(ErrorCode.NOT_FOUND, NOT_FOUND_MESSAGE);
-    }
-    await tx.$queryRaw`SELECT id FROM events WHERE id = ${id}::uuid FOR NO KEY UPDATE`;
-    return tx.event.findUniqueOrThrow({ where: { id } });
   }
 
   private assertDates(startsAt: Date, endsAt: Date): void {
