@@ -7,8 +7,8 @@ import type { AccessControlProvider } from '@refinedev/core';
 const RESOURCES: ReadonlySet<string> = new Set(Object.values(Resource));
 const ACTIONS: ReadonlySet<string> = new Set(Object.values(Action));
 
-function isResource(value: string | undefined): value is Resource {
-  return value !== undefined && RESOURCES.has(value);
+function isResource(value: string): value is Resource {
+  return RESOURCES.has(value);
 }
 
 function isAction(value: string): value is Action {
@@ -16,6 +16,7 @@ function isAction(value: string): value is Action {
 }
 
 /**
+ * Deny by default: anything that is not a known resource and action of the matrix is refused.
  * Hides menu items and buttons with the same permission matrix the API enforces. It is only a
  * convenience: the server still decides, so a hidden button never protects anything by itself.
  */
@@ -25,6 +26,7 @@ export const accessControlProvider: AccessControlProvider = {
     return {
       can:
         role !== undefined &&
+        resource !== undefined &&
         isResource(resource) &&
         isAction(action) &&
         can(role, resource, action),

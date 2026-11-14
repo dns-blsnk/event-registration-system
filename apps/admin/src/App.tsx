@@ -2,7 +2,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 import GlobalStyles from '@mui/material/GlobalStyles';
 import { ThemeProvider } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
-import { Authenticated, Refine } from '@refinedev/core';
+import { Authenticated, CanAccess, Refine } from '@refinedev/core';
 import {
   ErrorComponent,
   RefineSnackbarProvider,
@@ -10,14 +10,21 @@ import {
   ThemedLayout,
   useNotificationProvider,
 } from '@refinedev/mui';
-import routerProvider, { CatchAllNavigate, NavigateToResource } from '@refinedev/react-router';
+import routerProvider, {
+  CatchAllNavigate,
+  DocumentTitleHandler,
+  NavigateToResource,
+  UnsavedChangesNotifier,
+} from '@refinedev/react-router';
 import { BrowserRouter, Outlet, Route, Routes } from 'react-router';
 
 import { LoginPage } from './pages/auth/login-page';
 import { ForbiddenPage } from './pages/errors/forbidden-page';
+import { EventList } from './pages/events/event-list';
 import { accessControlProvider } from './providers/access-control-provider';
 import { authProvider, HOME_PATH, LOGIN_PATH } from './providers/auth-provider';
 import { dataProvider } from './providers/data-provider';
+import { resources } from './resources';
 
 function HomePage(): React.JSX.Element {
   return (
@@ -41,6 +48,8 @@ export function App(): React.JSX.Element {
             dataProvider={dataProvider}
             accessControlProvider={accessControlProvider}
             notificationProvider={useNotificationProvider}
+            resources={resources}
+            options={{ syncWithLocation: true, warnWhenUnsavedChanges: true }}
           >
             <Routes>
               <Route
@@ -53,6 +62,16 @@ export function App(): React.JSX.Element {
                 }
               >
                 <Route index element={<HomePage />} />
+                {/* Resource pages: the shared matrix decides; pages outside a resource need only a session. */}
+                <Route
+                  element={
+                    <CanAccess fallback={<ForbiddenPage />}>
+                      <Outlet />
+                    </CanAccess>
+                  }
+                >
+                  <Route path="/events" element={<EventList />} />
+                </Route>
                 <Route path="/forbidden" element={<ForbiddenPage />} />
                 <Route path="*" element={<ErrorComponent />} />
               </Route>
@@ -66,6 +85,8 @@ export function App(): React.JSX.Element {
                 <Route path={LOGIN_PATH} element={<LoginPage />} />
               </Route>
             </Routes>
+            <UnsavedChangesNotifier />
+            <DocumentTitleHandler />
           </Refine>
         </RefineSnackbarProvider>
       </ThemeProvider>
