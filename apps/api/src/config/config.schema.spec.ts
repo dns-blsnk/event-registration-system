@@ -51,6 +51,10 @@ describe('parseConfig', () => {
     expect(config.ai.model).toBe('claude-haiku-5-5');
   });
 
+  it('reads an empty Anthropic key as no key, so the chat reports itself unavailable', () => {
+    expect(parseConfig(envWith({ ANTHROPIC_API_KEY: '' })).ai.apiKey).toBeUndefined();
+  });
+
   it('treats blank values as unset so defaults still apply', () => {
     const config = parseConfig(
       envWith({ LOG_LEVEL: '', API_PORT: ' ', S3_FORCE_PATH_STYLE: '', ANTHROPIC_MODEL: '' }),
