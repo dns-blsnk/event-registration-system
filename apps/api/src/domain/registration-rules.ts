@@ -1,4 +1,4 @@
-import { ErrorCode, EventStatus } from '@ers/shared';
+import { ErrorCode, EventStatus, RegistrationStatus } from '@ers/shared';
 
 import { DomainError } from '../common/errors/domain-error.js';
 
@@ -46,9 +46,34 @@ export function assertNoScheduleConflict(
   }
 }
 
-/** Customers can give up a seat or a waitlist place only before the session starts. */
-export function assertCanCancel(session: TimeRange, now: Date): void {
+/**
+ * A registration can be cancelled only before its session starts. The one exception: staff may
+ * clear leftover waitlist places afterwards, which frees no seat and rewrites no attendance.
+ */
+export function assertCanCancel(
+  registration: { status: RegistrationStatus },
+  session: TimeRange,
+  { byStaff, now }: { byStaff: boolean; now: Date },
+): void {
+  if (byStaff && registration.status === RegistrationStatus.WAITLISTED) {
+    return;
+  }
   assertNotStarted(session, now);
+}
+
+const ATTENDANCE_EVENT_STATUSES: readonly EventStatus[] = [
+  EventStatus.PUBLISHED,
+  EventStatus.COMPLETED,
+];
+
+/** Attendance belongs to events that actually ran: published or completed, never draft or cancelled. */
+export function assertCanRecordAttendance(event: { status: EventStatus }): void {
+  if (!ATTENDANCE_EVENT_STATUSES.includes(event.status)) {
+    throw new DomainError(
+      ErrorCode.INVALID_TRANSITION,
+      'Attendance can only be recorded for published or completed events',
+    );
+  }
 }
 
 function assertNotStarted(session: TimeRange, now: Date): void {

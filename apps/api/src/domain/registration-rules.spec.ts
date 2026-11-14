@@ -4,6 +4,7 @@ import { domainErrorCode } from '../../test/helpers/domain-error.js';
 
 import {
   assertCanCancel,
+  assertCanRecordAttendance,
   assertCanRegister,
   assertNoScheduleConflict,
   hasScheduleConflict,
@@ -78,9 +79,11 @@ describe('schedule conflicts', () => {
 });
 
 describe('assertCanCancel', () => {
+  const confirmed = { status: 'CONFIRMED' } as const;
+
   it('allows cancelling before the session starts', () => {
     expect(() => {
-      assertCanCancel(at('s', '09:00', '10:00'), NOW);
+      assertCanCancel(confirmed, at('s', '09:00', '10:00'), { byStaff: false, now: NOW });
     }).not.toThrow();
   });
 
@@ -89,7 +92,45 @@ describe('assertCanCancel', () => {
     ['after the start', '07:00'],
   ])('refuses cancelling %s', (_label, start) => {
     expect(() => {
-      assertCanCancel(at('s', start, '10:00'), NOW);
+      assertCanCancel(confirmed, at('s', start, '10:00'), { byStaff: false, now: NOW });
     }).toThrow('This session has already started');
+  });
+
+  it('refuses staff cancelling a confirmed seat after the start', () => {
+    expect(() => {
+      assertCanCancel(confirmed, at('s', '07:00', '10:00'), { byStaff: true, now: NOW });
+    }).toThrow('This session has already started');
+  });
+
+  it('lets staff clear a waitlist place after the start', () => {
+    expect(() => {
+      assertCanCancel({ status: 'WAITLISTED' }, at('s', '07:00', '10:00'), {
+        byStaff: true,
+        now: NOW,
+      });
+    }).not.toThrow();
+  });
+
+  it('does not let a customer leave the waitlist after the start', () => {
+    expect(() => {
+      assertCanCancel({ status: 'WAITLISTED' }, at('s', '07:00', '10:00'), {
+        byStaff: false,
+        now: NOW,
+      });
+    }).toThrow('This session has already started');
+  });
+});
+
+describe('assertCanRecordAttendance', () => {
+  it.each(['PUBLISHED', 'COMPLETED'] as const)('allows attendance for a %s event', (status) => {
+    expect(() => {
+      assertCanRecordAttendance({ status });
+    }).not.toThrow();
+  });
+
+  it.each(['DRAFT', 'CANCELLED'] as const)('refuses attendance for a %s event', (status) => {
+    expect(() => {
+      assertCanRecordAttendance({ status });
+    }).toThrow('Attendance can only be recorded for published or completed events');
   });
 });
