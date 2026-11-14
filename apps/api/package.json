@@ -13,7 +13,9 @@
     "test:integration": "vitest run --project integration",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
-    "db:deploy": "prisma migrate deploy"
+    "db:deploy": "prisma migrate deploy",
+    "db:seed": "NODE_ENV=${NODE_ENV:-development} tsx prisma/seed/main.ts",
+    "db:reset": "prisma migrate reset --force && pnpm db:seed"
   },
   "devDependencies": {
     "@faker-js/faker": "^10.6.0",
@@ -28,6 +30,7 @@
     "pino-pretty": "^13.2.0",
     "prisma": "7.10.1",
     "supertest": "^7.3.2",
+    "tsx": "^4.23.15",
     "unplugin-swc": "^2.0.0",
     "vitest": "^5.1.0"
   },
