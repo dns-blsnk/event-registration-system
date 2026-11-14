@@ -18,6 +18,8 @@ import routerProvider, {
 } from '@refinedev/react-router';
 import { BrowserRouter, Outlet, Route, Routes } from 'react-router';
 
+import { AppLogList } from './pages/app-logs/app-log-list';
+import { AppLogShow } from './pages/app-logs/app-log-show';
 import { LoginPage } from './pages/auth/login-page';
 import { ForbiddenPage } from './pages/errors/forbidden-page';
 import { EventCreate } from './pages/events/event-create';
@@ -83,6 +85,8 @@ export function App(): React.JSX.Element {
                   <Route path="/sessions" element={<SessionList />} />
                   <Route path="/registrations" element={<RegistrationList />} />
                   <Route path="/users" element={<UserList />} />
+                  <Route path="/logs" element={<AppLogList />} />
+                  <Route path="/logs/:id" element={<AppLogShow />} />
                 </Route>
                 <Route path="/forbidden" element={<ForbiddenPage />} />
                 <Route path="*" element={<ErrorComponent />} />

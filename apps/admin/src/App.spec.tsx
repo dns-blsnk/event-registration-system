@@ -30,7 +30,7 @@ describe('App', () => {
       await screen.findByRole('heading', { name: 'Event Registration Admin' }),
     ).toBeInTheDocument();
   });
-  it.each(['/events', '/sessions', '/registrations', '/users'])(
+  it.each(['/events', '/sessions', '/registrations', '/users', '/logs'])(
     'shows "No access" to a customer on %s',
     async (path) => {
       mockHttp([
@@ -40,6 +40,28 @@ describe('App', () => {
           status: 200,
           body: {
             user: { id: 'c', email: 'c@demo.test', name: 'C', role: 'CUSTOMER' },
+            csrfToken: 't',
+          },
+        },
+      ]);
+      window.history.pushState({}, '', path);
+
+      render(<App />);
+
+      expect(await screen.findByRole('heading', { name: 'No access' })).toBeInTheDocument();
+    },
+  );
+
+  it.each(['/users', '/logs'])(
+    'shows "No access" to an organizer on admin-only %s',
+    async (path) => {
+      mockHttp([
+        {
+          method: 'get',
+          url: '/auth/me',
+          status: 200,
+          body: {
+            user: { id: 'o', email: 'o@demo.test', name: 'O', role: 'ORGANIZER' },
             csrfToken: 't',
           },
         },
