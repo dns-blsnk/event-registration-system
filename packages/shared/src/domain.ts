@@ -125,3 +125,11 @@ export function canCustomerCancel(
     sessionPhase(session, now) === SessionPhase.UPCOMING
   );
 }
+
+/** The booking rules in words, for the help chat; written next to the rules they describe. */
+export const BOOKING_RULES_TEXT = [
+  'A booking is confirmed while the session has free seats, otherwise it joins the waitlist.',
+  'When a confirmed booking is cancelled, the oldest waitlisted booking takes the seat.',
+  'Customers book only published events and only sessions that have not started yet.',
+  'A customer can cancel a seat or a waitlist place until the session starts.',
+].join(' ');

@@ -84,6 +84,19 @@ export const CUSTOMER_ONLY_RESOURCES: readonly Resource[] = [
   Resource.MY_REGISTRATIONS,
 ];
 
+const RESOURCES: ReadonlySet<string> = new Set(Object.values(Resource));
+const ACTIONS: ReadonlySet<string> = new Set(Object.values(Action));
+
+/** Narrows text from outside (a socket payload, a route) to a known resource name. */
+export function isResource(value: unknown): value is Resource {
+  return typeof value === 'string' && RESOURCES.has(value);
+}
+
+/** Narrows text from outside to a known action name. */
+export function isAction(value: unknown): value is Action {
+  return typeof value === 'string' && ACTIONS.has(value);
+}
+
 /**
  * True when the role may perform the action on the resource. Unknown pairs are denied, including
  * untyped strings from the admin router (own-property checks, never the prototype chain).

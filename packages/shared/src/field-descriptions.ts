@@ -229,3 +229,27 @@ export const SIGNUP_FIELDS = {
 
 /** The error a new password below the minimum gets, distinct from the help text it replaces. */
 export const PASSWORD_TOO_SHORT_MESSAGE = `Too short: use at least ${String(PASSWORD_MIN_LENGTH)} characters`;
+
+/** The catalog as customers see it: only what they can read and act on. */
+export const CATALOG_FIELDS = {
+  title: { label: 'Title', help: 'Name of the event.' },
+  description: { label: 'Description', help: 'What the event is about.' },
+  city: { label: 'City', help: 'Where the event takes place; the list can be filtered by it.' },
+  venue: { label: 'Venue', help: 'The place inside the city.' },
+  startsAt: { label: 'Starts', help: 'When the event begins, in your time zone.' },
+  seatsLeft: {
+    label: 'Seats left',
+    help: 'Free seats in sessions that have not started; at zero you can still join the waitlist.',
+  },
+} as const satisfies Record<string, FieldDescription>;
+
+/** A customer's own bookings. */
+export const MY_REGISTRATION_FIELDS = {
+  event: { label: 'Event', help: 'The event you booked.' },
+  session: { label: 'Session', help: 'The talk or workshop your seat is in.' },
+  status: {
+    label: 'Status',
+    help: 'Confirmed holds a seat; waitlisted waits for one (your place is shown); cancelled can be booked again.',
+  },
+  createdAt: { label: 'Booked', help: 'When you made the booking.' },
+} as const satisfies Record<string, FieldDescription>;

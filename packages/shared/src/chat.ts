@@ -6,3 +6,6 @@ export interface ChatTicket {
   ticket: string;
   expiresAt: string;
 }
+
+/** Longest question the help chat accepts, in characters. */
+export const CHAT_QUESTION_MAX_LENGTH = 1000;

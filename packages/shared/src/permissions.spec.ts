@@ -7,6 +7,8 @@ import {
   PERMISSIONS,
   Resource,
   visibleResources,
+  isAction,
+  isResource,
 } from './permissions.js';
 import { ROLES, type Role } from './roles.js';
 
@@ -83,5 +85,26 @@ describe('visibleResources', () => {
       'tags',
       'customers',
     ]);
+  });
+});
+
+describe('isResource and isAction', () => {
+  it.each([
+    ['events', true],
+    ['app-logs', true],
+    ['payments', false],
+    ['constructor', false],
+    [42, false],
+  ])('recognizes %p as a resource: %p', (value, expected) => {
+    expect(isResource(value)).toBe(expected);
+  });
+
+  it.each([
+    ['list', true],
+    ['bulk-status', true],
+    ['toString', false],
+    [undefined, false],
+  ])('recognizes %p as an action: %p', (value, expected) => {
+    expect(isAction(value)).toBe(expected);
   });
 });
