@@ -1,4 +1,4 @@
-import { CSRF_HEADER, REQUEST_ID_HEADER, TOTAL_COUNT_HEADER } from '@ers/shared';
+import { API_PREFIX, CSRF_HEADER, REQUEST_ID_HEADER, TOTAL_COUNT_HEADER } from '@ers/shared';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 
@@ -8,7 +8,6 @@ import { APP_CONFIG } from './config/config.module.js';
 import type { Config } from './config/config.schema.js';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 
-export const API_PREFIX = 'api';
 const CORS_MAX_AGE_SECONDS = 600;
 
 /** HTTP setup shared by the real server and integration tests. Call before app.init(). */

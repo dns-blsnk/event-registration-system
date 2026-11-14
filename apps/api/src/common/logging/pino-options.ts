@@ -1,4 +1,5 @@
-import { API_PREFIX } from '../../app.setup.js';
+import { API_PREFIX } from '@ers/shared';
+
 import { HEALTH_ROUTE } from '../../modules/health/health.controller.js';
 
 import { requestIdOf } from './request-id.js';

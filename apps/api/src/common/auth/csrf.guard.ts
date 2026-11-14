@@ -1,4 +1,4 @@
-import { CSRF_HEADER, ErrorCode } from '@ers/shared';
+import { CSRF_HEADER, CSRF_SAFE_METHODS, ErrorCode } from '@ers/shared';
 import { Injectable, type CanActivate, type ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 
@@ -11,7 +11,7 @@ import { SKIP_CSRF_TOKEN_KEY } from './skip-csrf-token.decorator.js';
 import type { Config } from '../../config/config.schema.js';
 import type { Request } from 'express';
 
-const SAFE_METHODS: ReadonlySet<string> = new Set(['GET', 'HEAD', 'OPTIONS']);
+const SAFE_METHODS: ReadonlySet<string> = new Set(CSRF_SAFE_METHODS);
 
 /**
  * Global, runs after AuthGuard. For state-changing requests:
