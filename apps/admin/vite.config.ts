@@ -19,6 +19,7 @@ function valueOr(value: string | undefined, fallback: string): string {
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, ENV_DIR, '');
   const adminOrigin = new URL(valueOr(env.ADMIN_ORIGIN, DEFAULT_ADMIN_ORIGIN));
+  const apiTarget = `http://localhost:${valueOr(env.API_PORT, DEFAULT_API_PORT)}`;
   return {
     envDir: ENV_DIR,
     plugins: [react()],
@@ -27,9 +28,9 @@ export default defineConfig(({ mode }) => {
       port: Number(adminOrigin.port),
       strictPort: true,
       proxy: {
-        [`/${API_PREFIX}`]: {
-          target: `http://localhost:${valueOr(env.API_PORT, DEFAULT_API_PORT)}`,
-        },
+        [`/${API_PREFIX}`]: { target: apiTarget },
+        // The help chat's socket; in production the admin connects to the API host directly.
+        '/socket.io': { target: apiTarget, ws: true },
       },
     },
     test: {
