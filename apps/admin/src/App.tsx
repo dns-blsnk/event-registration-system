@@ -16,8 +16,9 @@ import routerProvider, {
   NavigateToResource,
   UnsavedChangesNotifier,
 } from '@refinedev/react-router';
-import { BrowserRouter, Outlet, Route, Routes } from 'react-router';
+import { BrowserRouter, Outlet, Route, Routes, useLocation } from 'react-router';
 
+import { ErrorBoundary } from './components/error-boundary';
 import { AppLogList } from './pages/app-logs/app-log-list';
 import { AppLogShow } from './pages/app-logs/app-log-show';
 import { LoginPage } from './pages/auth/login-page';
@@ -48,6 +49,16 @@ function HomePage(): React.JSX.Element {
   );
 }
 
+/** A page that crashes shows the error screen inside the layout; any navigation clears it. */
+function PageErrorBoundary(): React.JSX.Element {
+  const { key } = useLocation();
+  return (
+    <ErrorBoundary resetKey={key}>
+      <Outlet />
+    </ErrorBoundary>
+  );
+}
+
 /** Root of the admin: theme, notifications, router, auth and access control, then the routes. */
 export function App(): React.JSX.Element {
   return (
@@ -65,54 +76,57 @@ export function App(): React.JSX.Element {
             resources={resources}
             options={{ syncWithLocation: true, warnWhenUnsavedChanges: true }}
           >
-            <Routes>
-              <Route
-                element={
-                  <Authenticated key="protected" fallback={<CatchAllNavigate to={LOGIN_PATH} />}>
-                    <ThemedLayout>
-                      <Outlet />
-                    </ThemedLayout>
-                  </Authenticated>
-                }
-              >
-                <Route index element={<HomePage />} />
-                {/* Resource pages: the shared matrix decides; pages outside a resource need only a session. */}
+            {/* Last resort for crashes outside a page: the layout, menu or the sign-in pages. */}
+            <ErrorBoundary>
+              <Routes>
                 <Route
                   element={
-                    <CanAccess fallback={<ForbiddenPage />}>
-                      <Outlet />
-                    </CanAccess>
+                    <Authenticated key="protected" fallback={<CatchAllNavigate to={LOGIN_PATH} />}>
+                      <ThemedLayout>
+                        <PageErrorBoundary />
+                      </ThemedLayout>
+                    </Authenticated>
                   }
                 >
-                  <Route path="/events" element={<EventList />} />
-                  <Route path="/events/create" element={<EventCreate />} />
-                  <Route path="/events/:id" element={<EventShow />} />
-                  <Route path="/events/:id/edit" element={<EventEdit />} />
-                  <Route path="/sessions" element={<SessionList />} />
-                  <Route path="/registrations" element={<RegistrationList />} />
-                  <Route path="/customers" element={<CustomerList />} />
-                  <Route path="/tags" element={<TagList />} />
-                  <Route path="/users" element={<UserList />} />
-                  <Route path="/catalog" element={<CatalogList />} />
-                  <Route path="/catalog/:id" element={<CatalogShow />} />
-                  <Route path="/my-registrations" element={<MyRegistrationList />} />
-                  <Route path="/logs" element={<AppLogList />} />
-                  <Route path="/logs/:id" element={<AppLogShow />} />
+                  <Route index element={<HomePage />} />
+                  {/* Resource pages: the shared matrix decides; pages outside a resource need only a session. */}
+                  <Route
+                    element={
+                      <CanAccess fallback={<ForbiddenPage />}>
+                        <Outlet />
+                      </CanAccess>
+                    }
+                  >
+                    <Route path="/events" element={<EventList />} />
+                    <Route path="/events/create" element={<EventCreate />} />
+                    <Route path="/events/:id" element={<EventShow />} />
+                    <Route path="/events/:id/edit" element={<EventEdit />} />
+                    <Route path="/sessions" element={<SessionList />} />
+                    <Route path="/registrations" element={<RegistrationList />} />
+                    <Route path="/customers" element={<CustomerList />} />
+                    <Route path="/tags" element={<TagList />} />
+                    <Route path="/users" element={<UserList />} />
+                    <Route path="/catalog" element={<CatalogList />} />
+                    <Route path="/catalog/:id" element={<CatalogShow />} />
+                    <Route path="/my-registrations" element={<MyRegistrationList />} />
+                    <Route path="/logs" element={<AppLogList />} />
+                    <Route path="/logs/:id" element={<AppLogShow />} />
+                  </Route>
+                  <Route path="/forbidden" element={<ForbiddenPage />} />
+                  <Route path="*" element={<ErrorComponent />} />
                 </Route>
-                <Route path="/forbidden" element={<ForbiddenPage />} />
-                <Route path="*" element={<ErrorComponent />} />
-              </Route>
-              <Route
-                element={
-                  <Authenticated key="public" fallback={<Outlet />}>
-                    <NavigateToResource fallbackTo={HOME_PATH} />
-                  </Authenticated>
-                }
-              >
-                <Route path={LOGIN_PATH} element={<LoginPage />} />
-                <Route path={REGISTER_PATH} element={<SignupPage />} />
-              </Route>
-            </Routes>
+                <Route
+                  element={
+                    <Authenticated key="public" fallback={<Outlet />}>
+                      <NavigateToResource fallbackTo={HOME_PATH} />
+                    </Authenticated>
+                  }
+                >
+                  <Route path={LOGIN_PATH} element={<LoginPage />} />
+                  <Route path={REGISTER_PATH} element={<SignupPage />} />
+                </Route>
+              </Routes>
+            </ErrorBoundary>
             <UnsavedChangesNotifier />
             <DocumentTitleHandler />
           </Refine>

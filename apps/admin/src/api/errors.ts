@@ -50,3 +50,11 @@ export function messageOf(error: unknown, fallback: string): string {
   }
   return error instanceof Error && 'statusCode' in error ? error.message : fallback;
 }
+
+/** The API's request id on an error that carries one (the data provider puts it on its errors). */
+export function requestIdOf(error: unknown): string | undefined {
+  if (typeof error === 'object' && error !== null && 'requestId' in error) {
+    return typeof error.requestId === 'string' ? error.requestId : undefined;
+  }
+  return undefined;
+}
