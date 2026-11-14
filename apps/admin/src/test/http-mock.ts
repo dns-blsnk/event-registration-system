@@ -24,7 +24,8 @@ export function mockHttp(routes: MockRoute[]): { calls: InternalAxiosRequestConf
     calls.push(config);
     const index = queue.findIndex(
       (route) =>
-        route.method === (config.method ?? 'get').toLowerCase() && route.url === config.url,
+        route.method === (config.method ?? 'get').toLowerCase() &&
+        route.url === config.url?.split('?')[0],
     );
     const route = index === -1 ? undefined : queue.splice(index, 1)[0];
     const response: AxiosResponse = {

@@ -17,6 +17,7 @@ import { LoginPage } from './pages/auth/login-page';
 import { ForbiddenPage } from './pages/errors/forbidden-page';
 import { accessControlProvider } from './providers/access-control-provider';
 import { authProvider, HOME_PATH, LOGIN_PATH } from './providers/auth-provider';
+import { dataProvider } from './providers/data-provider';
 
 function HomePage(): React.JSX.Element {
   return (
@@ -37,6 +38,7 @@ export function App(): React.JSX.Element {
           <Refine
             routerProvider={routerProvider}
             authProvider={authProvider}
+            dataProvider={dataProvider}
             accessControlProvider={accessControlProvider}
             notificationProvider={useNotificationProvider}
           >

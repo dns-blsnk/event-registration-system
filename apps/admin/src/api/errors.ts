@@ -21,12 +21,32 @@ export function apiErrorOf(error: unknown): ApiErrorBody | undefined {
   return isApiErrorBody(body) ? body : undefined;
 }
 
-/** HTTP status of a failed request, or undefined when it never got a response (offline, CORS, ...). */
+/**
+ * HTTP status of a failed request, or undefined when it never got a response (offline, CORS, ...).
+ * Understands both raw axios errors and the HttpError shape Refine receives from the data provider.
+ */
 export function statusOf(error: unknown): number | undefined {
-  return isAxiosError(error) ? error.response?.status : undefined;
+  if (isAxiosError(error)) {
+    return error.response?.status;
+  }
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    'statusCode' in error &&
+    typeof error.statusCode === 'number'
+  ) {
+    return error.statusCode;
+  }
+  return undefined;
 }
 
-/** A user-facing message: the API's own text when it sent one, otherwise the fallback. */
+/**
+ * A user-facing message: the API's own text when it sent one (on a raw axios error, or already
+ * carried by the data provider's error), otherwise the fallback.
+ */
 export function messageOf(error: unknown, fallback: string): string {
-  return apiErrorOf(error)?.message ?? fallback;
+  if (isAxiosError(error)) {
+    return apiErrorOf(error)?.message ?? fallback;
+  }
+  return error instanceof Error && 'statusCode' in error ? error.message : fallback;
 }
