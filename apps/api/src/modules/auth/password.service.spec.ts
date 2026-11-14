@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import argon2 from 'argon2';
+import { describe, expect, it, vi } from 'vitest';
 
 import { PasswordService } from './password.service.js';
 
@@ -39,16 +40,17 @@ describe('PasswordService', () => {
     },
   );
 
-  it('spends real hashing work on a missing hash, so timing does not reveal accounts', async () => {
-    const started = performance.now();
-    await service.verify(null, 'whatever');
-    const missingMs = performance.now() - started;
+  it.each([null, undefined, 'not-an-argon2-hash'])(
+    'still runs a full argon2 verification for an unusable hash (%p), so timing does not reveal accounts',
+    async (hash) => {
+      const verify = vi.spyOn(argon2, 'verify');
 
-    const hash = await service.hash('whatever');
-    const startedReal = performance.now();
-    await service.verify(hash, 'nope');
-    const realMs = performance.now() - startedReal;
+      expect(await service.verify(hash, 'whatever')).toBe(false);
 
-    expect(missingMs).toBeGreaterThan(realMs / 3);
-  });
+      // Same algorithm and cost as a real check: a dummy argon2id hash with the OWASP parameters.
+      expect(verify).toHaveBeenCalledOnce();
+      expect(verify.mock.calls[0]?.[0]).toMatch(/^\$argon2id\$v=19\$m=19456,t=2,p=1\$/);
+      verify.mockRestore();
+    },
+  );
 });
