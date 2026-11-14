@@ -24,6 +24,7 @@ export const Action = {
   DELETE: 'delete',
   PUBLISH: 'publish',
   CANCEL: 'cancel',
+  COMPLETE: 'complete',
   BULK_STATUS: 'bulk-status',
   CHANGE_ROLE: 'change-role',
 } as const;
@@ -54,6 +55,7 @@ export const PERMISSIONS: Readonly<Record<Resource, Partial<Record<Action, reado
     edit: STAFF,
     publish: STAFF,
     cancel: STAFF,
+    complete: STAFF,
     delete: [ADMIN],
   },
   [Resource.SESSIONS]: { list: STAFF, show: STAFF, create: STAFF, edit: STAFF, delete: STAFF },

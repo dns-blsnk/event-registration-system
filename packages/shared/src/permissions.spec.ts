@@ -35,6 +35,7 @@ describe('can', () => {
   it.each([
     [Resource.EVENTS, Action.CREATE],
     [Resource.EVENTS, Action.PUBLISH],
+    [Resource.EVENTS, Action.COMPLETE],
     [Resource.SESSIONS, Action.EDIT],
     [Resource.REGISTRATIONS, Action.BULK_STATUS],
     [Resource.CUSTOMERS, Action.LIST],
