@@ -3,7 +3,7 @@ import { Injectable } from '@nestjs/common';
 
 import { DomainError } from '../../common/errors/domain-error.js';
 import { orderByOf, type ListQuery } from '../../common/pagination/list-query.js';
-import { containsInsensitive } from '../../common/pagination/search.js';
+import { personSearch } from '../../common/pagination/search.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { normalizeEmail } from '../auth/email.js';
 import { PasswordService } from '../auth/password.service.js';
@@ -41,14 +41,7 @@ export class UsersService {
   async list(query: ListQuery<UserSortField>, filters: UserFilters): Promise<ListResult<User>> {
     const where: Prisma.UserWhereInput = {
       ...(filters.role === undefined ? {} : { role: filters.role }),
-      ...(query.search === undefined
-        ? {}
-        : {
-            OR: [
-              { email: containsInsensitive(query.search) },
-              { name: containsInsensitive(query.search) },
-            ],
-          }),
+      ...personSearch(query.search),
     };
     const [items, total] = await this.prisma.$transaction([
       this.prisma.user.findMany({

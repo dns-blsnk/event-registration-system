@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { containsInsensitive, escapeLikePattern } from './search.js';
+import { containsInsensitive, escapeLikePattern, personSearch } from './search.js';
 
 describe('escapeLikePattern', () => {
   it.each([
@@ -16,5 +16,20 @@ describe('escapeLikePattern', () => {
 describe('containsInsensitive', () => {
   it('builds an escaped, case-insensitive filter', () => {
     expect(containsInsensitive('a_b')).toEqual({ contains: 'a\\_b', mode: 'insensitive' });
+  });
+});
+
+describe('personSearch', () => {
+  it('matches name or email, escaping wildcards', () => {
+    expect(personSearch('a_b')).toEqual({
+      OR: [
+        { name: { contains: 'a\\_b', mode: 'insensitive' } },
+        { email: { contains: 'a\\_b', mode: 'insensitive' } },
+      ],
+    });
+  });
+
+  it('matches everyone without a search', () => {
+    expect(personSearch(undefined)).toEqual({});
   });
 });

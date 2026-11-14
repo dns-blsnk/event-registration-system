@@ -3,7 +3,7 @@ import { Injectable } from '@nestjs/common';
 
 import { DomainError } from '../../common/errors/domain-error.js';
 import { orderByOf, type ListQuery } from '../../common/pagination/list-query.js';
-import { containsInsensitive } from '../../common/pagination/search.js';
+import { personSearch } from '../../common/pagination/search.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 
 import { registrationScope } from './registration-scope.js';
@@ -38,16 +38,7 @@ export class RegistrationsService {
         filters.sessionId === undefined ? {} : { sessionId: filters.sessionId },
         filters.eventId === undefined ? {} : { session: { eventId: filters.eventId } },
         filters.customerId === undefined ? {} : { customerId: filters.customerId },
-        query.search === undefined
-          ? {}
-          : {
-              customer: {
-                OR: [
-                  { name: containsInsensitive(query.search) },
-                  { email: containsInsensitive(query.search) },
-                ],
-              },
-            },
+        query.search === undefined ? {} : { customer: personSearch(query.search) },
       ],
     };
     const [items, total] = await this.prisma.$transaction([
