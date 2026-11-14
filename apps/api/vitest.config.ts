@@ -8,7 +8,7 @@ export default defineConfig({
     projects: [
       {
         extends: true,
-        test: { name: 'unit', include: ['src/**/*.spec.ts'] },
+        test: { name: 'unit', include: ['src/**/*.spec.ts', 'prisma/seed/**/*.spec.ts'] },
       },
       {
         extends: true,
