@@ -182,3 +182,8 @@ export function SearchFilterForm({
     </Stack>
   );
 }
+
+/** List APIs search by `q`; Refine's default would filter a field such as "title" they do not have. */
+export function searchByQ(value: string): CrudFilters {
+  return [{ field: 'q', operator: 'eq', value }];
+}

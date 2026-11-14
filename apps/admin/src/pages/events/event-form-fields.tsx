@@ -14,6 +14,7 @@ import TextField, { type TextFieldProps } from '@mui/material/TextField';
 import { useAutocomplete } from '@refinedev/mui';
 import { Controller, type Control, type FieldErrors, type UseFormRegister } from 'react-hook-form';
 
+import { searchByQ } from '../../components/filter-form';
 import { fieldHelp, REQUIRED } from '../../components/forms';
 
 import type { EventFormValues } from './event-form-values';
@@ -32,8 +33,7 @@ export function EventFormFields({
 }: EventFormFieldsProps): React.JSX.Element {
   const { autocompleteProps } = useAutocomplete<TagRef>({
     resource: Resource.TAGS,
-    // The tags API searches by `q`; the default would filter a "title" field it does not have.
-    onSearch: (value) => [{ field: 'q', operator: 'eq', value }],
+    onSearch: searchByQ,
   });
   return (
     <Stack spacing={2}>
