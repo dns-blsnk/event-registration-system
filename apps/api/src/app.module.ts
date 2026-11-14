@@ -17,6 +17,7 @@ import { EventsModule } from './modules/events/events.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { RegistrationsModule } from './modules/registrations/registrations.module.js';
 import { SessionsModule } from './modules/sessions/sessions.module.js';
+import { TagsModule } from './modules/tags/tags.module.js';
 import { UsersModule } from './modules/users/users.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 
@@ -38,6 +39,7 @@ const REQUESTS_PER_MINUTE_PER_IP = 300;
     EventsModule,
     SessionsModule,
     RegistrationsModule,
+    TagsModule,
     HealthModule,
   ],
   providers: [
