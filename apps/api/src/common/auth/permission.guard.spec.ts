@@ -2,7 +2,7 @@ import { Action, Resource, type Role } from '@ers/shared';
 import { Reflector } from '@nestjs/core';
 import { describe, expect, it } from 'vitest';
 
-import { DomainError } from '../errors/domain-error.js';
+import { domainErrorCode } from '../../../test/helpers/domain-error.js';
 
 import { Public, RequirePermission, SignedIn } from './access.decorator.js';
 import { PermissionGuard } from './permission.guard.js';
@@ -54,15 +54,6 @@ function contextFor(controller: object, method: string, role: Role | undefined):
   } as unknown as ExecutionContext;
 }
 
-function codeOf(run: () => unknown): string | undefined {
-  try {
-    run();
-  } catch (error) {
-    return error instanceof DomainError ? error.code : 'OTHER';
-  }
-  return undefined;
-}
-
 describe('PermissionGuard', () => {
   it('lets anyone through a public route', () => {
     expect(guard.canActivate(contextFor(OpenRoutes, 'open', undefined))).toBe(true);
@@ -77,21 +68,21 @@ describe('PermissionGuard', () => {
   });
 
   it('forbids a role the matrix does not grant', () => {
-    expect(codeOf(() => guard.canActivate(contextFor(OpenRoutes, 'usersOnly', 'ORGANIZER')))).toBe(
-      'FORBIDDEN',
-    );
+    expect(
+      domainErrorCode(() => guard.canActivate(contextFor(OpenRoutes, 'usersOnly', 'ORGANIZER'))),
+    ).toBe('FORBIDDEN');
   });
 
   it('closes a route that declares no access rule', () => {
-    expect(codeOf(() => guard.canActivate(contextFor(OpenRoutes, 'undeclared', 'ADMIN')))).toBe(
-      'FORBIDDEN',
-    );
+    expect(
+      domainErrorCode(() => guard.canActivate(contextFor(OpenRoutes, 'undeclared', 'ADMIN'))),
+    ).toBe('FORBIDDEN');
   });
 
   it('lets a method rule override a looser controller rule', () => {
-    expect(codeOf(() => guard.canActivate(contextFor(SignedInByDefault, 'logs', 'CUSTOMER')))).toBe(
-      'FORBIDDEN',
-    );
+    expect(
+      domainErrorCode(() => guard.canActivate(contextFor(SignedInByDefault, 'logs', 'CUSTOMER'))),
+    ).toBe('FORBIDDEN');
     expect(guard.canActivate(contextFor(SignedInByDefault, 'logs', 'ADMIN'))).toBe(true);
   });
 
