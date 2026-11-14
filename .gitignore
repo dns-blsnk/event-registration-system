@@ -30,3 +30,6 @@ coverage/
 *.log
 npm-debug.log*
 pnpm-debug.log*
+
+# Generated Prisma client (pnpm db:generate)
+apps/api/src/generated/

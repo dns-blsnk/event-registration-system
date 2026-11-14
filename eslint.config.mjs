@@ -205,6 +205,7 @@ export default tseslint.config(
     files: [
       '**/src/config/**',
       '**/test/helpers/integration-setup.ts',
+      '**/test/helpers/global-setup.ts',
       '**/*.config.ts',
       '**/prisma.config.ts',
     ],
@@ -212,7 +213,13 @@ export default tseslint.config(
   },
   {
     // Frameworks that load these files expect a default export.
-    files: ['**/*.config.ts', '**/*.config.mts', '**/vite.config.*', '**/src/pages/**/index.tsx'],
+    files: [
+      '**/*.config.ts',
+      '**/*.config.mts',
+      '**/vite.config.*',
+      '**/src/pages/**/index.tsx',
+      '**/test/helpers/global-setup.ts',
+    ],
     rules: { 'import-x/no-default-export': 'off' },
   },
   prettier,

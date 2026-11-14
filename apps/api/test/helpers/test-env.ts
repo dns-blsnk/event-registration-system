@@ -13,3 +13,11 @@ export const TEST_ENV: Readonly<Record<string, string>> = {
   S3_SECRET_ACCESS_KEY: 'ers_local_only_secret',
   S3_FORCE_PATH_STYLE: 'true',
 };
+
+/** Unreachable database for "database is down" tests. */
+export const DEAD_DATABASE_URL = 'postgresql://ers:ers_local_only@localhost:5999/none';
+
+/** The single rule for which database integration tests use. CI may override it. */
+export function testDatabaseUrl(env: Readonly<Record<string, string | undefined>>): string {
+  return env.TEST_DATABASE_URL ?? TEST_ENV.DATABASE_URL ?? '';
+}

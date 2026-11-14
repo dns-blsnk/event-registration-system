@@ -1,0 +1,51 @@
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "esm"
+  importFileExtension = "js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum LogLevel {
+  WARN
+  ERROR
+}
+
+enum LogCategory {
+  /// 5xx responses, unhandled exceptions, AI provider failures
+  ERROR
+  /// Failed logins, 401/403, CSRF failures, rate limits, rejected uploads
+  SECURITY
+}
+
+/// Error and security journal shown on the admin "Logs" page. Kept for 7 days.
+model AppLog {
+  id         String      @id @default(uuid()) @db.Uuid
+  createdAt  DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  level      LogLevel
+  category   LogCategory
+  requestId  String?     @map("request_id") @db.VarChar(64)
+  method     String?     @db.VarChar(10)
+  route      String?     @db.VarChar(512)
+  statusCode Int?        @map("status_code") @db.SmallInt
+  errorCode  String?     @map("error_code") @db.VarChar(64)
+  message    String      @db.VarChar(2000)
+  stack      String?     @db.VarChar(8000)
+  /// Snapshot of the actor, no foreign key: deleting a user must not break the journal.
+  userId     String?     @map("user_id") @db.Uuid
+  userRole   String?     @map("user_role") @db.VarChar(16)
+  ip         String?     @db.VarChar(64)
+  userAgent  String?     @map("user_agent") @db.VarChar(512)
+  durationMs Int?        @map("duration_ms")
+  /// Allow-listed, non-sensitive fields only.
+  context    Json?
+
+  @@index([createdAt])
+  @@index([requestId])
+  @@index([statusCode, createdAt])
+  @@index([category, createdAt])
+  @@map("app_logs")
+}

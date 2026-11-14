@@ -10,11 +10,11 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "typecheck": "pnpm build:shared && pnpm -r --if-present typecheck",
-    "test": "pnpm build:shared && pnpm -r --if-present test",
+    "typecheck": "pnpm codegen && pnpm -r --if-present typecheck",
+    "test": "pnpm codegen && pnpm -r --if-present test",
     "build": "pnpm -r --if-present build",
-    "prepare": "husky && pnpm --filter @ers/shared build",
-    "build:shared": "pnpm --filter @ers/shared build"
+    "prepare": "husky && pnpm codegen",
+    "codegen": "pnpm --filter @ers/shared build && pnpm --filter @ers/api db:generate"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.4",
