@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   EVENT_STATUSES,
   EVENT_TRANSITIONS,
+  canCustomerCancel,
   EventStatus,
   HELD_REGISTRATION_STATUSES,
   REGISTRATION_STATUSES,
@@ -71,5 +72,23 @@ describe('eventTimingProblem', () => {
     expect(
       REGISTRATION_STATUSES.filter((status) => !HELD_REGISTRATION_STATUSES.includes(status)),
     ).toEqual(['CANCELLED']);
+  });
+
+  describe('canCustomerCancel', () => {
+    const session = {
+      startsAt: new Date('2026-12-01T09:00:00Z'),
+      endsAt: new Date('2026-12-01T10:00:00Z'),
+    };
+
+    it.each([
+      ['CONFIRMED', '2026-12-01T08:59:59Z', true],
+      ['WAITLISTED', '2026-12-01T08:59:59Z', true],
+      ['CONFIRMED', '2026-12-01T09:00:00Z', false],
+      ['CONFIRMED', '2026-12-01T09:30:00Z', false],
+      ['CANCELLED', '2026-12-01T08:00:00Z', false],
+      ['ATTENDED', '2026-12-01T08:00:00Z', false],
+    ] as const)('lets a %s booking be cancelled at %s: %p', (status, now, expected) => {
+      expect(canCustomerCancel({ status }, session, new Date(now))).toBe(expected);
+    });
   });
 });

@@ -104,3 +104,24 @@ export const HELD_REGISTRATION_STATUSES: readonly RegistrationStatus[] = [
 
 /** A session counts as "almost full" from this share of seats taken. */
 export const ALMOST_FULL_RATIO = 0.9;
+
+/** What a customer may give up themselves: a seat or a waitlist place, never history. */
+const CUSTOMER_CANCELLABLE_STATUSES: readonly RegistrationStatus[] = [
+  RegistrationStatus.CONFIRMED,
+  RegistrationStatus.WAITLISTED,
+];
+
+/**
+ * A customer can cancel their own seat or waitlist place until the session starts. The API checks
+ * the same rule (and the status transition) before cancelling; the admin uses it to offer the button.
+ */
+export function canCustomerCancel(
+  registration: { status: RegistrationStatus },
+  session: { startsAt: Date; endsAt: Date },
+  now: Date,
+): boolean {
+  return (
+    CUSTOMER_CANCELLABLE_STATUSES.includes(registration.status) &&
+    sessionPhase(session, now) === SessionPhase.UPCOMING
+  );
+}
