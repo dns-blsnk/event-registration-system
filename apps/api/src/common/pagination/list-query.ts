@@ -1,6 +1,8 @@
-import { DEFAULT_PAGE_SIZE, ErrorCode, MAX_PAGE_SIZE } from '@ers/shared';
+import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from '@ers/shared';
 
-import { DomainError } from '../errors/domain-error.js';
+import { fieldError } from '../errors/field-error.js';
+
+import type { DomainError } from '../errors/domain-error.js';
 
 export type SortDirection = 'asc' | 'desc';
 
@@ -22,9 +24,7 @@ const MAX_SEARCH_LENGTH = 100;
 type RawQuery = Readonly<Record<string, unknown>>;
 
 function invalid(field: string, message: string): DomainError {
-  return new DomainError(ErrorCode.VALIDATION_FAILED, 'Invalid list parameters', [
-    { field, messages: [message] },
-  ]);
+  return fieldError(field, message, 'Invalid list parameters');
 }
 
 function nonNegativeInt(raw: unknown, field: string, fallback: number): number {
@@ -98,4 +98,42 @@ export function enumFilter<T extends string>(
     throw invalid(field, `${field} must be one of ${allowed.join(', ')}`);
   }
   return raw as T;
+}
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const MAX_TEXT_FILTER_LENGTH = 100;
+
+/** Reads an optional UUID filter. */
+export function uuidFilter(raw: unknown, field: string): string | undefined {
+  if (raw === undefined || raw === '') {
+    return undefined;
+  }
+  if (typeof raw !== 'string' || !UUID_PATTERN.test(raw)) {
+    throw invalid(field, `${field} must be a UUID`);
+  }
+  return raw;
+}
+
+/** Reads an optional ISO date filter. */
+export function dateFilter(raw: unknown, field: string): Date | undefined {
+  if (raw === undefined || raw === '') {
+    return undefined;
+  }
+  const date = typeof raw === 'string' ? new Date(raw) : new Date(Number.NaN);
+  if (Number.isNaN(date.getTime())) {
+    throw invalid(field, `${field} must be an ISO date`);
+  }
+  return date;
+}
+
+/** Reads an optional exact-match text filter (trimmed, length-capped). */
+export function textFilter(raw: unknown, field: string): string | undefined {
+  if (raw === undefined || raw === '') {
+    return undefined;
+  }
+  if (typeof raw !== 'string') {
+    throw invalid(field, `${field} must be a string`);
+  }
+  const value = raw.trim().slice(0, MAX_TEXT_FILTER_LENGTH);
+  return value === '' ? undefined : value;
 }

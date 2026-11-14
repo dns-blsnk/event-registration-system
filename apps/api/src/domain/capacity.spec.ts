@@ -17,6 +17,11 @@ describe('capacity', () => {
     expect(fillRate({ capacity: 10, confirmedCount: 12 })).toBe(1);
   });
 
+  it('treats no seats at all as empty, not full', () => {
+    expect(fillRate({ capacity: 0, confirmedCount: 0 })).toBe(0);
+    expect(isAlmostFull({ capacity: 0, confirmedCount: 0 })).toBe(false);
+  });
+
   it('flags a session as almost full from 90% of seats taken', () => {
     expect(isAlmostFull({ capacity: 10, confirmedCount: 8 })).toBe(false);
     expect(isAlmostFull({ capacity: 10, confirmedCount: 9 })).toBe(true);

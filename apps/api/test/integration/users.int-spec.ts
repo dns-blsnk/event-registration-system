@@ -181,6 +181,16 @@ describe('users API (admin only)', () => {
       expect(response.body.name).toBe('Renamed');
     });
 
+    it.each(['name', 'role'])('rejects an explicit null %s', async (field) => {
+      const user = await createUser(prisma);
+
+      await admin.agent
+        .patch(`/api/users/${user.id}`)
+        .set('x-csrf-token', admin.csrfToken)
+        .send({ [field]: null })
+        .expect(400);
+    });
+
     it('changes a role and signs the user out everywhere', async () => {
       const target = await signedInAgent(app, 'CUSTOMER');
 

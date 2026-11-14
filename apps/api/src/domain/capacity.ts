@@ -10,9 +10,9 @@ export function seatsLeft({ capacity, confirmedCount }: SeatCounts): number {
   return Math.max(capacity - confirmedCount, 0);
 }
 
-/** Share of seats taken, 0..1. */
+/** Share of seats taken, 0..1. No seats at all (an event without sessions) counts as 0. */
 export function fillRate({ capacity, confirmedCount }: SeatCounts): number {
-  return capacity === 0 ? 1 : Math.min(confirmedCount / capacity, 1);
+  return capacity === 0 ? 0 : Math.min(confirmedCount / capacity, 1);
 }
 
 export function isAlmostFull(seats: SeatCounts): boolean {
