@@ -16,6 +16,11 @@ export interface ChatTicket {
 /** Longest question the help chat accepts, in characters. */
 export const CHAT_QUESTION_MAX_LENGTH = 1000;
 
+/** What `GET /api/chat/status` returns: whether a model is configured, so the widget can say so. */
+export interface ChatStatus {
+  isAvailable: boolean;
+}
+
 /** Events between the admin and the chat gateway. */
 export const ChatEvent = {
   /** Client: ask a question about the screen being used. */
