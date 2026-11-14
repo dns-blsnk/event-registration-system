@@ -126,6 +126,36 @@ export class SessionService implements OnApplicationBootstrap {
     return { status: 'valid', value: { session, user } };
   }
 
+  /**
+   * A live session by id, for connections that authenticated another way (a chat ticket) and must
+   * stop working once the session is signed out or runs out. Read-only: it does not count as activity.
+   */
+  async findLiveById(id: string, now: Date = new Date()): Promise<ValidSession | null> {
+    const found = await this.prisma.authSession.findUnique({
+      where: { id },
+      include: { user: true },
+    });
+    if (found === null || isExpired(found, now)) {
+      return null;
+    }
+    const { user, ...session } = found;
+    return { session, user };
+  }
+
+  /** Which of these session ids are still live; one query for many open connections. */
+  async liveIds(ids: readonly string[], now: Date = new Date()): Promise<Set<string>> {
+    if (ids.length === 0) {
+      return new Set();
+    }
+    const found = await this.prisma.authSession.findMany({
+      where: { id: { in: [...ids] } },
+      select: { id: true, expiresAt: true, lastSeenAt: true },
+    });
+    return new Set(
+      found.filter((session) => !isExpired(session, now)).map((session) => session.id),
+    );
+  }
+
   async revoke(token: string): Promise<void> {
     await this.prisma.authSession.deleteMany({ where: { tokenHash: hashSessionToken(token) } });
   }
