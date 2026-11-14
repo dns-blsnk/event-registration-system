@@ -15,5 +15,5 @@ export const resources: ResourceProps[] = [
     edit: '/events/:id/edit',
     meta: { label: 'Events' },
   },
-  { name: Resource.SESSIONS, meta: { label: 'Sessions' } },
+  { name: Resource.SESSIONS, list: '/sessions', meta: { label: 'Sessions' } },
 ];

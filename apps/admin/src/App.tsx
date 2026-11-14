@@ -24,6 +24,7 @@ import { EventCreate } from './pages/events/event-create';
 import { EventEdit } from './pages/events/event-edit';
 import { EventList } from './pages/events/event-list';
 import { EventShow } from './pages/events/event-show';
+import { SessionList } from './pages/sessions/session-list';
 import { accessControlProvider } from './providers/access-control-provider';
 import { authProvider, HOME_PATH, LOGIN_PATH } from './providers/auth-provider';
 import { dataProvider } from './providers/data-provider';
@@ -77,6 +78,7 @@ export function App(): React.JSX.Element {
                   <Route path="/events/create" element={<EventCreate />} />
                   <Route path="/events/:id" element={<EventShow />} />
                   <Route path="/events/:id/edit" element={<EventEdit />} />
+                  <Route path="/sessions" element={<SessionList />} />
                 </Route>
                 <Route path="/forbidden" element={<ForbiddenPage />} />
                 <Route path="*" element={<ErrorComponent />} />
