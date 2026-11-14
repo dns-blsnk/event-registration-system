@@ -23,6 +23,7 @@ import { AppLogShow } from './pages/app-logs/app-log-show';
 import { LoginPage } from './pages/auth/login-page';
 import { CatalogList } from './pages/catalog/catalog-list';
 import { CatalogShow } from './pages/catalog/catalog-show';
+import { CustomerList } from './pages/customers/customer-list';
 import { ForbiddenPage } from './pages/errors/forbidden-page';
 import { EventCreate } from './pages/events/event-create';
 import { EventEdit } from './pages/events/event-edit';
@@ -31,6 +32,7 @@ import { EventShow } from './pages/events/event-show';
 import { MyRegistrationList } from './pages/my-registrations/my-registration-list';
 import { RegistrationList } from './pages/registrations/registration-list';
 import { SessionList } from './pages/sessions/session-list';
+import { TagList } from './pages/tags/tag-list';
 import { UserList } from './pages/users/user-list';
 import { accessControlProvider } from './providers/access-control-provider';
 import { authProvider, HOME_PATH, LOGIN_PATH } from './providers/auth-provider';
@@ -87,6 +89,8 @@ export function App(): React.JSX.Element {
                   <Route path="/events/:id/edit" element={<EventEdit />} />
                   <Route path="/sessions" element={<SessionList />} />
                   <Route path="/registrations" element={<RegistrationList />} />
+                  <Route path="/customers" element={<CustomerList />} />
+                  <Route path="/tags" element={<TagList />} />
                   <Route path="/users" element={<UserList />} />
                   <Route path="/catalog" element={<CatalogList />} />
                   <Route path="/catalog/:id" element={<CatalogShow />} />
