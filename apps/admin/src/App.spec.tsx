@@ -52,7 +52,7 @@ describe('App', () => {
     },
   );
 
-  it.each(['/users', '/logs', '/catalog'])(
+  it.each(['/users', '/logs', '/catalog', '/my-registrations'])(
     'shows "No access" to an organizer on %s, which is not for staff',
     async (path) => {
       mockHttp([

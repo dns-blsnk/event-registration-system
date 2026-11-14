@@ -28,6 +28,7 @@ import { EventCreate } from './pages/events/event-create';
 import { EventEdit } from './pages/events/event-edit';
 import { EventList } from './pages/events/event-list';
 import { EventShow } from './pages/events/event-show';
+import { MyRegistrationList } from './pages/my-registrations/my-registration-list';
 import { RegistrationList } from './pages/registrations/registration-list';
 import { SessionList } from './pages/sessions/session-list';
 import { UserList } from './pages/users/user-list';
@@ -89,6 +90,7 @@ export function App(): React.JSX.Element {
                   <Route path="/users" element={<UserList />} />
                   <Route path="/catalog" element={<CatalogList />} />
                   <Route path="/catalog/:id" element={<CatalogShow />} />
+                  <Route path="/my-registrations" element={<MyRegistrationList />} />
                   <Route path="/logs" element={<AppLogList />} />
                   <Route path="/logs/:id" element={<AppLogShow />} />
                 </Route>

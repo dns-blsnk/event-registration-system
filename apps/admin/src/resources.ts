@@ -19,5 +19,10 @@ export const resources: ResourceProps[] = [
   { name: Resource.REGISTRATIONS, list: '/registrations', meta: { label: 'Registrations' } },
   { name: Resource.USERS, list: '/users', meta: { label: 'Users' } },
   { name: Resource.CATALOG, list: '/catalog', show: '/catalog/:id', meta: { label: 'Catalog' } },
+  {
+    name: Resource.MY_REGISTRATIONS,
+    list: '/my-registrations',
+    meta: { label: 'My registrations' },
+  },
   { name: Resource.APP_LOGS, list: '/logs', show: '/logs/:id', meta: { label: 'Logs' } },
 ];
