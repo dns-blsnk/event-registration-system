@@ -1,4 +1,4 @@
-import { CSRF_HEADER, REQUEST_ID_HEADER } from '@ers/shared';
+import { CSRF_HEADER, REQUEST_ID_HEADER, TOTAL_COUNT_HEADER } from '@ers/shared';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 
@@ -26,7 +26,7 @@ export function configureApp(app: NestExpressApplication): NestExpressApplicatio
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     allowedHeaders: ['content-type', CSRF_HEADER],
-    exposedHeaders: [REQUEST_ID_HEADER, 'x-total-count'],
+    exposedHeaders: [REQUEST_ID_HEADER, TOTAL_COUNT_HEADER],
     maxAge: CORS_MAX_AGE_SECONDS,
   });
   app.setGlobalPrefix(API_PREFIX);

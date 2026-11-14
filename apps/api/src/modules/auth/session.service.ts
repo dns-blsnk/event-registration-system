@@ -8,7 +8,7 @@ import { PrismaService } from '../../prisma/prisma.service.js';
 
 import { generateCsrfToken, generateSessionToken, hashSessionToken } from './session-tokens.js';
 
-import type { AuthSession, User } from '../../generated/prisma/client.js';
+import type { AuthSession, Prisma, User } from '../../generated/prisma/client.js';
 
 const SESSION_TTL_DAYS = 7;
 const SESSION_IDLE_HOURS = 24;
@@ -130,9 +130,16 @@ export class SessionService implements OnApplicationBootstrap {
     await this.prisma.authSession.deleteMany({ where: { tokenHash: hashSessionToken(token) } });
   }
 
-  /** Signs the user out everywhere, e.g. after a password or role change. */
-  async revokeAllForUser(userId: string, exceptSessionId?: string): Promise<number> {
-    const { count } = await this.prisma.authSession.deleteMany({
+  /**
+   * Signs the user out everywhere, e.g. after a password or role change. Pass `tx` to make it part
+   * of the caller's transaction.
+   */
+  async revokeAllForUser(
+    userId: string,
+    exceptSessionId?: string,
+    tx: Prisma.TransactionClient = this.prisma,
+  ): Promise<number> {
+    const { count } = await tx.authSession.deleteMany({
       where: { userId, ...(exceptSessionId === undefined ? {} : { id: { not: exceptSessionId } }) },
     });
     return count;

@@ -18,6 +18,8 @@ describe('translatePrismaError', () => {
     ['P2002', 'CONFLICT'],
     ['P2003', 'CONFLICT'],
     ['P2025', 'NOT_FOUND'],
+    ['P2028', 'CONFLICT'],
+    ['P2034', 'CONFLICT'],
   ])('maps %s to %s', (prismaCode, errorCode) => {
     expect(translatePrismaError(knownError(prismaCode))?.code).toBe(errorCode);
   });

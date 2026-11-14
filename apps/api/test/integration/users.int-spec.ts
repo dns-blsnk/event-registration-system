@@ -74,6 +74,21 @@ describe('users API (admin only)', () => {
       ]);
     });
 
+    it('treats LIKE wildcards in the search as literal characters', async () => {
+      const marker = randomUUID().slice(0, 8);
+      await createUser(prisma, { name: `Wild ${marker} plain` });
+      await createUser(prisma, { name: `Wild ${marker} under_score` });
+
+      const response = await admin.agent
+        .get('/api/users')
+        .query({ q: `${marker} under_` })
+        .expect(200);
+
+      expect(response.body.map((user: { name: string }) => user.name)).toEqual([
+        `Wild ${marker} under_score`,
+      ]);
+    });
+
     it.each([
       [{ _sort: 'passwordHash' }, '_sort'],
       [{ role: 'SUPERUSER' }, 'role'],
@@ -224,6 +239,43 @@ describe('users API (admin only)', () => {
       expect((await prisma.user.findUniqueOrThrow({ where: { id: user.id } })).role).toBe(
         'CUSTOMER',
       );
+    });
+  });
+  // Last: it temporarily leaves exactly two admins in the shared test database.
+  describe('concurrent role changes', () => {
+    it('never leaves the system without an admin when two admins demote each other at once', async () => {
+      const first = await signedInAgent(app, 'ADMIN');
+      const second = await signedInAgent(app, 'ADMIN');
+      const others = await prisma.user.findMany({
+        where: { role: 'ADMIN', id: { notIn: [first.userId, second.userId] } },
+        select: { id: true },
+      });
+      const otherIds = others.map((other) => other.id);
+      await prisma.user.updateMany({
+        where: { id: { in: otherIds } },
+        data: { role: 'ORGANIZER' },
+      });
+      try {
+        const results = await Promise.all([
+          first.agent
+            .patch(`/api/users/${second.userId}`)
+            .set('x-csrf-token', first.csrfToken)
+            .send({ role: 'CUSTOMER' }),
+          second.agent
+            .patch(`/api/users/${first.userId}`)
+            .set('x-csrf-token', second.csrfToken)
+            .send({ role: 'CUSTOMER' }),
+        ]);
+
+        // One demotion wins. The other is refused: 409 if it reached the lock, or 401/403 if the
+        // winner had already demoted and signed out its author.
+        const statuses = results.map((result) => result.status);
+        expect(statuses.filter((status) => status === 200)).toHaveLength(1);
+        expect(statuses.filter((status) => [401, 403, 409].includes(status))).toHaveLength(1);
+        expect(await prisma.user.count({ where: { role: 'ADMIN' } })).toBe(1);
+      } finally {
+        await prisma.user.updateMany({ where: { id: { in: otherIds } }, data: { role: 'ADMIN' } });
+      }
     });
   });
 });

@@ -64,6 +64,13 @@ export function translatePrismaError(error: unknown): DomainError | undefined {
       return new DomainError(ErrorCode.CONFLICT, 'A related record is missing or still in use');
     case 'P2025':
       return new DomainError(ErrorCode.NOT_FOUND, 'Record not found');
+    case 'P2028':
+    case 'P2034':
+      // Transaction expired while waiting for a lock (P2028), or a write conflict/deadlock (P2034).
+      return new DomainError(
+        ErrorCode.CONFLICT,
+        'The data changed while saving. Please try again.',
+      );
     default:
       return undefined;
   }
