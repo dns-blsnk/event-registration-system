@@ -21,6 +21,8 @@ import { BrowserRouter, Outlet, Route, Routes } from 'react-router';
 import { AppLogList } from './pages/app-logs/app-log-list';
 import { AppLogShow } from './pages/app-logs/app-log-show';
 import { LoginPage } from './pages/auth/login-page';
+import { CatalogList } from './pages/catalog/catalog-list';
+import { CatalogShow } from './pages/catalog/catalog-show';
 import { ForbiddenPage } from './pages/errors/forbidden-page';
 import { EventCreate } from './pages/events/event-create';
 import { EventEdit } from './pages/events/event-edit';
@@ -85,6 +87,8 @@ export function App(): React.JSX.Element {
                   <Route path="/sessions" element={<SessionList />} />
                   <Route path="/registrations" element={<RegistrationList />} />
                   <Route path="/users" element={<UserList />} />
+                  <Route path="/catalog" element={<CatalogList />} />
+                  <Route path="/catalog/:id" element={<CatalogShow />} />
                   <Route path="/logs" element={<AppLogList />} />
                   <Route path="/logs/:id" element={<AppLogShow />} />
                 </Route>

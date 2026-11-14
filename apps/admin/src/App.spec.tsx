@@ -52,8 +52,8 @@ describe('App', () => {
     },
   );
 
-  it.each(['/users', '/logs'])(
-    'shows "No access" to an organizer on admin-only %s',
+  it.each(['/users', '/logs', '/catalog'])(
+    'shows "No access" to an organizer on %s, which is not for staff',
     async (path) => {
       mockHttp([
         {
