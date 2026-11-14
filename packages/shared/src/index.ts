@@ -1,6 +1,7 @@
 export * from './app-logs.js';
 export * from './auth.js';
 export * from './catalog.js';
+export * from './chat.js';
 export * from './customers.js';
 export * from './domain.js';
 export * from './errors.js';
