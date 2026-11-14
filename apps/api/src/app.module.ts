@@ -14,6 +14,7 @@ import { ConfigModule } from './config/config.module.js';
 import { AppLogsModule } from './modules/app-logs/app-logs.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { CatalogModule } from './modules/catalog/catalog.module.js';
+import { ChatModule } from './modules/chat/chat.module.js';
 import { CustomersModule } from './modules/customers/customers.module.js';
 import { EventsModule } from './modules/events/events.module.js';
 import { HealthModule } from './modules/health/health.module.js';
@@ -45,6 +46,7 @@ const REQUESTS_PER_MINUTE_PER_IP = 300;
     TagsModule,
     CustomersModule,
     CatalogModule,
+    ChatModule,
     StorageModule,
     HealthModule,
   ],

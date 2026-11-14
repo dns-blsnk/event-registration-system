@@ -2,12 +2,12 @@ import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 
 const TOKEN_BYTES = 32;
 
-/** 256-bit random session token for the cookie. Never stored as is. */
+/** 256-bit random bearer token (session cookie, chat ticket). Never stored as is. */
 export function generateSessionToken(): string {
   return randomBytes(TOKEN_BYTES).toString('base64url');
 }
 
-/** What the database stores: a leaked table does not reveal usable session tokens. */
+/** What the server keeps of a bearer token: a leaked store does not reveal usable tokens. */
 export function hashSessionToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
 }
