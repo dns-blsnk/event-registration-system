@@ -2,10 +2,13 @@ import Anthropic from '@anthropic-ai/sdk';
 import { Module } from '@nestjs/common';
 
 import { APP_CONFIG } from '../../config/config.module.js';
+import { AuthModule } from '../auth/auth.module.js';
 
 import { ANTHROPIC_CLIENT, CHAT_MODEL, ChatAnswerService } from './chat-answer.service.js';
+import { ChatHandshake } from './chat-handshake.js';
 import { ChatTicketStore } from './chat-tickets.js';
 import { ChatController } from './chat.controller.js';
+import { ChatGateway } from './chat.gateway.js';
 
 import type { Config } from '../../config/config.schema.js';
 
@@ -13,10 +16,13 @@ import type { Config } from '../../config/config.schema.js';
 const ANSWER_MAX_RETRIES = 1;
 
 @Module({
+  imports: [AuthModule],
   controllers: [ChatController],
   providers: [
     ChatTicketStore,
     ChatAnswerService,
+    ChatGateway,
+    ChatHandshake,
     {
       provide: ANTHROPIC_CLIENT,
       inject: [APP_CONFIG],

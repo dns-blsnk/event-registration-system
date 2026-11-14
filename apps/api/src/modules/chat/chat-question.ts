@@ -1,0 +1,22 @@
+import type { ChatQuestion } from '@ers/shared';
+
+/** Client-chosen ids and field names are short tokens; anything longer is not from the admin. */
+const TOKEN_MAX_LENGTH = 64;
+
+function isShortText(value: unknown): value is string {
+  return typeof value === 'string' && value !== '' && value.length <= TOKEN_MAX_LENGTH;
+}
+
+/**
+ * Reads an `ask` payload from the socket. Only the shape is checked here; the question text, the
+ * screen and the role are checked when the prompt is built. Undefined means a malformed payload.
+ */
+export function parseChatQuestion(
+  payload: unknown,
+): (Omit<ChatQuestion, 'resource'> & { resource: string }) | undefined {
+  if (typeof payload !== 'object' || payload === null) return undefined;
+  const { id, resource, field, question } = payload as Record<string, unknown>;
+  if (!isShortText(id) || !isShortText(resource) || typeof question !== 'string') return undefined;
+  if (field !== undefined && !isShortText(field)) return undefined;
+  return { id, resource, question, ...(field === undefined ? {} : { field }) };
+}
