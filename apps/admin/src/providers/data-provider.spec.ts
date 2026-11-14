@@ -173,4 +173,27 @@ describe('toHttpError', () => {
 
     expect([error.statusCode, error.requestId]).toEqual([413, 'req-9']);
   });
+
+  it.each([
+    [500, 'Server error (request id: req-5)'],
+    [503, 'Server error (request id: req-5)'],
+    [409, 'Server error'],
+  ])(
+    'adds the request id to the message of a %i answer only when the server failed',
+    (status, message) => {
+      const headers = new AxiosHeaders();
+      const error = toHttpError(
+        new AxiosError('failed', String(status), undefined, undefined, {
+          data: { statusCode: status, code: 'X', message: 'Server error', requestId: 'req-5' },
+          status,
+          statusText: '',
+          headers,
+          config: { headers },
+        }),
+      ) as AdminHttpError;
+
+      expect(error.message).toBe(message);
+      expect(error.requestId).toBe('req-5');
+    },
+  );
 });

@@ -1,6 +1,6 @@
 import { REQUEST_ID_HEADER } from '@ers/shared';
 import simpleRest from '@refinedev/simple-rest';
-import { isAxiosError } from 'axios';
+import { HttpStatusCode, isAxiosError } from 'axios';
 
 import { apiErrorOf, statusOf } from '../api/errors';
 import { API_BASE_URL, http } from '../api/http';
@@ -51,6 +51,22 @@ export class AdminHttpError extends Error implements HttpError {
   }
 }
 
+const SERVER_ERROR_MIN_STATUS: number = HttpStatusCode.InternalServerError;
+
+/**
+ * Server failures carry the request id in their message, so the notification the user sees has the
+ * id an admin needs to find the entry in Logs. Client errors (4xx) explain themselves.
+ */
+function withRequestIdForServerErrors(
+  message: string,
+  statusCode: number,
+  requestId: string | undefined,
+): string {
+  return statusCode >= SERVER_ERROR_MIN_STATUS && requestId !== undefined
+    ? `${message} (request id: ${requestId})`
+    : message;
+}
+
 function fieldErrors(details: readonly { field: string; messages: string[] }[]): ValidationErrors {
   const merged = new Map<string, string[]>();
   for (const { field, messages } of details) {
@@ -59,7 +75,10 @@ function fieldErrors(details: readonly { field: string; messages: string[] }[]):
   return Object.fromEntries(merged);
 }
 
-function requestIdOf(error: unknown, bodyRequestId: string | undefined): string | undefined {
+function requestIdFromResponse(
+  error: unknown,
+  bodyRequestId: string | undefined,
+): string | undefined {
   if (bodyRequestId !== undefined) {
     return bodyRequestId;
   }
@@ -80,9 +99,11 @@ export function toHttpError(error: unknown): unknown {
   }
   const body = apiErrorOf(error);
   const statusCode = statusOf(error) ?? 0;
-  const requestId = requestIdOf(error, body?.requestId);
+  const requestId = requestIdFromResponse(error, body?.requestId);
+  const message =
+    body?.message ?? (error.response === undefined ? UNREACHABLE_MESSAGE : FAILED_MESSAGE);
   return new AdminHttpError({
-    message: body?.message ?? (error.response === undefined ? UNREACHABLE_MESSAGE : FAILED_MESSAGE),
+    message: withRequestIdForServerErrors(message, statusCode, requestId),
     statusCode,
     ...(body?.details === undefined ? {} : { errors: fieldErrors(body.details) }),
     ...(requestId === undefined ? {} : { requestId }),
