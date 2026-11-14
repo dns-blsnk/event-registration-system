@@ -1,4 +1,5 @@
-import type { EventStatus } from './domain.js';
+import { ALMOST_FULL_RATIO, type EventStatus } from './domain.js';
+import { formatPercent } from './format.js';
 
 /**
  * Label and help text of a field. The admin shows them in forms and tables, and the AI help chat
@@ -42,6 +43,7 @@ export const EVENT_FIELDS = {
 } as const satisfies Record<string, FieldDescription>;
 
 export const SESSION_FIELDS = {
+  event: { label: 'Event', help: 'The event this session belongs to.' },
   title: { label: 'Title', help: 'Name of the talk or workshop.' },
   speaker: { label: 'Speaker', help: 'Who leads the session; optional.' },
   room: { label: 'Room', help: 'Where in the venue it happens; optional.' },
@@ -68,6 +70,15 @@ export const SESSION_FIELDS = {
 /** Controls of the events list that are not fields of an event. */
 export const EVENT_LIST_CONTROLS = {
   search: { label: 'Search', help: 'Matches the title, city or venue.' },
+} as const satisfies Record<string, FieldDescription>;
+
+/** Controls of the sessions list that are not fields of a session. */
+export const SESSION_LIST_CONTROLS = {
+  search: { label: 'Search', help: 'Matches the title, speaker or room.' },
+  almostFull: {
+    label: 'Almost full',
+    help: `Only sessions with at least ${formatPercent(ALMOST_FULL_RATIO)} of seats taken.`,
+  },
 } as const satisfies Record<string, FieldDescription>;
 
 export const EVENT_STATUS_LABELS: Readonly<Record<EventStatus, string>> = {
