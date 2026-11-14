@@ -7,6 +7,13 @@ import type { ResourceProps } from '@refinedev/core';
  * the routes and the access checks all speak about the same thing.
  */
 export const resources: ResourceProps[] = [
-  { name: Resource.EVENTS, list: '/events', show: '/events/:id', meta: { label: 'Events' } },
+  {
+    name: Resource.EVENTS,
+    list: '/events',
+    show: '/events/:id',
+    create: '/events/create',
+    edit: '/events/:id/edit',
+    meta: { label: 'Events' },
+  },
   { name: Resource.SESSIONS, meta: { label: 'Sessions' } },
 ];

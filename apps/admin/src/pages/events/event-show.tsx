@@ -1,11 +1,11 @@
-import { EVENT_FIELDS, type EventDetail } from '@ers/shared';
+import { EVENT_FIELDS, EVENT_TRANSITIONS, type EventDetail } from '@ers/shared';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { useShow } from '@refinedev/core';
-import { Show } from '@refinedev/mui';
+import { EditButton, Show } from '@refinedev/mui';
 
 import { EventStatusChip } from '../../components/event-status-chip';
 import { formatDateTime, formatPercent } from '../../components/format';
@@ -37,7 +37,16 @@ export function EventShow(): React.JSX.Element {
   return (
     <Show
       isLoading={query.isLoading}
-      headerButtons={event === undefined ? [] : <EventActions event={event} />}
+      headerButtons={
+        event === undefined ? (
+          []
+        ) : (
+          <>
+            {EVENT_TRANSITIONS[event.status].length > 0 && <EditButton recordItemId={event.id} />}
+            <EventActions event={event} />
+          </>
+        )
+      }
     >
       {query.isError && (
         <Alert severity="error">
