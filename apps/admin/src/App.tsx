@@ -34,6 +34,7 @@ import { EventShow } from './pages/events/event-show';
 import { MyRegistrationList } from './pages/my-registrations/my-registration-list';
 import { RegistrationList } from './pages/registrations/registration-list';
 import { SessionList } from './pages/sessions/session-list';
+import { SessionShow } from './pages/sessions/session-show';
 import { TagList } from './pages/tags/tag-list';
 import { UserList } from './pages/users/user-list';
 import { accessControlProvider } from './providers/access-control-provider';
@@ -102,6 +103,7 @@ export function App(): React.JSX.Element {
                     <Route path="/events/:id" element={<EventShow />} />
                     <Route path="/events/:id/edit" element={<EventEdit />} />
                     <Route path="/sessions" element={<SessionList />} />
+                    <Route path="/sessions/:id" element={<SessionShow />} />
                     <Route path="/registrations" element={<RegistrationList />} />
                     <Route path="/customers" element={<CustomerList />} />
                     <Route path="/tags" element={<TagList />} />

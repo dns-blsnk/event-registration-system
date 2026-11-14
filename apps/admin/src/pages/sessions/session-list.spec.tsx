@@ -47,7 +47,10 @@ describe('SessionList', () => {
 
     renderAdminPage({ path: '/sessions', route: '/sessions', element: <SessionList /> });
 
-    expect(await screen.findByText('State of React')).toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: 'State of React' })).toHaveAttribute(
+      'href',
+      '/sessions/s1',
+    );
     expect(screen.getByRole('link', { name: 'Kyiv Frontend Summit' })).toHaveAttribute(
       'href',
       '/events/e1',

@@ -1,4 +1,6 @@
 import { SESSION_FIELDS, type SessionListItem } from '@ers/shared';
+import Link from '@mui/material/Link';
+import { Link as RouterLink } from 'react-router';
 
 import { formatDateTime } from '../../components/format';
 
@@ -6,7 +8,18 @@ import type { GridColDef } from '@mui/x-data-grid';
 
 /** Session columns shared by the sessions list and the sessions table on an event page. */
 export const SESSION_COLUMNS: GridColDef<SessionListItem>[] = [
-  { field: 'title', headerName: SESSION_FIELDS.title.label, flex: 2, minWidth: 180 },
+  {
+    field: 'title',
+    headerName: SESSION_FIELDS.title.label,
+    flex: 2,
+    minWidth: 180,
+    // The session page lists its registrations, so the title is the way in.
+    renderCell: ({ row }) => (
+      <Link component={RouterLink} to={`/sessions/${row.id}`}>
+        {row.title}
+      </Link>
+    ),
+  },
   {
     field: 'speaker',
     headerName: SESSION_FIELDS.speaker.label,
