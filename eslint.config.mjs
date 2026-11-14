@@ -127,6 +127,8 @@ export default tseslint.config(
         },
       ],
       '@typescript-eslint/consistent-type-imports': 'error',
+      // Nest modules are empty classes configured through decorators.
+      '@typescript-eslint/no-extraneous-class': ['error', { allowWithDecorator: true }],
       '@typescript-eslint/switch-exhaustiveness-check': 'error',
       '@typescript-eslint/no-floating-promises': 'error',
       '@typescript-eslint/no-explicit-any': 'error',
@@ -189,14 +191,23 @@ export default tseslint.config(
       '@typescript-eslint/no-magic-numbers': 'off',
       '@typescript-eslint/max-params': 'off',
       'max-depth': 'off',
+      // Test clients such as supertest return untyped response bodies.
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-argument': 'off',
       'max-lines': 'off',
       'max-lines-per-function': 'off',
       complexity: 'off',
     },
   },
   {
-    // The config module is the single place allowed to read process.env.
-    files: ['**/src/config/**', '**/*.config.ts', '**/prisma.config.ts'],
+    // Only the config module (and the test env setup that feeds it) may touch process.env.
+    files: [
+      '**/src/config/**',
+      '**/test/helpers/integration-setup.ts',
+      '**/*.config.ts',
+      '**/prisma.config.ts',
+    ],
     rules: { 'no-restricted-syntax': 'off', 'no-restricted-imports': 'off' },
   },
   {
