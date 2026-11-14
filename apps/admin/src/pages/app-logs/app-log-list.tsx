@@ -7,16 +7,13 @@ import {
   AppLogLevel,
   type AppLogListItem,
 } from '@ers/shared';
-import Stack from '@mui/material/Stack';
 import { DataGrid, type GridColDef } from '@mui/x-data-grid';
 import { List, ShowButton, useDataGrid } from '@refinedev/mui';
 
 import {
-  ApplySearchButton,
   applyFiltersFromFirstPage,
+  SearchFilterForm,
   SelectFilterField,
-  submitTextFilters,
-  TextFilterField,
 } from '../../components/filter-form';
 import { formatDateTime } from '../../components/format';
 import { ACTIONS_COLUMN_HEADER } from '../../components/grid';
@@ -83,21 +80,14 @@ export function AppLogList(): React.JSX.Element {
   const onFilters = applyFiltersFromFirstPage({ setCurrentPage, setFilters });
   return (
     <List title="Logs">
-      <Stack
-        component="form"
-        direction={{ xs: 'column', md: 'row' }}
-        spacing={2}
-        sx={{ mb: 2 }}
-        alignItems={{ md: 'flex-start' }}
-        onSubmit={submitTextFilters(['q', 'requestId'], onFilters)}
+      <SearchFilterForm
+        textFilters={[
+          { name: 'q', description: APP_LOG_LIST_CONTROLS.search },
+          { name: 'requestId', description: APP_LOG_FIELDS.requestId },
+        ]}
+        filters={filters}
+        onChange={onFilters}
       >
-        <TextFilterField name="q" description={APP_LOG_LIST_CONTROLS.search} filters={filters} />
-        <TextFilterField
-          name="requestId"
-          description={APP_LOG_FIELDS.requestId}
-          filters={filters}
-        />
-        <ApplySearchButton />
         <SelectFilterField
           name="category"
           description={APP_LOG_FIELDS.category}
@@ -114,7 +104,7 @@ export function AppLogList(): React.JSX.Element {
           filters={filters}
           onChange={onFilters}
         />
-      </Stack>
+      </SearchFilterForm>
       <DataGrid {...dataGridProps} columns={columns} disableColumnFilter autoHeight />
     </List>
   );

@@ -6,18 +6,15 @@ import {
   type PublicUser,
   type UserListItem,
 } from '@ers/shared';
-import Stack from '@mui/material/Stack';
 import { DataGrid, type GridColDef } from '@mui/x-data-grid';
 import { useGetIdentity } from '@refinedev/core';
 import { CreateButton, DeleteButton, EditButton, List, useDataGrid } from '@refinedev/mui';
 import { useMemo, useState } from 'react';
 
 import {
-  ApplySearchButton,
   applyFiltersFromFirstPage,
+  SearchFilterForm,
   SelectFilterField,
-  submitTextFilters,
-  TextFilterField,
 } from '../../components/filter-form';
 import { formatDateTime } from '../../components/format';
 import { ACTIONS_COLUMN_HEADER } from '../../components/grid';
@@ -94,16 +91,11 @@ export function UserList(): React.JSX.Element {
         </CreateButton>
       }
     >
-      <Stack
-        component="form"
-        direction={{ xs: 'column', sm: 'row' }}
-        spacing={2}
-        sx={{ mb: 2 }}
-        alignItems={{ sm: 'flex-start' }}
-        onSubmit={submitTextFilters(['q'], onFilters)}
+      <SearchFilterForm
+        textFilters={[{ name: 'q', description: USER_LIST_CONTROLS.search }]}
+        filters={filters}
+        onChange={onFilters}
       >
-        <TextFilterField name="q" description={USER_LIST_CONTROLS.search} filters={filters} />
-        <ApplySearchButton />
         <SelectFilterField
           name="role"
           description={USER_FIELDS.role}
@@ -112,7 +104,7 @@ export function UserList(): React.JSX.Element {
           filters={filters}
           onChange={onFilters}
         />
-      </Stack>
+      </SearchFilterForm>
       <DataGrid {...dataGridProps} columns={columns} disableColumnFilter autoHeight />
       {dialog.kind !== 'closed' && (
         <UserFormDialog

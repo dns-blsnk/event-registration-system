@@ -1,15 +1,9 @@
 import { SESSION_LIST_CONTROLS } from '@ers/shared';
 import FormControlLabel from '@mui/material/FormControlLabel';
-import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
 import Tooltip from '@mui/material/Tooltip';
 
-import {
-  ApplySearchButton,
-  filterText,
-  submitTextFilters,
-  TextFilterField,
-} from '../../components/filter-form';
+import { filterText, SearchFilterForm } from '../../components/filter-form';
 
 import type { CrudFilters } from '@refinedev/core';
 
@@ -23,16 +17,11 @@ interface SessionFiltersProps {
 /** Search and the "almost full" switch; the server does the filtering. */
 export function SessionFilters({ filters, onChange }: SessionFiltersProps): React.JSX.Element {
   return (
-    <Stack
-      component="form"
-      direction={{ xs: 'column', sm: 'row' }}
-      spacing={2}
-      sx={{ mb: 2 }}
-      alignItems={{ sm: 'flex-start' }}
-      onSubmit={submitTextFilters(['q'], onChange)}
+    <SearchFilterForm
+      textFilters={[{ name: 'q', description: SESSION_LIST_CONTROLS.search }]}
+      filters={filters}
+      onChange={onChange}
     >
-      <TextFilterField name="q" description={SESSION_LIST_CONTROLS.search} filters={filters} />
-      <ApplySearchButton />
       {/* describeChild keeps "Almost full" as the switch's name and the help as its description. */}
       <Tooltip title={SESSION_LIST_CONTROLS.almostFull.help} describeChild>
         <FormControlLabel
@@ -49,6 +38,6 @@ export function SessionFilters({ filters, onChange }: SessionFiltersProps): Reac
           label={SESSION_LIST_CONTROLS.almostFull.label}
         />
       </Tooltip>
-    </Stack>
+    </SearchFilterForm>
   );
 }

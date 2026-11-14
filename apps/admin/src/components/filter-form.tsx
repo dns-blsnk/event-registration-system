@@ -1,6 +1,7 @@
 import SearchIcon from '@mui/icons-material/Search';
 import IconButton from '@mui/material/IconButton';
 import MenuItem from '@mui/material/MenuItem';
+import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import { getDefaultFilter, type CrudFilters } from '@refinedev/core';
 
@@ -128,4 +129,56 @@ export function applyFiltersFromFirstPage({
     setCurrentPage(1);
     setFilters(changed, 'merge');
   };
+}
+
+/** A free-text filter of a search form: the URL field it sets and its shared label and help. */
+export interface TextFilter {
+  name: string;
+  description: FieldDescription;
+}
+
+interface SearchFilterFormProps {
+  textFilters: readonly TextFilter[];
+  filters: CrudFilters;
+  onChange: (filters: CrudFilters) => void;
+  /** Controls after the search button that apply at once, such as pick-one filters. */
+  children?: React.ReactNode;
+}
+
+/**
+ * The filter row every list shares: text boxes applied together on submit, the search button, then
+ * instant controls. Stacks into a column on narrow screens.
+ */
+export function SearchFilterForm({
+  textFilters,
+  filters,
+  onChange,
+  children,
+}: SearchFilterFormProps): React.JSX.Element {
+  return (
+    <Stack
+      component="form"
+      direction={{ xs: 'column', sm: 'row' }}
+      spacing={2}
+      sx={{ mb: 2 }}
+      alignItems={{ sm: 'flex-start' }}
+      useFlexGap
+      flexWrap="wrap"
+      onSubmit={submitTextFilters(
+        textFilters.map((filter) => filter.name),
+        onChange,
+      )}
+    >
+      {textFilters.map((filter) => (
+        <TextFilterField
+          key={filter.name}
+          name={filter.name}
+          description={filter.description}
+          filters={filters}
+        />
+      ))}
+      <ApplySearchButton />
+      {children}
+    </Stack>
+  );
 }
