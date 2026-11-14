@@ -6,6 +6,7 @@
     "node": ">=24"
   },
   "scripts": {
+    "dev": "pnpm codegen && pnpm --parallel --filter @ers/api --filter @ers/admin dev",
     "lint": "eslint . --max-warnings=0",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
