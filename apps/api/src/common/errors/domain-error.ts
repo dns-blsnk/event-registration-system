@@ -6,6 +6,8 @@ export class DomainError extends Error {
     readonly code: ErrorCode,
     message: string,
     readonly details?: FieldError[],
+    /** True for routine outcomes (e.g. "not signed in yet") that must not flood the security journal. */
+    readonly isRoutine = false,
   ) {
     super(message);
     this.name = 'DomainError';

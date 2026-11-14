@@ -1,9 +1,13 @@
 import { Module } from '@nestjs/common';
-import { APP_FILTER, APP_PIPE } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_PIPE } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 
+import { AuthGuard } from './common/auth/auth.guard.js';
+import { CsrfGuard } from './common/auth/csrf.guard.js';
 import { AllExceptionsFilter } from './common/errors/all-exceptions.filter.js';
 import { LoggingModule } from './common/logging/logging.module.js';
+import { MINUTE_MS } from './common/time.js';
 import { createValidationPipe } from './common/validation/validation.pipe.js';
 import { ConfigModule } from './config/config.module.js';
 import { AppLogsModule } from './modules/app-logs/app-logs.module.js';
@@ -11,17 +15,27 @@ import { AuthModule } from './modules/auth/auth.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 
+/** Generous default per IP; sensitive routes (login, signup, chat) set stricter limits. */
+const REQUESTS_PER_MINUTE_PER_IP = 300;
+
 @Module({
   imports: [
     ConfigModule,
     LoggingModule,
     ScheduleModule.forRoot(),
+    ThrottlerModule.forRoot([
+      { name: 'default', ttl: MINUTE_MS, limit: REQUESTS_PER_MINUTE_PER_IP },
+    ]),
     PrismaModule,
     AppLogsModule,
     AuthModule,
     HealthModule,
   ],
   providers: [
+    // Order matters: rate limit first, then resolve the session, then check CSRF.
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: AuthGuard },
+    { provide: APP_GUARD, useClass: CsrfGuard },
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
     { provide: APP_PIPE, useFactory: createValidationPipe },
   ],

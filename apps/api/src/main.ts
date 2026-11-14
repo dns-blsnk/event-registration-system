@@ -8,9 +8,10 @@ import { configureApp } from './app.setup.js';
 import { APP_CONFIG } from './config/config.module.js';
 
 import type { Config } from './config/config.schema.js';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { bufferLogs: true });
   app.useLogger(app.get(Logger));
   configureApp(app);
   app.enableShutdownHooks();

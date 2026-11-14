@@ -67,7 +67,15 @@ describe('parseConfig', () => {
   });
 
   it('flags production mode', () => {
-    expect(parseConfig(envWith({ NODE_ENV: 'production' })).isProduction).toBe(true);
+    expect(
+      parseConfig(envWith({ NODE_ENV: 'production', TRUST_PROXY_HOPS: '1' })).isProduction,
+    ).toBe(true);
+  });
+
+  it('requires trusted proxy hops in production so client IPs are real', () => {
+    expect(configErrorFor(envWith({ NODE_ENV: 'production' })).variables).toEqual([
+      'TRUST_PROXY_HOPS',
+    ]);
   });
 
   it('lists every missing required variable by name', () => {

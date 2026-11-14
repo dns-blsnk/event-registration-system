@@ -43,6 +43,10 @@ export interface ValidSession {
   user: User;
 }
 
+/** Why a token did not resolve: never issued (possibly forged) or a real session that ran out. */
+export type SessionLookup =
+  { status: 'valid'; value: ValidSession } | { status: 'unknown' } | { status: 'expired' };
+
 export function isExpired(
   session: Pick<AuthSession, 'expiresAt' | 'lastSeenAt'>,
   now: Date,
@@ -90,16 +94,22 @@ export class SessionService implements OnApplicationBootstrap {
 
   /** Returns the session and its user, or null if the token is unknown, expired or idle too long. */
   async validate(token: string, now: Date = new Date()): Promise<ValidSession | null> {
+    const lookup = await this.lookup(token, now);
+    return lookup.status === 'valid' ? lookup.value : null;
+  }
+
+  /** Like validate(), but says why a token did not resolve. */
+  async lookup(token: string, now: Date = new Date()): Promise<SessionLookup> {
     const found = await this.prisma.authSession.findUnique({
       where: { tokenHash: hashSessionToken(token) },
       include: { user: true },
     });
     if (found === null) {
-      return null;
+      return { status: 'unknown' };
     }
     if (isExpired(found, now)) {
       await this.prisma.authSession.deleteMany({ where: { id: found.id } });
-      return null;
+      return { status: 'expired' };
     }
     const { user, ...session } = found;
     if (now.getTime() - session.lastSeenAt.getTime() >= SESSION_TOUCH_INTERVAL_MS) {
@@ -109,11 +119,11 @@ export class SessionService implements OnApplicationBootstrap {
         data: { lastSeenAt: now },
       });
       if (count === 0) {
-        return null;
+        return { status: 'expired' };
       }
       session.lastSeenAt = now;
     }
-    return { session, user };
+    return { status: 'valid', value: { session, user } };
   }
 
   async revoke(token: string): Promise<void> {

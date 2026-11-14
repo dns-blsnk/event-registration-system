@@ -4,6 +4,7 @@ import { AppModule } from '../../src/app.module.js';
 import { configureApp } from '../../src/app.setup.js';
 
 import type { INestApplication, Type } from '@nestjs/common';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 
 interface ProviderOverride {
   provide: Type | symbol;
@@ -25,7 +26,9 @@ export async function createTestApp(options: TestAppOptions = {}): Promise<INest
   for (const override of options.overrides ?? []) {
     builder.overrideProvider(override.provide).useValue(override.useValue);
   }
-  const app = configureApp((await builder.compile()).createNestApplication());
+  const app = configureApp(
+    (await builder.compile()).createNestApplication<NestExpressApplication>(),
+  );
   await app.init();
   return app;
 }

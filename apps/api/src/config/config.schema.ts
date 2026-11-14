@@ -3,6 +3,7 @@ import { z } from 'zod';
 const MIN_SECRET_LENGTH = 32;
 const DEFAULT_API_PORT = 3000;
 const MAX_PORT = 65_535;
+const MAX_PROXY_HOPS = 5;
 
 const NODE_ENVS = ['development', 'test', 'production'] as const;
 const LOG_LEVELS = ['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'] as const;
@@ -20,6 +21,8 @@ const envSchema = z.object({
   NODE_ENV: z.enum(NODE_ENVS),
   LOG_LEVEL: z.enum(LOG_LEVELS).default('info'),
   API_PORT: z.coerce.number().int().positive().max(MAX_PORT).default(DEFAULT_API_PORT),
+  /** Reverse proxies in front of the API (Render, Vercel rewrite); needed for the real client IP. */
+  TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(MAX_PROXY_HOPS).default(0),
   ADMIN_ORIGIN: httpUrl,
   DATABASE_URL: postgresUrl,
   SESSION_SECRET: z.string().min(MIN_SECRET_LENGTH),
@@ -43,6 +46,7 @@ export interface Config {
   readonly isProduction: boolean;
   readonly logLevel: LogLevel;
   readonly port: number;
+  readonly trustProxyHops: number;
   readonly adminOrigin: string;
   readonly databaseUrl: string;
   readonly sessionSecret: string;
@@ -85,6 +89,11 @@ export function parseConfig(env: RawEnv): Config {
     throw new ConfigError(variables.sort());
   }
   const values = result.data;
+  // Production always runs behind Render's proxy: with 0 hops every client would share one IP,
+  // breaking rate limits and lockouts.
+  if (values.NODE_ENV === 'production' && values.TRUST_PROXY_HOPS === 0) {
+    throw new ConfigError(['TRUST_PROXY_HOPS']);
+  }
   const { GITHUB_CLIENT_ID: githubClientId, GITHUB_CLIENT_SECRET: githubClientSecret } = values;
 
   return {
@@ -92,6 +101,7 @@ export function parseConfig(env: RawEnv): Config {
     isProduction: values.NODE_ENV === 'production',
     logLevel: values.LOG_LEVEL,
     port: values.API_PORT,
+    trustProxyHops: values.TRUST_PROXY_HOPS,
     adminOrigin: new URL(values.ADMIN_ORIGIN).origin,
     databaseUrl: values.DATABASE_URL,
     sessionSecret: values.SESSION_SECRET,
