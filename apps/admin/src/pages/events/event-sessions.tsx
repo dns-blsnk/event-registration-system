@@ -4,6 +4,7 @@ import { DataGrid, type GridColDef } from '@mui/x-data-grid';
 import { CreateButton, DeleteButton, EditButton, useDataGrid } from '@refinedev/mui';
 import { useMemo, useState } from 'react';
 
+import { ACTIONS_COLUMN_HEADER } from '../../components/grid';
 import { SESSION_COLUMNS } from '../sessions/session-columns';
 import { SessionFormDialog, type SessionDialogTarget } from '../sessions/session-form-dialog';
 
@@ -38,7 +39,7 @@ export function EventSessions({ eventId, canChange }: EventSessionsProps): React
     if (!canChange) return SESSION_COLUMNS;
     const actions: GridColDef<SessionListItem> = {
       field: 'actions',
-      headerName: 'Actions',
+      headerName: ACTIONS_COLUMN_HEADER,
       sortable: false,
       minWidth: 120,
       renderCell: ({ row }) => (

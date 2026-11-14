@@ -5,6 +5,7 @@ import { List, ShowButton, useDataGrid } from '@refinedev/mui';
 import { EventStatusChip } from '../../components/event-status-chip';
 import { applyFiltersFromFirstPage } from '../../components/filter-form';
 import { formatDateTime } from '../../components/format';
+import { ACTIONS_COLUMN_HEADER } from '../../components/grid';
 
 import { EventFilters } from './event-filters';
 
@@ -46,7 +47,7 @@ const columns: GridColDef<EventListItem>[] = [
   },
   {
     field: 'actions',
-    headerName: 'Open',
+    headerName: ACTIONS_COLUMN_HEADER,
     sortable: false,
     hideable: false,
     disableColumnMenu: true,

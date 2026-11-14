@@ -20,6 +20,7 @@ import {
   TextFilterField,
 } from '../../components/filter-form';
 import { formatDateTime } from '../../components/format';
+import { ACTIONS_COLUMN_HEADER } from '../../components/grid';
 
 import { UserFormDialog } from './user-form-dialog';
 
@@ -58,7 +59,7 @@ export function UserList(): React.JSX.Element {
       ...BASE_COLUMNS,
       {
         field: 'actions',
-        headerName: 'Actions',
+        headerName: ACTIONS_COLUMN_HEADER,
         sortable: false,
         minWidth: 120,
         renderCell: ({ row }) => (
