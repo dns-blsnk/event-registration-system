@@ -1,4 +1,4 @@
-import { EVENT_FIELDS, EVENT_TRANSITIONS, type EventDetail } from '@ers/shared';
+import { EVENT_FIELDS, EVENT_TRANSITIONS, type EventDetail, formatPercent } from '@ers/shared';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
@@ -8,7 +8,7 @@ import { useShow } from '@refinedev/core';
 import { EditButton, Show } from '@refinedev/mui';
 
 import { EventStatusChip } from '../../components/event-status-chip';
-import { formatDateTime, formatPercent } from '../../components/format';
+import { formatDateTime } from '../../components/format';
 
 import { EventActions } from './event-actions';
 import { EventSessions } from './event-sessions';

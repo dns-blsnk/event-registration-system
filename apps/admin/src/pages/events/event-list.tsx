@@ -1,9 +1,9 @@
-import { EVENT_FIELDS, type EventListItem } from '@ers/shared';
+import { EVENT_FIELDS, type EventListItem, formatPercent } from '@ers/shared';
 import { DataGrid, type GridColDef } from '@mui/x-data-grid';
 import { List, ShowButton, useDataGrid } from '@refinedev/mui';
 
 import { EventStatusChip } from '../../components/event-status-chip';
-import { formatDateTime, formatPercent } from '../../components/format';
+import { formatDateTime } from '../../components/format';
 
 import { EventFilters } from './event-filters';
 
