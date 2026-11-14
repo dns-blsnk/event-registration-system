@@ -35,6 +35,7 @@
     "vitest": "^5.1.0"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "1.8.0",
     "@aws-sdk/client-s3": "^3.1169.0",
     "@aws-sdk/s3-request-presigner": "^3.1169.0",
     "@ers/shared": "workspace:*",
