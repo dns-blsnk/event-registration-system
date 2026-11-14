@@ -6,6 +6,20 @@ export const REQUIRED_TEXT = {
   validate: (value: string): true | string => value.trim() !== '' || REQUIRED,
 };
 
+/**
+ * A quick shape check (something@something.tld) for faster feedback; the API's email validation
+ * stays the authority.
+ */
+const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export const EMAIL_RULES = {
+  validate: (value: string): true | string => {
+    const email = value.trim();
+    if (email === '') return REQUIRED;
+    return EMAIL_SHAPE.test(email) || 'Enter an email address like name@example.com';
+  },
+};
+
 /** Helper text: the error when there is one, otherwise the shared description of the field. */
 export function fieldHelp(error: { message?: string } | undefined, description: string): string {
   return error?.message ?? description;

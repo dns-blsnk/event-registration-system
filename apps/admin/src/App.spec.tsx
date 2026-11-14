@@ -30,7 +30,7 @@ describe('App', () => {
       await screen.findByRole('heading', { name: 'Event Registration Admin' }),
     ).toBeInTheDocument();
   });
-  it.each(['/events', '/sessions', '/registrations'])(
+  it.each(['/events', '/sessions', '/registrations', '/users'])(
     'shows "No access" to a customer on %s',
     async (path) => {
       mockHttp([

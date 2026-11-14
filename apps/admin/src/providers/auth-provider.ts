@@ -59,6 +59,11 @@ export async function loadUser(): Promise<PublicUser | undefined> {
   return pendingUser;
 }
 
+/** Drops the cached user (not the session), so the next loadUser reads /auth/me again. */
+export function forgetCachedUser(): void {
+  currentUser = undefined;
+}
+
 async function signIn(path: string, body: Record<string, unknown>, failure: string) {
   try {
     remember((await http.post<AuthResponse>(path, body)).data);
