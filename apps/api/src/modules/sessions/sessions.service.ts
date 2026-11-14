@@ -1,4 +1,4 @@
-import { ALMOST_FULL_RATIO, ErrorCode, EventStatus, Role } from '@ers/shared';
+import { ALMOST_FULL_RATIO, ErrorCode, EventStatus, RegistrationStatus, Role } from '@ers/shared';
 import { Injectable } from '@nestjs/common';
 
 import { DomainError } from '../../common/errors/domain-error.js';
@@ -9,6 +9,7 @@ import { isValidRange, isWithin, type TimeRange } from '../../domain/schedule.js
 import { Prisma, type Event, type Session, type User } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { lockScopedEvent } from '../events/event-lock.js';
+import { promoteFromWaitlist } from '../registrations/waitlist.js';
 
 import { sessionScope } from './session-scope.js';
 import { SESSION_INCLUDE, type SessionWithRelations } from './session-view.js';
@@ -146,13 +147,14 @@ export class SessionsService {
       ) {
         throw fieldError('startsAt', 'The session cannot be moved into the past');
       }
+      await this.assertMovable(tx, session, dto);
       if (dto.capacity !== undefined && dto.capacity < session.confirmedCount) {
         throw fieldError(
           'capacity',
           `Capacity cannot be lower than the ${String(session.confirmedCount)} seats already confirmed`,
         );
       }
-      return tx.session.update({
+      await tx.session.update({
         where: { id },
         data: omitUndefined({
           title: dto.title,
@@ -162,8 +164,12 @@ export class SessionsService {
           endsAt: dto.endsAt,
           capacity: dto.capacity,
         }),
-        include: SESSION_INCLUDE,
       });
+      if (dto.capacity !== undefined && dto.capacity > session.capacity) {
+        // New seats go to the waitlist first, oldest booking first.
+        await promoteFromWaitlist(tx, id, now);
+      }
+      return tx.session.findUniqueOrThrow({ where: { id }, include: SESSION_INCLUDE });
     });
   }
 
@@ -195,6 +201,35 @@ export class SessionsService {
     this.assertEventEditable(event);
     await tx.$queryRaw`SELECT id FROM sessions WHERE id = ${id}::uuid FOR UPDATE`;
     return { session: await tx.session.findUniqueOrThrow({ where: { id } }), event };
+  }
+
+  /**
+   * Moving a booked session could silently give its attendees overlapping seats, so the time of a
+   * session with active registrations is fixed; cancel it and create a new one instead.
+   */
+  private async assertMovable(
+    tx: Prisma.TransactionClient,
+    session: Session,
+    dto: UpdateSessionDto,
+  ): Promise<void> {
+    const moves =
+      (dto.startsAt !== undefined && dto.startsAt.getTime() !== session.startsAt.getTime()) ||
+      (dto.endsAt !== undefined && dto.endsAt.getTime() !== session.endsAt.getTime());
+    if (!moves) {
+      return;
+    }
+    const active = await tx.registration.count({
+      where: {
+        sessionId: session.id,
+        status: { in: [RegistrationStatus.CONFIRMED, RegistrationStatus.WAITLISTED] },
+      },
+    });
+    if (active > 0) {
+      throw new DomainError(
+        ErrorCode.CONFLICT,
+        'Sessions with active registrations cannot be moved',
+      );
+    }
   }
 
   private assertEditableNow(session: Session, dto: UpdateSessionDto, now: Date): void {
