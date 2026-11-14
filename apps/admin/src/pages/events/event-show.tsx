@@ -1,4 +1,4 @@
-import { EVENT_FIELDS, EVENT_TRANSITIONS, type EventDetail, formatPercent } from '@ers/shared';
+import { EVENT_FIELDS, isEventLocked, type EventDetail, formatPercent } from '@ers/shared';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
@@ -42,7 +42,7 @@ export function EventShow(): React.JSX.Element {
           []
         ) : (
           <>
-            {EVENT_TRANSITIONS[event.status].length > 0 && <EditButton recordItemId={event.id} />}
+            {!isEventLocked(event.status) && <EditButton recordItemId={event.id} />}
             <EventActions event={event} />
           </>
         )
@@ -91,7 +91,7 @@ export function EventShow(): React.JSX.Element {
             <Typography variant="h6" component="h3" sx={{ mb: 1 }}>
               Sessions
             </Typography>
-            <EventSessions eventId={event.id} />
+            <EventSessions eventId={event.id} canChange={!isEventLocked(event.status)} />
           </Box>
         </Stack>
       )}
