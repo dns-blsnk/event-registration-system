@@ -14,4 +14,5 @@ export * from './registrations.js';
 export * from './roles.js';
 export * from './sessions.js';
 export * from './tags.js';
+export * from './text.js';
 export * from './users.js';
