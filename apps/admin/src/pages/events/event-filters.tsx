@@ -8,10 +8,14 @@ import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 
-import { ApplySearchButton, filterText, formText } from '../../components/filter-form';
+import {
+  ApplySearchButton,
+  filterText,
+  submitTextFilters,
+  TextFilterField,
+} from '../../components/filter-form';
 
 import type { CrudFilters } from '@refinedev/core';
-import type { SyntheticEvent } from 'react';
 
 interface EventFiltersProps {
   filters: CrudFilters;
@@ -20,16 +24,6 @@ interface EventFiltersProps {
 
 /** Search, status and city filters; every change goes to the server, which does the filtering. */
 export function EventFilters({ filters, onChange }: EventFiltersProps): React.JSX.Element {
-  const search = filterText('q', filters);
-  const city = filterText('city', filters);
-  const submitText = (event: SyntheticEvent<HTMLFormElement>): void => {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    onChange([
-      { field: 'q', operator: 'eq', value: formText(form, 'q') },
-      { field: 'city', operator: 'eq', value: formText(form, 'city') },
-    ]);
-  };
   return (
     <Stack
       component="form"
@@ -37,25 +31,10 @@ export function EventFilters({ filters, onChange }: EventFiltersProps): React.JS
       spacing={2}
       sx={{ mb: 2 }}
       alignItems={{ sm: 'flex-start' }}
-      onSubmit={submitText}
+      onSubmit={submitTextFilters(['q', 'city'], onChange)}
     >
-      {/* Keyed by the active value, so the box follows filters changed by the menu or Back. */}
-      <TextField
-        key={`q:${search}`}
-        name="q"
-        label={EVENT_LIST_CONTROLS.search.label}
-        helperText={EVENT_LIST_CONTROLS.search.help}
-        defaultValue={search}
-        size="small"
-      />
-      <TextField
-        key={`city:${city}`}
-        name="city"
-        label={EVENT_FIELDS.city.label}
-        helperText={EVENT_FIELDS.city.help}
-        defaultValue={city}
-        size="small"
-      />
+      <TextFilterField name="q" description={EVENT_LIST_CONTROLS.search} filters={filters} />
+      <TextFilterField name="city" description={EVENT_FIELDS.city} filters={filters} />
       <ApplySearchButton />
       <TextField
         select
