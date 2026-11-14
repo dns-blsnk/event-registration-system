@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { domainErrorCode } from '../../test/helpers/domain-error.js';
 
 import {
+  assertCanCancel,
   assertCanRegister,
   assertNoScheduleConflict,
   hasScheduleConflict,
@@ -73,5 +74,22 @@ describe('schedule conflicts', () => {
         assertNoScheduleConflict(at('b', '09:30', '10:30'), [at('a', '09:00', '10:00')]);
       }),
     ).toBe('SCHEDULE_CONFLICT');
+  });
+});
+
+describe('assertCanCancel', () => {
+  it('allows cancelling before the session starts', () => {
+    expect(() => {
+      assertCanCancel(at('s', '09:00', '10:00'), NOW);
+    }).not.toThrow();
+  });
+
+  it.each([
+    ['at the start', '08:00'],
+    ['after the start', '07:00'],
+  ])('refuses cancelling %s', (_label, start) => {
+    expect(() => {
+      assertCanCancel(at('s', start, '10:00'), NOW);
+    }).toThrow('This session has already started');
   });
 });

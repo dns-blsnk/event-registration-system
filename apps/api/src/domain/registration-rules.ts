@@ -17,9 +17,7 @@ export function assertCanRegister(
   if (event.status !== EventStatus.PUBLISHED) {
     throw new DomainError(ErrorCode.EVENT_NOT_OPEN, 'This event is not open for registration');
   }
-  if (session.startsAt.getTime() <= now.getTime()) {
-    throw new DomainError(ErrorCode.SESSION_STARTED, 'This session has already started');
-  }
+  assertNotStarted(session, now);
 }
 
 /** True when the candidate overlaps another of the customer's confirmed sessions (itself excluded). */
@@ -45,5 +43,16 @@ export function assertNoScheduleConflict(
       ErrorCode.SCHEDULE_CONFLICT,
       'You already have a confirmed session at this time',
     );
+  }
+}
+
+/** Customers can give up a seat or a waitlist place only before the session starts. */
+export function assertCanCancel(session: TimeRange, now: Date): void {
+  assertNotStarted(session, now);
+}
+
+function assertNotStarted(session: TimeRange, now: Date): void {
+  if (session.startsAt.getTime() <= now.getTime()) {
+    throw new DomainError(ErrorCode.SESSION_STARTED, 'This session has already started');
   }
 }
