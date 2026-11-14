@@ -18,6 +18,7 @@ import routerProvider, {
 } from '@refinedev/react-router';
 import { BrowserRouter, Outlet, Route, Routes, useLocation } from 'react-router';
 
+import { ChatWidget } from './chat/chat-widget';
 import { ErrorBoundary } from './components/error-boundary';
 import { AppLogList } from './pages/app-logs/app-log-list';
 import { AppLogShow } from './pages/app-logs/app-log-show';
@@ -85,6 +86,7 @@ export function App(): React.JSX.Element {
                     <Authenticated key="protected" fallback={<CatchAllNavigate to={LOGIN_PATH} />}>
                       <ThemedLayout>
                         <PageErrorBoundary />
+                        <ChatWidget />
                       </ThemedLayout>
                     </Authenticated>
                   }
