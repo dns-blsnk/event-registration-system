@@ -1,5 +1,6 @@
 import SearchIcon from '@mui/icons-material/Search';
 import IconButton from '@mui/material/IconButton';
+import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
 import { getDefaultFilter, type CrudFilters } from '@refinedev/core';
 
@@ -63,5 +64,68 @@ export function submitTextFilters(
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     onChange(names.map((name) => ({ field: name, operator: 'eq', value: formText(form, name) })));
+  };
+}
+
+/** The active value if it is one of the choices; a stale or hand-edited URL value shows as "All". */
+function selectedValue(name: string, filters: CrudFilters, values: readonly string[]): string {
+  const value = filterText(name, filters);
+  return values.includes(value) ? value : '';
+}
+
+interface SelectFilterFieldProps<TValue extends string> {
+  name: string;
+  description: FieldDescription;
+  values: readonly TValue[];
+  labels: Readonly<Record<TValue, string>>;
+  filters: CrudFilters;
+  onChange: (filters: CrudFilters) => void;
+}
+
+/** A pick-one filter with an "All" choice that removes it; applies as soon as a value is picked. */
+export function SelectFilterField<TValue extends string>({
+  name,
+  description,
+  values,
+  labels,
+  filters,
+  onChange,
+}: SelectFilterFieldProps<TValue>): React.JSX.Element {
+  return (
+    <TextField
+      select
+      label={description.label}
+      value={selectedValue(name, filters, values)}
+      onChange={(event) => {
+        const value = event.target.value;
+        onChange([{ field: name, operator: 'eq', value: value === '' ? undefined : value }]);
+      }}
+      size="small"
+      sx={{ minWidth: 160 }}
+    >
+      <MenuItem value="">All</MenuItem>
+      {values.map((value) => (
+        <MenuItem key={value} value={value}>
+          {labels[value]}
+        </MenuItem>
+      ))}
+    </TextField>
+  );
+}
+
+/**
+ * The change handler every list gives its filters: a new filter starts from the first page, since
+ * staying on page 3 of the old result could show nothing.
+ */
+export function applyFiltersFromFirstPage({
+  setCurrentPage,
+  setFilters,
+}: {
+  setCurrentPage: (page: number) => void;
+  setFilters: (filters: CrudFilters, behavior: 'merge') => void;
+}): (filters: CrudFilters) => void {
+  return (changed) => {
+    setCurrentPage(1);
+    setFilters(changed, 'merge');
   };
 }

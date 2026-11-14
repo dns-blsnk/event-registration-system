@@ -4,13 +4,11 @@ import {
   REGISTRATION_STATUS_LABELS,
   REGISTRATION_STATUSES,
 } from '@ers/shared';
-import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
-import TextField from '@mui/material/TextField';
 
 import {
   ApplySearchButton,
-  filterText,
+  SelectFilterField,
   submitTextFilters,
   TextFilterField,
 } from '../../components/filter-form';
@@ -38,29 +36,14 @@ export function RegistrationFilters({
     >
       <TextFilterField name="q" description={REGISTRATION_LIST_CONTROLS.search} filters={filters} />
       <ApplySearchButton />
-      <TextField
-        select
-        label={REGISTRATION_FIELDS.status.label}
-        value={filterText('status', filters)}
-        onChange={(event) => {
-          onChange([
-            {
-              field: 'status',
-              operator: 'eq',
-              value: event.target.value === '' ? undefined : event.target.value,
-            },
-          ]);
-        }}
-        size="small"
-        sx={{ minWidth: 160 }}
-      >
-        <MenuItem value="">All</MenuItem>
-        {REGISTRATION_STATUSES.map((status) => (
-          <MenuItem key={status} value={status}>
-            {REGISTRATION_STATUS_LABELS[status]}
-          </MenuItem>
-        ))}
-      </TextField>
+      <SelectFilterField
+        name="status"
+        description={REGISTRATION_FIELDS.status}
+        values={REGISTRATION_STATUSES}
+        labels={REGISTRATION_STATUS_LABELS}
+        filters={filters}
+        onChange={onChange}
+      />
     </Stack>
   );
 }

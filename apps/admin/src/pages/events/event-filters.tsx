@@ -4,13 +4,11 @@ import {
   EVENT_STATUS_LABELS,
   EVENT_STATUSES,
 } from '@ers/shared';
-import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
-import TextField from '@mui/material/TextField';
 
 import {
   ApplySearchButton,
-  filterText,
+  SelectFilterField,
   submitTextFilters,
   TextFilterField,
 } from '../../components/filter-form';
@@ -36,29 +34,14 @@ export function EventFilters({ filters, onChange }: EventFiltersProps): React.JS
       <TextFilterField name="q" description={EVENT_LIST_CONTROLS.search} filters={filters} />
       <TextFilterField name="city" description={EVENT_FIELDS.city} filters={filters} />
       <ApplySearchButton />
-      <TextField
-        select
-        label={EVENT_FIELDS.status.label}
-        value={filterText('status', filters)}
-        onChange={(event) => {
-          onChange([
-            {
-              field: 'status',
-              operator: 'eq',
-              value: event.target.value === '' ? undefined : event.target.value,
-            },
-          ]);
-        }}
-        size="small"
-        sx={{ minWidth: 160 }}
-      >
-        <MenuItem value="">All</MenuItem>
-        {EVENT_STATUSES.map((status) => (
-          <MenuItem key={status} value={status}>
-            {EVENT_STATUS_LABELS[status]}
-          </MenuItem>
-        ))}
-      </TextField>
+      <SelectFilterField
+        name="status"
+        description={EVENT_FIELDS.status}
+        values={EVENT_STATUSES}
+        labels={EVENT_STATUS_LABELS}
+        filters={filters}
+        onChange={onChange}
+      />
     </Stack>
   );
 }

@@ -4,6 +4,8 @@ import { DataGrid, type GridColDef } from '@mui/x-data-grid';
 import { List, useDataGrid } from '@refinedev/mui';
 import { Link as RouterLink } from 'react-router';
 
+import { applyFiltersFromFirstPage } from '../../components/filter-form';
+
 import { SESSION_COLUMNS } from './session-columns';
 import { SessionFilters } from './session-filters';
 
@@ -34,10 +36,7 @@ export function SessionList(): React.JSX.Element {
     <List>
       <SessionFilters
         filters={filters}
-        onChange={(changed) => {
-          setCurrentPage(1);
-          setFilters(changed, 'merge');
-        }}
+        onChange={applyFiltersFromFirstPage({ setCurrentPage, setFilters })}
       />
       <DataGrid {...dataGridProps} columns={columns} disableColumnFilter autoHeight />
     </List>

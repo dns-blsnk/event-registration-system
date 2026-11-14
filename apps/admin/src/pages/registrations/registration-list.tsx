@@ -4,6 +4,7 @@ import { useCan } from '@refinedev/core';
 import { List, useDataGrid } from '@refinedev/mui';
 import { useState } from 'react';
 
+import { applyFiltersFromFirstPage } from '../../components/filter-form';
 import { formatDateTime } from '../../components/format';
 import { RegistrationStatusChip } from '../../components/registration-status-chip';
 
@@ -73,15 +74,15 @@ export function RegistrationList(): React.JSX.Element {
   });
   const canBulk = bulkAccess?.can === true;
   const [selection, setSelection] = useState<GridRowSelectionModel>(NO_SELECTION);
+  const applyFilters = applyFiltersFromFirstPage({ setCurrentPage, setFilters });
   const selectedIds = selectedIdsOf(selection, result.data);
   return (
     <List>
       <RegistrationFilters
         filters={filters}
         onChange={(changed) => {
-          setCurrentPage(1);
           setSelection(NO_SELECTION);
-          setFilters(changed, 'merge');
+          applyFilters(changed);
         }}
       />
       {canBulk && (

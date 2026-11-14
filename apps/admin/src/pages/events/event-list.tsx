@@ -3,6 +3,7 @@ import { DataGrid, type GridColDef } from '@mui/x-data-grid';
 import { List, ShowButton, useDataGrid } from '@refinedev/mui';
 
 import { EventStatusChip } from '../../components/event-status-chip';
+import { applyFiltersFromFirstPage } from '../../components/filter-form';
 import { formatDateTime } from '../../components/format';
 
 import { EventFilters } from './event-filters';
@@ -64,11 +65,7 @@ export function EventList(): React.JSX.Element {
     <List>
       <EventFilters
         filters={filters}
-        onChange={(next) => {
-          // A new filter starts from the first page; staying on page 3 of the old result shows nothing.
-          setCurrentPage(1);
-          setFilters(next, 'merge');
-        }}
+        onChange={applyFiltersFromFirstPage({ setCurrentPage, setFilters })}
       />
       <DataGrid {...dataGridProps} columns={columns} disableColumnFilter autoHeight />
     </List>
