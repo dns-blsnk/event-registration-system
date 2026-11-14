@@ -21,14 +21,14 @@ const UPCOMING = {
 
 describe('event transitions', () => {
   it.each([
-    ['DRAFT', 'PUBLISHED'],
-    ['DRAFT', 'CANCELLED'],
-    ['PUBLISHED', 'COMPLETED'],
-    ['PUBLISHED', 'CANCELLED'],
-  ] as const)('allows %s -> %s', (from, to) => {
+    ['DRAFT', 'PUBLISHED', UPCOMING],
+    ['DRAFT', 'CANCELLED', UPCOMING],
+    ['PUBLISHED', 'COMPLETED', STARTED],
+    ['PUBLISHED', 'CANCELLED', UPCOMING],
+  ] as const)('allows %s -> %s', (from, to, timing) => {
     expect(
       domainErrorCode(() => {
-        assertEventTransition(from, to, STARTED);
+        assertEventTransition(from, to, timing);
       }),
     ).toBeUndefined();
   });
@@ -55,17 +55,32 @@ describe('event transitions', () => {
     ).toBe('INVALID_TRANSITION');
   });
 
-  it('allows publishing or cancelling an upcoming event', () => {
+  it('forbids publishing an event that has already started', () => {
     expect(
       domainErrorCode(() => {
-        assertEventTransition('DRAFT', 'PUBLISHED', UPCOMING);
+        assertEventTransition('DRAFT', 'PUBLISHED', STARTED);
       }),
-    ).toBeUndefined();
+    ).toBe('INVALID_TRANSITION');
+  });
+
+  it('allows cancelling an event that is in progress', () => {
+    const inProgress = { ...STARTED, endsAt: new Date('2026-12-02T09:00:00Z') };
+
     expect(
       domainErrorCode(() => {
-        assertEventTransition('PUBLISHED', 'CANCELLED', UPCOMING);
+        assertEventTransition('PUBLISHED', 'CANCELLED', inProgress);
       }),
     ).toBeUndefined();
+  });
+
+  it('forbids cancelling an event that has already ended', () => {
+    const ended = { ...STARTED, endsAt: new Date('2026-12-01T10:00:00Z') };
+
+    expect(
+      domainErrorCode(() => {
+        assertEventTransition('PUBLISHED', 'CANCELLED', ended);
+      }),
+    ).toBe('INVALID_TRANSITION');
   });
 
   it.each(EVENT_STATUSES)('forbids staying in %s (no-op transition)', (status) => {

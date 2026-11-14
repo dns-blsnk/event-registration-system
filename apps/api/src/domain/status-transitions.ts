@@ -34,6 +34,8 @@ const SYSTEM_REGISTRATION_TRANSITIONS: Readonly<
 export interface TransitionTiming {
   /** When the event or session starts. */
   startsAt: Date;
+  /** When the event ends; needed for cancellation. */
+  endsAt?: Date;
   now: Date;
 }
 
@@ -50,7 +52,26 @@ export function canTransitionRegistration(
   return table[from].includes(to);
 }
 
-/** An event can only be completed once it has started; completing early would close it for good. */
+const EVENT_TIMING_RULES: Partial<
+  Record<EventStatus, (timing: TransitionTiming) => string | undefined>
+> = {
+  // Publishing a past event would open bookings for something that already happened.
+  [EventStatus.PUBLISHED]: ({ startsAt, now }) =>
+    now.getTime() >= startsAt.getTime()
+      ? 'An event that has already started cannot be published'
+      : undefined,
+  // Completing early would close the event for good.
+  [EventStatus.COMPLETED]: ({ startsAt, now }) =>
+    now.getTime() < startsAt.getTime()
+      ? 'An event cannot be completed before it starts'
+      : undefined,
+  // Cancelling a finished event would rewrite its attendance history; complete it instead.
+  [EventStatus.CANCELLED]: ({ endsAt, now }) =>
+    endsAt !== undefined && now.getTime() >= endsAt.getTime()
+      ? 'An event that has already ended cannot be cancelled'
+      : undefined,
+};
+
 export function assertEventTransition(
   from: EventStatus,
   to: EventStatus,
@@ -59,11 +80,9 @@ export function assertEventTransition(
   if (!canTransitionEvent(from, to)) {
     throw new DomainError(ErrorCode.INVALID_TRANSITION, `An event cannot go from ${from} to ${to}`);
   }
-  if (to === EventStatus.COMPLETED && timing.now.getTime() < timing.startsAt.getTime()) {
-    throw new DomainError(
-      ErrorCode.INVALID_TRANSITION,
-      'An event cannot be completed before it starts',
-    );
+  const problem = EVENT_TIMING_RULES[to]?.(timing);
+  if (problem !== undefined) {
+    throw new DomainError(ErrorCode.INVALID_TRANSITION, problem);
   }
 }
 
