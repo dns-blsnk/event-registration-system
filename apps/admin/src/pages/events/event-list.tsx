@@ -1,8 +1,8 @@
-import { EVENT_FIELDS, EVENT_STATUS_LABELS, type EventListItem } from '@ers/shared';
-import Chip from '@mui/material/Chip';
+import { EVENT_FIELDS, type EventListItem } from '@ers/shared';
 import { DataGrid, type GridColDef } from '@mui/x-data-grid';
-import { List, useDataGrid } from '@refinedev/mui';
+import { List, ShowButton, useDataGrid } from '@refinedev/mui';
 
+import { EventStatusChip } from '../../components/event-status-chip';
 import { formatDateTime, formatPercent } from '../../components/format';
 
 import { EventFilters } from './event-filters';
@@ -21,7 +21,7 @@ const columns: GridColDef<EventListItem>[] = [
     field: 'status',
     headerName: EVENT_FIELDS.status.label,
     minWidth: 130,
-    renderCell: ({ row }) => <Chip size="small" label={EVENT_STATUS_LABELS[row.status]} />,
+    renderCell: ({ row }) => <EventStatusChip status={row.status} />,
   },
   {
     field: 'organizer',
@@ -42,6 +42,15 @@ const columns: GridColDef<EventListItem>[] = [
     type: 'number',
     sortable: false,
     valueFormatter: (value: number) => formatPercent(value),
+  },
+  {
+    field: 'actions',
+    headerName: 'Open',
+    sortable: false,
+    hideable: false,
+    disableColumnMenu: true,
+    minWidth: 90,
+    renderCell: ({ row }) => <ShowButton hideText recordItemId={row.id} />,
   },
 ];
 

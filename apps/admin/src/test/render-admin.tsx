@@ -29,7 +29,11 @@ export function renderAdminPage({
           dataProvider={dataProvider}
           accessControlProvider={accessControlProvider}
           resources={resources}
-          options={{ disableTelemetry: true }}
+          // No retries in tests: a failed request should show its error state right away.
+          options={{
+            disableTelemetry: true,
+            reactQuery: { clientConfig: { defaultOptions: { queries: { retry: false } } } },
+          }}
         >
           <Routes>
             <Route path={route} element={element} />

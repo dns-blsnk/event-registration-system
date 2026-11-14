@@ -21,6 +21,7 @@ import { BrowserRouter, Outlet, Route, Routes } from 'react-router';
 import { LoginPage } from './pages/auth/login-page';
 import { ForbiddenPage } from './pages/errors/forbidden-page';
 import { EventList } from './pages/events/event-list';
+import { EventShow } from './pages/events/event-show';
 import { accessControlProvider } from './providers/access-control-provider';
 import { authProvider, HOME_PATH, LOGIN_PATH } from './providers/auth-provider';
 import { dataProvider } from './providers/data-provider';
@@ -71,6 +72,7 @@ export function App(): React.JSX.Element {
                   }
                 >
                   <Route path="/events" element={<EventList />} />
+                  <Route path="/events/:id" element={<EventShow />} />
                 </Route>
                 <Route path="/forbidden" element={<ForbiddenPage />} />
                 <Route path="*" element={<ErrorComponent />} />
