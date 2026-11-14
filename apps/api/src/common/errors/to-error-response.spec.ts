@@ -41,7 +41,8 @@ describe('toErrorResponse', () => {
 
     expect(isServerError).toBe(true);
     expect(body.statusCode).toBe(503);
-    expect(body.message).toBe(GENERIC);
+    expect(body.message).toBe('The service is temporarily unavailable. Please try again shortly.');
+    expect(body.message).not.toContain('10.0.0.5');
   });
 
   it('maps Nest HTTP exceptions to error codes', () => {

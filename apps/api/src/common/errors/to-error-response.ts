@@ -3,9 +3,11 @@ import { HttpException } from '@nestjs/common';
 
 import { DomainError } from './domain-error.js';
 import { codeForHttpStatus, ERROR_STATUS, SERVER_ERROR_MIN_STATUS } from './error-status.js';
+import { translatePrismaError } from './prisma-errors.js';
 
 const CLIENT_ERROR_MIN_STATUS = 400;
 const INTERNAL_MESSAGE = 'Something went wrong. Please try again later.';
+const UNAVAILABLE_MESSAGE = 'The service is temporarily unavailable. Please try again shortly.';
 
 /** Fixed texts for errors raised before our code runs; their own messages can quote the request body. */
 const TRANSPORT_ERROR_MESSAGES: Readonly<Record<string, string>> = {
@@ -53,6 +55,11 @@ function messageOf(exception: HttpException): string {
   return exception.message;
 }
 
+/** Fixed public texts for server errors: their real messages may contain internals. */
+function serverMessage(code: ErrorCode): string {
+  return code === ErrorCode.SERVICE_UNAVAILABLE ? UNAVAILABLE_MESSAGE : INTERNAL_MESSAGE;
+}
+
 function build(
   statusCode: number,
   code: ErrorCode,
@@ -62,12 +69,13 @@ function build(
   const isServerError = statusCode >= SERVER_ERROR_MIN_STATUS;
   return {
     isServerError,
-    body: { statusCode, code, message: isServerError ? INTERNAL_MESSAGE : message, requestId },
+    body: { statusCode, code, message: isServerError ? serverMessage(code) : message, requestId },
   };
 }
 
 /** Turns any thrown value into the public error body. Never exposes internals of 5xx errors. */
-export function toErrorResponse(exception: unknown, requestId: string): ErrorResponse {
+export function toErrorResponse(thrown: unknown, requestId: string): ErrorResponse {
+  const exception = translatePrismaError(thrown) ?? thrown;
   if (exception instanceof DomainError) {
     const response = build(
       ERROR_STATUS[exception.code],
