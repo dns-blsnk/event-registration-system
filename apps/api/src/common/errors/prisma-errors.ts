@@ -45,6 +45,69 @@ function isUnavailable(error: unknown): boolean {
   return code !== undefined && UNAVAILABLE_CODES.has(code);
 }
 
+const CHECK_VIOLATION = '23514';
+
+/** Public meaning of each CHECK constraint, so a violation is a clear 4xx instead of a 500. */
+const CHECK_CONSTRAINT_ERRORS: Readonly<
+  Record<string, { code: ErrorCode; message: string; field?: string }>
+> = {
+  events_dates_check: {
+    code: ErrorCode.VALIDATION_FAILED,
+    message: 'The end must be after the start',
+    field: 'endsAt',
+  },
+  sessions_dates_check: {
+    code: ErrorCode.VALIDATION_FAILED,
+    message: 'The end must be after the start',
+    field: 'endsAt',
+  },
+  sessions_capacity_check: {
+    code: ErrorCode.VALIDATION_FAILED,
+    message: 'Capacity must be positive',
+    field: 'capacity',
+  },
+  sessions_confirmed_count_check: {
+    code: ErrorCode.CONFLICT,
+    message: 'Capacity cannot be lower than the number of confirmed seats',
+  },
+  tags_name_check: {
+    code: ErrorCode.VALIDATION_FAILED,
+    message: 'Tag name cannot start or end with spaces',
+    field: 'name',
+  },
+  users_email_normalised_check: {
+    code: ErrorCode.VALIDATION_FAILED,
+    message: 'Email must be normalised',
+    field: 'email',
+  },
+};
+
+interface DriverCause {
+  code?: unknown;
+  message?: unknown;
+}
+
+function driverCauseOf(error: Prisma.PrismaClientKnownRequestError): DriverCause | undefined {
+  const meta = error.meta as { driverAdapterError?: { cause?: DriverCause } } | undefined;
+  return meta?.driverAdapterError?.cause;
+}
+
+/** Translates a Postgres CHECK violation into the constraint's public error. */
+function checkViolationError(error: Prisma.PrismaClientKnownRequestError): DomainError | undefined {
+  const cause = driverCauseOf(error);
+  if (cause?.code !== CHECK_VIOLATION || typeof cause.message !== 'string') {
+    return undefined;
+  }
+  const constraint = /check constraint "([a-z_]+)"/.exec(cause.message)?.[1] ?? '';
+  const known = CHECK_CONSTRAINT_ERRORS[constraint];
+  if (known === undefined) {
+    return new DomainError(ErrorCode.VALIDATION_FAILED, 'The data breaks a business rule');
+  }
+  const details =
+    known.field === undefined ? undefined : [{ field: known.field, messages: [known.message] }];
+  return new DomainError(known.code, known.message, details);
+}
+
 /**
  * Maps database failures to domain errors; returns undefined for anything else.
  * P2003 means a referenced row is missing or still referenced; services check references
@@ -56,6 +119,10 @@ export function translatePrismaError(error: unknown): DomainError | undefined {
   }
   if (!(error instanceof Prisma.PrismaClientKnownRequestError)) {
     return undefined;
+  }
+  const checkError = checkViolationError(error);
+  if (checkError !== undefined) {
+    return checkError;
   }
   switch (error.code) {
     case 'P2002':

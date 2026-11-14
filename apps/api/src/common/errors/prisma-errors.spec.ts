@@ -86,3 +86,45 @@ describe('toErrorResponse with Prisma errors', () => {
     });
   });
 });
+
+function checkViolation(constraint: string): Prisma.PrismaClientKnownRequestError {
+  return new Prisma.PrismaClientKnownRequestError('check failed', {
+    code: 'P2039',
+    clientVersion: '7.10.1',
+    meta: {
+      driverAdapterError: {
+        cause: {
+          code: '23514',
+          message: `new row for relation "x" violates check constraint "${constraint}"`,
+        },
+      },
+    },
+  });
+}
+
+describe('CHECK constraint violations', () => {
+  it.each([
+    ['events_dates_check', 'VALIDATION_FAILED', 'endsAt'],
+    ['sessions_capacity_check', 'VALIDATION_FAILED', 'capacity'],
+    ['tags_name_check', 'VALIDATION_FAILED', 'name'],
+  ])('maps %s to %s on field %s', (constraint, code, field) => {
+    const error = translatePrismaError(checkViolation(constraint));
+
+    expect(error?.code).toBe(code);
+    expect(error?.details?.[0]?.field).toBe(field);
+  });
+
+  it('maps lowering capacity below confirmed seats to CONFLICT', () => {
+    expect(translatePrismaError(checkViolation('sessions_confirmed_count_check'))?.code).toBe(
+      'CONFLICT',
+    );
+  });
+
+  it('maps an unknown check constraint to a generic validation error, never a 500', () => {
+    const { body, isServerError } = toErrorResponse(checkViolation('something_new_check'), 'req-1');
+
+    expect(isServerError).toBe(false);
+    expect(body.code).toBe('VALIDATION_FAILED');
+    expect(body.message).not.toContain('something_new_check');
+  });
+});
