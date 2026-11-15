@@ -1,4 +1,4 @@
-import { Action, Resource, type UserListItem } from '@ers/shared';
+import { Action, Resource, ROLES, type Role, type UserListItem } from '@ers/shared';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
@@ -26,11 +26,23 @@ interface UserFormDialogProps {
   /** The user to edit; undefined to create one. */
   user: UserListItem | undefined;
   isSelf: boolean;
+  /** The roles the viewer may give, from the shared user-management rules. */
+  assignable: readonly Role[];
   onClose: () => void;
 }
 
+/** What the role field offers: the roles the viewer may give, and the user's current role. */
+function roleOptionsFor(user: UserListItem | undefined, assignable: readonly Role[]): Role[] {
+  return ROLES.filter((role) => assignable.includes(role) || role === user?.role);
+}
+
 /** Create a user, or change a user's name and role, in a dialog over the users list. */
-export function UserFormDialog({ user, isSelf, onClose }: UserFormDialogProps): React.JSX.Element {
+export function UserFormDialog({
+  user,
+  isSelf,
+  assignable,
+  onClose,
+}: UserFormDialogProps): React.JSX.Element {
   const { data: roleAccess } = useCan({ resource: Resource.USERS, action: Action.CHANGE_ROLE });
   const invalidateAuth = useInvalidateAuthStore();
   const original = user === undefined ? EMPTY_USER_FORM : toUserFormValues(user);
@@ -83,6 +95,7 @@ export function UserFormDialog({ user, isSelf, onClose }: UserFormDialogProps): 
             errors={errors}
             isNew={user === undefined}
             isRoleLocked={isSelf || roleAccess?.can !== true}
+            roleOptions={roleOptionsFor(user, assignable)}
           />
         </DialogContent>
         <DialogActions>

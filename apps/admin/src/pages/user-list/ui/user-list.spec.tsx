@@ -251,4 +251,62 @@ describe('UserList', () => {
       expect(calls.some((call) => call.method === 'delete' && call.url === '/users/u1')).toBe(true);
     });
   });
+
+  describe('admins and super admins', () => {
+    const otherAdmin: UserListItem = { ...ann, id: 'u2', name: 'Olga Admin', role: 'ADMIN' };
+    const owner: UserListItem = { ...me, id: 's1', name: 'Sam Owner', role: 'SUPER_ADMIN' };
+
+    function signedInAs(user: UserListItem): MockRoute {
+      return {
+        ...signedIn,
+        body: {
+          user: { id: user.id, email: user.email, name: user.name, role: user.role },
+          csrfToken: 't',
+        },
+      };
+    }
+
+    it('offers an admin no edit or delete for another admin', async () => {
+      mockHttp([signedIn, { ...users, body: [me, ann, otherAdmin] }]);
+      renderList();
+
+      expect(await screen.findByRole('button', { name: 'Edit Ann Customer' })).toBeInTheDocument();
+      expect(screen.getByText('Olga Admin')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Edit Olga Admin' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Delete Olga Admin' })).not.toBeInTheDocument();
+    });
+
+    it('offers an admin only organizer and customer roles for a new user', async () => {
+      mockHttp([signedIn, users]);
+      renderList();
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Add user' }));
+      await userEvent.click(
+        within(await screen.findByRole('dialog')).getByRole('combobox', { name: 'Role' }),
+      );
+
+      expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual([
+        'Organizer',
+        'Customer',
+      ]);
+    });
+
+    it('lets a super admin manage admins and give every role', async () => {
+      mockHttp([signedInAs(owner), { ...users, body: [owner, otherAdmin] }]);
+      renderList();
+
+      expect(await screen.findByRole('button', { name: 'Delete Olga Admin' })).toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: 'Add user' }));
+      await userEvent.click(
+        within(await screen.findByRole('dialog')).getByRole('combobox', { name: 'Role' }),
+      );
+
+      expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual([
+        'Super admin',
+        'Admin',
+        'Organizer',
+        'Customer',
+      ]);
+    });
+  });
 });

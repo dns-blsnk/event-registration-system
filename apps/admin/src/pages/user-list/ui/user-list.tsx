@@ -1,8 +1,10 @@
 import {
+  assignableRoles,
   ROLE_LABELS,
   ROLES,
   USER_FIELDS,
   USER_LIST_CONTROLS,
+  userManagementRefusal,
   type PublicUser,
   type UserListItem,
 } from '@ers/shared';
@@ -62,22 +64,30 @@ export function UserList(): React.JSX.Element {
         headerName: ACTIONS_COLUMN_HEADER,
         sortable: false,
         minWidth: 120,
-        renderCell: ({ row }) => (
-          <>
-            <EditButton
-              hideText
-              recordItemId={row.id}
-              aria-label={`Edit ${row.name}`}
-              onClick={() => {
-                setDialog({ kind: 'edit', user: row });
-              }}
-            />
-            {/* The API refuses deleting one's own account; not offered, nor while identity loads. */}
-            {me !== undefined && me !== null && row.id !== me.id && (
-              <DeleteButton hideText recordItemId={row.id} aria-label={`Delete ${row.name}`} />
-            )}
-          </>
-        ),
+        renderCell: ({ row }) => {
+          // Nothing is offered while identity loads. One's own account can be renamed, never
+          // deleted; other accounts follow the shared rules (admins are a super admin's to manage).
+          if (me === undefined || me === null) return null;
+          const isSelf = row.id === me.id;
+          const canManage = userManagementRefusal(me.role, row.role) === undefined;
+          return (
+            <>
+              {(isSelf || canManage) && (
+                <EditButton
+                  hideText
+                  recordItemId={row.id}
+                  aria-label={`Edit ${row.name}`}
+                  onClick={() => {
+                    setDialog({ kind: 'edit', user: row });
+                  }}
+                />
+              )}
+              {!isSelf && canManage && (
+                <DeleteButton hideText recordItemId={row.id} aria-label={`Delete ${row.name}`} />
+              )}
+            </>
+          );
+        },
       },
     ],
     [me],
@@ -117,6 +127,7 @@ export function UserList(): React.JSX.Element {
           isSelf={
             dialog.kind === 'edit' && (me === undefined || me === null || dialog.user.id === me.id)
           }
+          assignable={me === undefined || me === null ? [] : assignableRoles(me.role)}
           onClose={() => {
             setDialog({ kind: 'closed' });
           }}

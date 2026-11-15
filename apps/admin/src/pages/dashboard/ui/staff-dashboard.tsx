@@ -3,9 +3,10 @@ import {
   APP_LOG_RETENTION_DAYS,
   AppLogCategory,
   EventStatus,
+  hasAdminPowers,
   MAX_PINNED_EVENTS,
   Resource,
-  Role,
+  type Role,
 } from '@ers/shared';
 import EditNoteIcon from '@mui/icons-material/EditNote';
 import EventAvailableIcon from '@mui/icons-material/EventAvailable';
@@ -55,7 +56,7 @@ function StaffStats({ role }: { role: Role }): React.JSX.Element {
         to={listUrl('/sessions', { [ALMOST_FULL_FILTER.field]: ALMOST_FULL_FILTER.value })}
         color="warning"
       />
-      {role === Role.ADMIN && (
+      {hasAdminPowers(role) && (
         <StatTile
           // The whole journal (kept APP_LOG_RETENTION_DAYS), exactly what the link opens.
           label={`Errors, last ${String(APP_LOG_RETENTION_DAYS)} days`}

@@ -3,8 +3,8 @@ import {
   NAME_MAX_LENGTH,
   OWN_ROLE_LOCKED_HELP,
   ROLE_LABELS,
-  ROLES,
   USER_FIELDS,
+  type Role,
 } from '@ers/shared';
 import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
@@ -28,6 +28,8 @@ interface UserFormFieldsProps {
   isNew: boolean;
   /** Own account, or no change-role permission: the API would refuse, so the form does not offer it. */
   isRoleLocked: boolean;
+  /** The roles this viewer may give (plus the user's current one), from the shared rules. */
+  roleOptions: readonly Role[];
 }
 
 /** The fields of the user form; email and password only when creating, limits from packages/shared. */
@@ -37,6 +39,7 @@ export function UserFormFields({
   errors,
   isNew,
   isRoleLocked,
+  roleOptions,
 }: UserFormFieldsProps): React.JSX.Element {
   return (
     <Stack spacing={2} sx={{ pt: 1 }}>
@@ -75,7 +78,7 @@ export function UserFormFields({
             error={errors.role !== undefined}
             disabled={isRoleLocked}
           >
-            {ROLES.map((role) => (
+            {roleOptions.map((role) => (
               <MenuItem key={role} value={role}>
                 {ROLE_LABELS[role]}
               </MenuItem>
