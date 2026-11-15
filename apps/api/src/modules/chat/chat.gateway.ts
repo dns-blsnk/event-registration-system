@@ -16,7 +16,6 @@ import {
   type OnGatewayDisconnect,
   type OnGatewayInit,
 } from '@nestjs/websockets';
-import { PinoLogger } from 'nestjs-pino';
 
 import { DomainError } from '../../common/errors/domain-error.js';
 import { MINUTE_MS } from '../../common/time.js';
@@ -29,6 +28,7 @@ import { RateWindow } from '../app-logs/rate-window.js';
 import { SessionService } from '../auth/session.service.js';
 
 import { ChatAnswerService } from './chat-answer.service.js';
+import { ChatFailures } from './chat-failures.js';
 import { ChatHandshake, HANDSHAKE_REFUSED } from './chat-handshake.js';
 import { parseChatQuestion } from './chat-question.js';
 
@@ -65,10 +65,8 @@ export class ChatGateway implements OnGatewayInit, OnGatewayDisconnect {
     private readonly handshake: ChatHandshake,
     private readonly sessions: SessionService,
     private readonly answerService: ChatAnswerService,
-    private readonly logger: PinoLogger,
-  ) {
-    this.logger.setContext(ChatGateway.name);
-  }
+    private readonly failures: ChatFailures,
+  ) {}
 
   afterInit(namespace: Namespace): void {
     namespace.use((socket, next) => {
@@ -80,8 +78,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayDisconnect {
         },
         (error: unknown) => {
           // A refusal is journalled by the handshake; anything else (the database down) is an outage.
-          if (!(error instanceof DomainError))
-            this.logger.error({ err: error }, 'chat handshake failed');
+          if (!(error instanceof DomainError)) this.failures.recordHandshakeCrash(error);
           next(new Error(HANDSHAKE_REFUSED));
         },
       );
@@ -192,18 +189,10 @@ export class ChatGateway implements OnGatewayInit, OnGatewayDisconnect {
     socket.emit(ChatEvent.DONE, { id, cancelled: outcome === 'cancelled' } satisfies ChatDone);
   }
 
-  /** Tells the client a question failed and logs why; the question text is never logged. */
+  /** Tells the client a question failed; ChatFailures logs why. */
   private report(socket: ChatSocket, id: string, error: unknown): void {
-    if (error instanceof DomainError) {
-      this.logger.warn(
-        { err: error.cause ?? error, userId: socket.data.userId, code: error.code },
-        'chat answer failed',
-      );
-      this.fail(socket, id, error.code, error.message);
-      return;
-    }
-    this.logger.error({ err: error, userId: socket.data.userId }, 'chat answer crashed');
-    this.fail(socket, id, ErrorCode.INTERNAL_ERROR, 'Something went wrong. Please try again.');
+    const { code, message } = this.failures.record(socket.data.userId, error);
+    this.fail(socket, id, code, message);
   }
 
   private fail(socket: ChatSocket, id: string, code: ErrorCode, message: string): void {

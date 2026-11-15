@@ -5,6 +5,7 @@ import { APP_CONFIG } from '../../config/config.module.js';
 import { AuthModule } from '../auth/auth.module.js';
 
 import { ANTHROPIC_CLIENT, CHAT_MODEL, ChatAnswerService } from './chat-answer.service.js';
+import { ChatFailures } from './chat-failures.js';
 import { ChatHandshake } from './chat-handshake.js';
 import { ChatTicketStore } from './chat-tickets.js';
 import { ChatController } from './chat.controller.js';
@@ -21,6 +22,7 @@ const ANSWER_MAX_RETRIES = 1;
   providers: [
     ChatTicketStore,
     ChatAnswerService,
+    ChatFailures,
     ChatGateway,
     ChatHandshake,
     {

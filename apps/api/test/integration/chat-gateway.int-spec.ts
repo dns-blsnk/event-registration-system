@@ -2,6 +2,7 @@ import { CHAT_NAMESPACE, ChatEvent, CSRF_HEADER } from '@ers/shared';
 import { io, type Socket } from 'socket.io-client';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
+import { AppLogService } from '../../src/modules/app-logs/app-log.service.js';
 import { ANTHROPIC_CLIENT } from '../../src/modules/chat/chat-answer.service.js';
 import { ChatGateway } from '../../src/modules/chat/chat.gateway.js';
 import { PrismaService } from '../../src/prisma/prisma.service.js';
@@ -16,13 +17,19 @@ const ADMIN_ORIGIN = TEST_ENV.ADMIN_ORIGIN ?? '';
 const WAIT_MS = 2000;
 
 /** A fake model: streams fixed words, or waits until the answer is cancelled. */
-const model = { words: ['Seats ', 'left.'], hang: false, prompts: [] as { system: string }[] };
+const model = {
+  words: ['Seats ', 'left.'],
+  hang: false,
+  isDown: false,
+  prompts: [] as { system: string }[],
+};
 const fakeAnthropic = {
   messages: {
     stream: (params: { system: string }, options: { signal: AbortSignal }) => {
       model.prompts.push(params);
       return {
         async *[Symbol.asyncIterator]() {
+          if (model.isDown) throw new Error('provider is down');
           for (const text of model.words) {
             yield { type: 'content_block_delta', delta: { type: 'text_delta', text } };
           }
@@ -56,6 +63,7 @@ describe('chat gateway', () => {
     for (const socket of open.splice(0)) socket.disconnect();
     model.words = ['Seats ', 'left.'];
     model.hang = false;
+    model.isDown = false;
     model.prompts = [];
   });
 
@@ -217,6 +225,27 @@ describe('chat gateway', () => {
 
     expect((await error).code).toBe('VALIDATION_FAILED');
     expect(model.prompts).toHaveLength(0);
+  });
+
+  it('tells the user the assistant is unavailable and journals the provider failure for admins', async () => {
+    model.isDown = true;
+    const { socket, agent } = await connectAs('ORGANIZER');
+
+    const result = answer(socket, 'q1');
+    socket.emit(ChatEvent.ASK, { id: 'q1', resource: 'events', question: 'secret question text' });
+
+    expect((await result).error).toMatchObject({ id: 'q1', code: 'SERVICE_UNAVAILABLE' });
+    await app.get(AppLogService).flush();
+    const entry = await app
+      .get(PrismaService)
+      .appLog.findFirstOrThrow({ where: { userId: agent.userId, category: 'ERROR' } });
+    expect(entry).toMatchObject({
+      level: 'ERROR',
+      route: CHAT_NAMESPACE,
+      errorCode: 'SERVICE_UNAVAILABLE',
+    });
+    expect(entry.message).toContain('provider is down');
+    expect(JSON.stringify(entry)).not.toContain('secret question text');
   });
 
   it('stops an answer when the user cancels', async () => {
