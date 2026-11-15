@@ -1,11 +1,13 @@
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { mockHttp, type MockRoute } from '../test/http-mock';
 import { renderAdminPage } from '../test/render-admin';
 
+import { ChatMenuItem } from './chat-menu-item';
 import { ChatWidget } from './chat-widget';
+import { HelpChatProvider } from './help-chat-context';
 
 type Handler = (payload?: unknown) => void;
 
@@ -72,6 +74,16 @@ function status(isAvailable: boolean): MockRoute {
   return { method: 'get', url: '/chat/status', status: 200, body: { isAvailable } };
 }
 
+/** The chat's menu entry and its panel, as the layout puts them together. */
+function HelpChat(): React.JSX.Element {
+  return (
+    <HelpChatProvider>
+      <ChatMenuItem isCollapsed={false} />
+      <ChatWidget />
+    </HelpChatProvider>
+  );
+}
+
 /** A sessions screen with one form field, and the widget, as the layout shows them. */
 function renderOnSessions(): void {
   renderAdminPage({
@@ -83,14 +95,14 @@ function renderOnSessions(): void {
           Capacity
           <input name="capacity" />
         </label>
-        <ChatWidget />
+        <HelpChat />
       </>
     ),
   });
 }
 
 async function openChat(): Promise<HTMLElement> {
-  await userEvent.click(await screen.findByRole('button', { name: 'Open help chat' }));
+  await userEvent.click(await screen.findByRole('button', { name: 'Help chat' }));
   return screen.findByRole('dialog', { name: 'Help chat' });
 }
 
@@ -99,11 +111,15 @@ describe('ChatWidget', () => {
     sockets.length = 0;
   });
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('connects nothing until it is opened', async () => {
     const { calls } = mockHttp([signedIn, status(true)]);
     renderOnSessions();
 
-    expect(await screen.findByRole('button', { name: 'Open help chat' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Help chat' })).toBeInTheDocument();
     expect(sockets).toHaveLength(0);
     expect(calls.some((call) => call.url === '/chat/status')).toBe(false);
   });
@@ -140,6 +156,23 @@ describe('ChatWidget', () => {
     expect(within(dialog).getAllByText('Not below the confirmed seats.')).toHaveLength(2);
   });
 
+  it('starts a new chat, stopping an answer still streaming', async () => {
+    mockHttp([signedIn, status(true)]);
+    renderOnSessions();
+    const dialog = await openChat();
+    expect(within(dialog).queryByRole('button', { name: 'New chat' })).not.toBeInTheDocument();
+    await userEvent.type(
+      await within(dialog).findByRole('textbox', { name: 'Your question' }),
+      'Explain{Enter}',
+    );
+
+    await userEvent.click(within(dialog).getByRole('button', { name: 'New chat' }));
+
+    expect(within(dialog).queryByText('Explain')).not.toBeInTheDocument();
+    expect(firstSocket().emitted.map((sent) => sent.event)).toEqual(['ask', 'cancel']);
+    expect(within(dialog).queryByRole('button', { name: 'New chat' })).not.toBeInTheDocument();
+  });
+
   it('offers Stop while an answer streams', async () => {
     mockHttp([signedIn, status(true)]);
     renderOnSessions();
@@ -167,6 +200,8 @@ describe('ChatWidget', () => {
   });
 
   it('keeps the conversation when closed and reopened, and gives focus back to the button', async () => {
+    // jsdom lays nothing out, so every element would count as hidden; the entry is on screen here.
+    vi.spyOn(HTMLElement.prototype, 'offsetParent', 'get').mockReturnValue(document.body);
     mockHttp([signedIn, status(true)]);
     renderOnSessions();
     let dialog = await openChat();
@@ -177,7 +212,7 @@ describe('ChatWidget', () => {
 
     await userEvent.click(within(dialog).getByRole('button', { name: 'Close help chat' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Open help chat' })).toHaveFocus();
+    expect(screen.getByRole('button', { name: 'Help chat' })).toHaveFocus();
     dialog = await openChat();
 
     expect(within(dialog).getByText('Hello?')).toBeInTheDocument();
@@ -195,7 +230,7 @@ describe('ChatWidget', () => {
             Grid search
             <input name="grid-quick-filter" />
           </label>
-          <ChatWidget />
+          <HelpChat />
         </>
       ),
     });

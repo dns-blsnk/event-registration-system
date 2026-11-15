@@ -1,23 +1,40 @@
 import { CHAT_FORM_FIELDS, isResource, type ChatStatus, type Resource } from '@ers/shared';
-import ChatIcon from '@mui/icons-material/Chat';
 import CloudOffIcon from '@mui/icons-material/CloudOff';
-import Fab from '@mui/material/Fab';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { useCustom, useResourceParams } from '@refinedev/core';
-import { useEffect, useRef, useState } from 'react';
+import { useThemedLayoutContext } from '@refinedev/mui';
+import { useEffect, useRef } from 'react';
 
 import { ChatComposer } from './chat-composer';
 import { ChatHeader } from './chat-header';
 import { ChatMessages } from './chat-messages';
 import { blocker, reachabilityOf, starterQuestions, type ChatAvailability } from './chat-state';
+import { useHelpChat } from './help-chat-context';
 import { useChat } from './use-chat';
 import { useFocusedField } from './use-focused-field';
 
-/** Above the tables' pagination row, which sits at the bottom right of most pages. */
-const CORNER = { position: 'fixed', right: 24, bottom: 72 } as const;
+import type { SxProps, Theme } from '@mui/material/styles';
+
 const PANEL_SIZE = { width: 380, height: 520 } as const;
+/** Refine's side menu widths, open and collapsed. */
+const SIDER_WIDTH = { open: 240, collapsed: 56 } as const;
+/** The gap between the panel and the menu and the bottom of the window. */
+const PANEL_GAP = 16;
+
+/** Next to the side menu's bottom, where its entry is; across the bottom on a phone. */
+function panelPlace(isSiderCollapsed: boolean) {
+  const siderWidth = isSiderCollapsed ? SIDER_WIDTH.collapsed : SIDER_WIDTH.open;
+  return {
+    position: 'fixed',
+    // Over the page, as the floating button was: tables' sticky parts must not cover the composer.
+    zIndex: 'speedDial',
+    bottom: PANEL_GAP,
+    left: { xs: PANEL_GAP, md: siderWidth + PANEL_GAP },
+    maxWidth: `calc(100vw - ${String(PANEL_GAP)}px - ${String(PANEL_GAP)}px)`,
+  } as const satisfies SxProps<Theme>;
+}
 
 /** The screen's name as the menu shows it (the resource label), else its route name. */
 function labelOf(resource: { name: string; meta?: { label?: string } }): string {
@@ -34,11 +51,22 @@ function screenField(
   return description === undefined ? undefined : { name, label: description.label };
 }
 
+/** What questions are about, e.g. "Sessions · Capacity"; nothing outside a resource screen. */
+function contextOf(
+  screen: { label: string } | undefined,
+  field: { label: string } | undefined,
+): string | undefined {
+  return screen === undefined
+    ? undefined
+    : [screen.label, field?.label].filter(Boolean).join(' · ');
+}
+
 interface ChatPanelProps {
   chat: ReturnType<typeof useChat>;
   availability: ChatAvailability;
   screen: { name: Resource; label: string } | undefined;
   field: { name: string; label: string } | undefined;
+  isSiderCollapsed: boolean;
   onClose: () => void;
 }
 
@@ -48,6 +76,7 @@ function ChatPanel({
   availability,
   screen,
   field,
+  isSiderCollapsed,
   onClose,
 }: ChatPanelProps): React.JSX.Element {
   const reason = blocker(availability, screen !== undefined);
@@ -61,17 +90,15 @@ function ChatPanel({
       question,
     });
   };
-  const context =
-    screen === undefined ? undefined : [screen.label, field?.label].filter(Boolean).join(' · ');
+  const context = contextOf(screen, field);
   return (
     <Paper
       elevation={8}
       role="dialog"
       aria-label="Help chat"
       sx={{
-        ...CORNER,
+        ...panelPlace(isSiderCollapsed),
         ...PANEL_SIZE,
-        maxWidth: 'calc(100vw - 48px)',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
@@ -80,6 +107,7 @@ function ChatPanel({
       <ChatHeader
         reachability={reachabilityOf(availability, chat.connection)}
         context={context}
+        onNewChat={chat.messages.length === 0 ? undefined : chat.reset}
         onClose={onClose}
       />
       {reason === undefined ? (
@@ -113,14 +141,14 @@ function ChatPanel({
 }
 
 /**
- * The help chat: a button in the corner opens a panel that answers questions about the screen
- * that is open, and about the field the user was last in. Nothing connects until it is first
+ * The help chat's panel, opened from its entry in the side menu. It answers questions about the
+ * screen that is open, and about the field the user was last in. Nothing connects until it is first
  * opened; the conversation, and an answer still streaming, survive closing the panel.
  */
-export function ChatWidget(): React.JSX.Element {
-  const [isOpen, setOpen] = useState(false);
-  const [wasOpened, setWasOpened] = useState(false);
-  const fabRef = useRef<HTMLButtonElement>(null);
+export function ChatWidget(): React.JSX.Element | null {
+  const { isOpen, openCount, close, focusTrigger } = useHelpChat();
+  const { siderCollapsed } = useThemedLayoutContext();
+  const wasOpened = openCount > 0;
   // Tracked while closed too: the user picks a field first, then opens the chat to ask about it.
   const focusedName = useFocusedField();
   const { resource } = useResourceParams();
@@ -140,37 +168,26 @@ export function ChatWidget(): React.JSX.Element {
     isAvailable: query.data?.data.isAvailable === true,
   };
   const chat = useChat(availability.isAvailable && wasOpened);
-  // Back to the button after closing, so keyboard users are not dropped at the top of the page.
+  // A failed status check is retried on reopening, as the panel tells the user.
+  const retriedFor = useRef(openCount);
   useEffect(() => {
-    if (!isOpen && wasOpened) fabRef.current?.focus();
-  }, [isOpen, wasOpened]);
-  if (!isOpen) {
-    return (
-      <Fab
-        ref={fabRef}
-        color="primary"
-        aria-label="Open help chat"
-        onClick={() => {
-          setOpen(true);
-          setWasOpened(true);
-          // A failed status check is retried on reopening, as the panel tells the user.
-          if (query.isError) void query.refetch();
-        }}
-        sx={CORNER}
-      >
-        <ChatIcon />
-      </Fab>
-    );
-  }
+    if (openCount === retriedFor.current) return;
+    retriedFor.current = openCount;
+    if (query.isError) void query.refetch();
+  }, [openCount, query]);
+  // Back to the menu entry after closing, so keyboard users are not dropped at the top of the page.
+  useEffect(() => {
+    if (!isOpen && wasOpened) focusTrigger();
+  }, [isOpen, wasOpened, focusTrigger]);
+  if (!isOpen) return null;
   return (
     <ChatPanel
       chat={chat}
       availability={availability}
       screen={screen}
       field={field}
-      onClose={() => {
-        setOpen(false);
-      }}
+      isSiderCollapsed={siderCollapsed}
+      onClose={close}
     />
   );
 }

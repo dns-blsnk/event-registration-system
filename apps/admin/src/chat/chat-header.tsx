@@ -1,3 +1,4 @@
+import AddCommentIcon from '@mui/icons-material/AddCommentOutlined';
 import CloseIcon from '@mui/icons-material/Close';
 import Box from '@mui/material/Box';
 import IconButton from '@mui/material/IconButton';
@@ -24,11 +25,14 @@ const DOT_SIZE = 8;
 export function ChatHeader({
   reachability,
   context,
+  onNewChat,
   onClose,
 }: {
   reachability: ChatReachability;
   /** The screen and field questions are about, e.g. "Sessions · Capacity". */
   context: string | undefined;
+  /** Absent while there is nothing to start over from. */
+  onNewChat: (() => void) | undefined;
   onClose: () => void;
 }): React.JSX.Element {
   const status = STATUS[reachability];
@@ -54,6 +58,11 @@ export function ChatHeader({
           </Typography>
         </Stack>
       </Box>
+      {onNewChat !== undefined && (
+        <IconButton aria-label="New chat" onClick={onNewChat} sx={{ color: 'common.white' }}>
+          <AddCommentIcon />
+        </IconButton>
+      )}
       <IconButton aria-label="Close help chat" onClick={onClose} sx={{ color: 'common.white' }}>
         <CloseIcon />
       </IconButton>

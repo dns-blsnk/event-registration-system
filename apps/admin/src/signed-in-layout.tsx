@@ -4,6 +4,7 @@ import { Suspense } from 'react';
 import { Outlet, useLocation } from 'react-router';
 
 import { ChatWidget } from './chat/chat-widget';
+import { HelpChatProvider } from './chat/help-chat-context';
 import { AppHeader, AppSider } from './components/app-layout-parts';
 import { AppTitle } from './components/app-title';
 import { ErrorBoundary } from './components/error-boundary';
@@ -27,24 +28,26 @@ function PageErrorBoundary(): React.JSX.Element {
  */
 export function SignedInLayout(): React.JSX.Element {
   return (
-    <ThemedLayout
-      Title={AppTitle}
-      Header={AppHeader}
-      Sider={AppSider}
-      // The page card fills the window, however few rows it shows.
-      containerBoxProps={{ sx: { minHeight: '100dvh' } }}
-      childrenBoxProps={{
-        sx: {
-          display: 'flex',
-          flexDirection: 'column',
-          '& > .MuiPaper-root': { flexGrow: 1 },
-        },
-      }}
-    >
-      <PageErrorBoundary />
-      <ChatWidget />
-      {/* Only signed-in forms warn; sign-in and sign-up never ask to stay. */}
-      <UnsavedChangesNotifier />
-    </ThemedLayout>
+    <HelpChatProvider>
+      <ThemedLayout
+        Title={AppTitle}
+        Header={AppHeader}
+        Sider={AppSider}
+        // The page card fills the window, however few rows it shows.
+        containerBoxProps={{ sx: { minHeight: '100dvh' } }}
+        childrenBoxProps={{
+          sx: {
+            display: 'flex',
+            flexDirection: 'column',
+            '& > .MuiPaper-root': { flexGrow: 1 },
+          },
+        }}
+      >
+        <PageErrorBoundary />
+        <ChatWidget />
+        {/* Only signed-in forms warn; sign-in and sign-up never ask to stay. */}
+        <UnsavedChangesNotifier />
+      </ThemedLayout>
+    </HelpChatProvider>
   );
 }

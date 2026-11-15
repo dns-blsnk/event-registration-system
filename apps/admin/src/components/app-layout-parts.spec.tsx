@@ -3,6 +3,7 @@ import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
+import { HelpChatProvider } from '../chat/help-chat-context';
 import { mockHttp } from '../test/http-mock';
 import { renderAdminPage } from '../test/render-admin';
 
@@ -25,12 +26,16 @@ describe('admin layout', () => {
       path: '/',
       route: '/',
       element: (
-        <ThemedLayout Header={AppHeader} Sider={AppSider}>
-          <p>Page</p>
-        </ThemedLayout>
+        <HelpChatProvider>
+          <ThemedLayout Header={AppHeader} Sider={AppSider}>
+            <p>Page</p>
+          </ThemedLayout>
+        </HelpChatProvider>
       ),
     });
     expect(await screen.findAllByRole('link', { name: 'Events' })).not.toHaveLength(0);
+    // The help chat opens from the side menu, not from a button floating over the page.
+    expect(screen.getAllByRole('button', { name: 'Help chat' })).not.toHaveLength(0);
     expect(screen.queryByText('Logout')).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: 'Account menu for Ada' }));

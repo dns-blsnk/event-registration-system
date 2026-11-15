@@ -116,6 +116,8 @@ export function useChat(enabled: boolean): {
   isAnswering: boolean;
   ask: (question: Omit<ChatQuestion, 'id'>) => void;
   cancel: () => void;
+  /** Starts a new conversation; an answer still streaming is stopped first. */
+  reset: () => void;
 } {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [connection, setConnection] = useState<ChatConnection>('connecting');
@@ -154,11 +156,18 @@ export function useChat(enabled: boolean): {
     if (socketRef.current?.connected === true) socketRef.current.emit(ChatEvent.CANCEL);
   };
 
+  const isAnswering = messages.some((message) => message.state === 'streaming');
+
   return {
     messages,
     connection,
-    isAnswering: messages.some((message) => message.state === 'streaming'),
+    isAnswering,
     ask,
     cancel,
+    reset: () => {
+      if (isAnswering) cancel();
+      // Every question goes to the server on its own, so forgetting them here is the whole reset.
+      setMessages([]);
+    },
   };
 }
