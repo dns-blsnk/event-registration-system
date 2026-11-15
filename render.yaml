@@ -44,6 +44,11 @@ services:
       # Optional: without a key the admin works and the help chat says it is unavailable.
       - key: ANTHROPIC_API_KEY
         sync: false
+      # GitHub sign-in is on only when both are set.
+      - key: GITHUB_CLIENT_ID
+        sync: false
+      - key: GITHUB_CLIENT_SECRET
+        sync: false
 
 databases:
   - name: ers-db
