@@ -39,7 +39,7 @@ const registration: RegistrationListItem = {
   cancelledAt: null,
   customer: { id: 'c1', name: 'Ann Customer', email: 'ann@demo.test' },
   session: { id: 's1', title: 'State of React', startsAt: '2099-12-01T09:00:00Z' },
-  event: { id: 'e1', title: 'Kyiv Frontend Summit' },
+  event: { id: 'e1', title: 'Kyiv Frontend Summit', status: 'PUBLISHED' },
 };
 
 const registrations: MockRoute = {
@@ -105,7 +105,7 @@ describe('SessionShow', () => {
     const row = await screen.findByRole('row', { name: /Ann Customer/ });
 
     await userEvent.click(within(row).getByRole('checkbox'));
-    await userEvent.click(screen.getByRole('button', { name: 'Cancel bookings' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel bookings (1)' }));
     await userEvent.click(
       within(await screen.findByRole('dialog')).getByRole('button', { name: 'Cancel bookings' }),
     );

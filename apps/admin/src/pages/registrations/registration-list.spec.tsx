@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { mockHttp, type MockRoute } from '../../test/http-mock';
 import { renderAdminPage } from '../../test/render-admin';
 
-import { bulkSummary } from './registration-bulk-actions';
+import { bulkSummary } from './bulk-selection';
 import { RegistrationList } from './registration-list';
 
 import type { BulkStatusResponse, RegistrationListItem } from '@ers/shared';
@@ -17,15 +17,27 @@ const signedIn: MockRoute = {
   body: { user: { id: 'o1', email: 'o@demo.test', name: 'O', role: 'ORGANIZER' }, csrfToken: 't' },
 };
 
-function registration(id: string, name: string): RegistrationListItem {
+const HOUR_MS = 3_600_000;
+/** Sessions relative to now, so the staff rules (attend after the start, cancel before) hold. */
+const STARTED = new Date(Date.now() - HOUR_MS).toISOString();
+const UPCOMING = new Date(Date.now() + 24 * HOUR_MS).toISOString();
+
+function registration(
+  id: string,
+  name: string,
+  {
+    status = 'CONFIRMED',
+    startsAt = UPCOMING,
+  }: Partial<{ status: RegistrationListItem['status']; startsAt: string }> = {},
+): RegistrationListItem {
   return {
     id,
-    status: 'CONFIRMED',
+    status,
     createdAt: '2026-11-01T09:00:00Z',
     cancelledAt: null,
     customer: { id: `c-${id}`, name, email: `${id}@demo.test` },
-    session: { id: 's1', title: 'State of React', startsAt: '2026-12-01T09:00:00Z' },
-    event: { id: 'e1', title: 'Kyiv Frontend Summit' },
+    session: { id: 's1', title: 'State of React', startsAt },
+    event: { id: 'e1', title: 'Kyiv Frontend Summit', status: 'PUBLISHED' },
   };
 }
 
@@ -77,7 +89,12 @@ describe('RegistrationList', () => {
     });
   });
 
-  it('marks the selected registrations attended and keeps refused rows selected', async () => {
+  it('marks the selected registrations attended and keeps rows the server refused selected', async () => {
+    const started = [
+      registration('r1', 'Ann Customer', { startsAt: STARTED }),
+      registration('r2', 'Bob Customer', { startsAt: STARTED }),
+    ];
+    const startedList: MockRoute = { ...list, body: started };
     const response: BulkStatusResponse = {
       results: [
         { id: 'r1', ok: true, status: 'ATTENDED' },
@@ -86,16 +103,16 @@ describe('RegistrationList', () => {
     };
     const { calls } = mockHttp([
       signedIn,
-      list,
+      startedList,
       { method: 'post', url: '/registrations/bulk-status', status: 200, body: response },
-      list,
+      startedList,
     ]);
     renderList();
     await selectRow('Ann Customer');
     await selectRow('Bob Customer');
     expect(screen.getByText('2 selected')).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Mark attended' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Mark attended (2)' }));
 
     expect(
       await screen.findByText(
@@ -126,7 +143,7 @@ describe('RegistrationList', () => {
     renderList();
     await selectRow('Ann Customer');
 
-    await userEvent.click(screen.getByRole('button', { name: 'Cancel bookings' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel bookings (1)' }));
     const dialog = await screen.findByRole('dialog');
     expect(calls.some((call) => call.method === 'post')).toBe(false);
     await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel bookings' }));
@@ -143,7 +160,7 @@ describe('RegistrationList', () => {
     renderList();
     await selectRow('Ann Customer');
 
-    await userEvent.click(screen.getByRole('button', { name: 'Cancel bookings' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel bookings (1)' }));
     await userEvent.click(
       within(await screen.findByRole('dialog')).getByRole('button', { name: 'Keep bookings' }),
     );
@@ -166,6 +183,57 @@ describe('RegistrationList', () => {
       message:
         '1 registration(s) updated. Not changed: 2 × Already final; 1 × Registration not found',
     });
+  });
+
+  it('sends only the rows an action applies to and reports the others as skipped', async () => {
+    const mixed = [
+      registration('r1', 'Ann Customer', { startsAt: STARTED }),
+      registration('r2', 'Bob Customer', { status: 'CANCELLED', startsAt: STARTED }),
+    ];
+    const { calls } = mockHttp([
+      signedIn,
+      { ...list, body: mixed },
+      {
+        method: 'post',
+        url: '/registrations/bulk-status',
+        status: 200,
+        body: {
+          results: [{ id: 'r1', ok: true, status: 'ATTENDED' }],
+        } satisfies BulkStatusResponse,
+      },
+      { ...list, body: mixed },
+    ]);
+    renderList();
+    await selectRow('Ann Customer');
+    await selectRow('Bob Customer');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Mark attended (1)' }));
+
+    expect(bodyOf(calls.find((call) => call.method === 'post'))).toEqual({
+      ids: ['r1'],
+      status: 'ATTENDED',
+    });
+    expect(
+      await screen.findByText('1 registration(s) updated. Skipped: 1 × already cancelled'),
+    ).toBeInTheDocument();
+    // The skipped row stays selected for a second look.
+    expect(await screen.findByText('1 selected')).toBeInTheDocument();
+  });
+
+  it('switches an action off, with the reason, when it applies to none of the selection', async () => {
+    mockHttp([
+      signedIn,
+      { ...list, body: [registration('r1', 'Ann Customer', { status: 'CANCELLED' })] },
+    ]);
+    renderList();
+    await selectRow('Ann Customer');
+
+    expect(screen.getByRole('button', { name: 'Mark attended' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Cancel bookings' })).toBeDisabled();
+    // Both actions explain themselves: neither applies to a cancelled booking.
+    expect(
+      screen.getAllByLabelText('Not possible for the selection: 1 × already cancelled'),
+    ).toHaveLength(2);
   });
 
   it('clears the selection when the order changes', async () => {

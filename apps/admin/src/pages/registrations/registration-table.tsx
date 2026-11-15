@@ -1,14 +1,13 @@
 import { Action, REGISTRATION_FIELDS, Resource, type RegistrationListItem } from '@ers/shared';
-import Link from '@mui/material/Link';
-import { DataGrid, type GridColDef, type GridRowSelectionModel } from '@mui/x-data-grid';
+import { type GridColDef, type GridRowSelectionModel } from '@mui/x-data-grid';
 import { useCan } from '@refinedev/core';
-import { useDataGrid } from '@refinedev/mui';
 import { useState } from 'react';
-import { Link as RouterLink } from 'react-router';
 
 import { applyFiltersFromFirstPage } from '../../components/filter-form';
 import { formatDateTime } from '../../components/format';
+import { ListGrid, useListGrid } from '../../components/list-grid';
 import { RegistrationStatusChip } from '../../components/registration-status-chip';
+import { RowLink } from '../../components/row-link';
 
 import { RegistrationBulkActions } from './registration-bulk-actions';
 import { RegistrationFilters } from './registration-filters';
@@ -39,9 +38,7 @@ const columns: GridColDef<RegistrationListItem>[] = [
     // The title stays the cell's value (copy, quick filter); the link is only how it is drawn.
     valueGetter: (_value, row) => row.session.title,
     renderCell: ({ row }) => (
-      <Link component={RouterLink} to={`/sessions/${row.session.id}`}>
-        {row.session.title}
-      </Link>
+      <RowLink to={`/sessions/${row.session.id}`}>{row.session.title}</RowLink>
     ),
   },
   {
@@ -66,12 +63,11 @@ const EMBEDDED_INITIAL_STATE = {
 const NO_SELECTION: GridRowSelectionModel = { type: 'include', ids: new Set() };
 
 /** The selected ids on the current page; "exclude" is what the header checkbox produces. */
-function selectedIdsOf(
+function selectedRowsOf(
   model: GridRowSelectionModel,
   rows: readonly RegistrationListItem[],
-): string[] {
-  if (model.type === 'include') return [...model.ids].map(String);
-  return rows.filter((row) => !model.ids.has(row.id)).map((row) => row.id);
+): RegistrationListItem[] {
+  return rows.filter((row) => (model.type === 'include') === model.ids.has(row.id));
 }
 
 interface RegistrationTableProps {
@@ -82,7 +78,7 @@ interface RegistrationTableProps {
 /** Registrations with filters and bulk status changes on the selected rows. */
 export function RegistrationTable({ sessionId }: RegistrationTableProps): React.JSX.Element {
   const { dataGridProps, filters, setFilters, setCurrentPage, result } =
-    useDataGrid<RegistrationListItem>({
+    useListGrid<RegistrationListItem>({
       resource: Resource.REGISTRATIONS,
       sorters: { initial: [{ field: 'createdAt', order: 'desc' }] },
       ...(sessionId === undefined
@@ -99,7 +95,7 @@ export function RegistrationTable({ sessionId }: RegistrationTableProps): React.
   const canBulk = bulkAccess?.can === true;
   const [selection, setSelection] = useState<GridRowSelectionModel>(NO_SELECTION);
   const applyFilters = applyFiltersFromFirstPage({ setCurrentPage, setFilters });
-  const selectedIds = selectedIdsOf(selection, result.data);
+  const selectedRows = selectedRowsOf(selection, result.data);
   return (
     <>
       <RegistrationFilters
@@ -111,13 +107,13 @@ export function RegistrationTable({ sessionId }: RegistrationTableProps): React.
       />
       {canBulk && (
         <RegistrationBulkActions
-          selectedIds={selectedIds}
+          selectedRows={selectedRows}
           onDone={(failedIds) => {
             setSelection({ type: 'include', ids: new Set(failedIds) });
           }}
         />
       )}
-      <DataGrid
+      <ListGrid
         {...dataGridProps}
         columns={columns}
         checkboxSelection={canBulk}
@@ -133,8 +129,6 @@ export function RegistrationTable({ sessionId }: RegistrationTableProps): React.
         rowSelectionModel={selection}
         onRowSelectionModelChange={setSelection}
         {...(sessionId === undefined ? {} : { initialState: EMBEDDED_INITIAL_STATE })}
-        disableColumnFilter
-        autoHeight
       />
     </>
   );
