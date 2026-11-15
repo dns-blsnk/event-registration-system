@@ -27,6 +27,7 @@ describe('GET /api/health', () => {
         status: 'ok',
         checks: { database: 'up' },
         uptimeSeconds: expect.any(Number),
+        version: null,
       });
     });
 

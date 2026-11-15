@@ -21,6 +21,11 @@ const envSchema = z.object({
   NODE_ENV: z.enum(NODE_ENVS),
   LOG_LEVEL: z.enum(LOG_LEVELS).default('info'),
   API_PORT: z.coerce.number().int().positive().max(MAX_PORT).optional(),
+  /** Commit the running build came from; Render sets it, deploy checks wait for it in /health. */
+  RENDER_GIT_COMMIT: z
+    .string()
+    .regex(/^[0-9a-f]{7,40}$/)
+    .optional(),
   /** Set by hosts such as Render; API_PORT, when given, wins. */
   PORT: z.coerce.number().int().positive().max(MAX_PORT).optional(),
   /** Reverse proxies in front of the API (Render, Vercel rewrite); needed for the real client IP. */
@@ -49,6 +54,8 @@ export type LogLevel = (typeof LOG_LEVELS)[number];
 export interface Config {
   readonly nodeEnv: NodeEnv;
   readonly isProduction: boolean;
+  /** Commit of this build when the host reports it, otherwise undefined (local, tests). */
+  readonly version: string | undefined;
   readonly logLevel: LogLevel;
   readonly port: number;
   readonly trustProxyHops: number;
@@ -105,6 +112,7 @@ export function parseConfig(env: RawEnv): Config {
   return {
     nodeEnv: values.NODE_ENV,
     isProduction: values.NODE_ENV === 'production',
+    version: values.RENDER_GIT_COMMIT,
     logLevel: values.LOG_LEVEL,
     port: values.API_PORT ?? values.PORT ?? DEFAULT_API_PORT,
     trustProxyHops: values.TRUST_PROXY_HOPS,

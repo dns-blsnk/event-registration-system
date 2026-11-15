@@ -51,6 +51,16 @@ describe('parseConfig', () => {
     expect(config.ai.model).toBe('claude-haiku-5-5');
   });
 
+  it('reports the build commit the host gives, and refuses one that is not a commit hash', () => {
+    expect(parseConfig(envWith({ RENDER_GIT_COMMIT: 'a1b2c3d4e5f6' })).version).toBe(
+      'a1b2c3d4e5f6',
+    );
+    expect(parseConfig(TEST_ENV).version).toBeUndefined();
+    expect(configErrorFor(envWith({ RENDER_GIT_COMMIT: 'main; rm -rf' })).variables).toContain(
+      'RENDER_GIT_COMMIT',
+    );
+  });
+
   it('listens on the host-given PORT unless API_PORT is set', () => {
     expect(parseConfig(envWith({ API_PORT: undefined, PORT: '10000' })).port).toBe(10000);
     expect(parseConfig(envWith({ API_PORT: '3100', PORT: '10000' })).port).toBe(3100);
