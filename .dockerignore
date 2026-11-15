@@ -1,0 +1,20 @@
+# Only what the API image needs goes into the build context.
+**/node_modules
+**/dist
+**/.turbo
+.git
+.github
+.husky
+.env
+.env.*
+!.env.example
+apps/admin
+planning
+**/*.spec.ts
+apps/api/test
+**/coverage
+.claude
+.idea
+.vscode
+docker
+*.md
