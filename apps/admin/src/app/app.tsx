@@ -15,6 +15,7 @@ import { documentTitle, HOME_PATH, LOGIN_PATH, REGISTER_PATH } from '@/shared/co
 import { theme } from '@/shared/theme';
 import { ErrorBoundary } from '@/shared/ui/error-boundary';
 
+import { queryClient } from './config/query-client';
 import { resources } from './config/resources';
 import { forgetPersonalStateOnSignOut } from './model/session-cleanup';
 import { AuthGate } from './routes/auth-gate';
@@ -39,7 +40,7 @@ import {
   UserList,
 } from './routes/signed-in-pages';
 
-forgetPersonalStateOnSignOut();
+forgetPersonalStateOnSignOut(queryClient);
 
 /**
  * Where a visitor without a session goes. An expired session keeps the address to return to
@@ -68,7 +69,11 @@ export function App(): React.JSX.Element {
             accessControlProvider={accessControlProvider}
             notificationProvider={useNotificationProvider}
             resources={resources}
-            options={{ syncWithLocation: true, warnWhenUnsavedChanges: true }}
+            options={{
+              syncWithLocation: true,
+              warnWhenUnsavedChanges: true,
+              reactQuery: { clientConfig: queryClient },
+            }}
           >
             {/* Last resort for crashes outside a page: the layout, menu or the sign-in pages. */}
             <ErrorBoundary>

@@ -1,3 +1,4 @@
+import { QueryClient } from '@tanstack/react-query';
 import { describe, expect, it } from 'vitest';
 
 import { authProvider } from '@/entities/viewer';
@@ -7,8 +8,10 @@ import { mockHttp } from '@/test/http-mock';
 import { forgetPersonalStateOnSignOut } from './session-cleanup';
 
 describe('forgetPersonalStateOnSignOut', () => {
-  it('forgets every remembered column width when the user signs out', async () => {
-    forgetPersonalStateOnSignOut();
+  it('forgets cached answers and column widths when the user signs out', async () => {
+    const queryClient = new QueryClient();
+    forgetPersonalStateOnSignOut(queryClient);
+    queryClient.setQueryData(['identity'], { name: 'Previous user' });
     mockHttp([
       {
         method: 'post',
@@ -28,5 +31,6 @@ describe('forgetPersonalStateOnSignOut', () => {
     await authProvider.logout({});
 
     expect(savedWidthsOf(table).size).toBe(0);
+    expect(queryClient.getQueryData(['identity'])).toBeUndefined();
   });
 });
