@@ -1,0 +1,116 @@
+name: Deploy
+
+# Production deploys only follow a green CI run on main.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy API (Render) and admin (Vercel)
+    # Only a green CI run of a push to this repository's main. `branches: [main]` above matches the
+    # head branch name, which a pull request from a fork can also be called; such a run must never
+    # reach the deploy secrets or have its code built with them.
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      COMMIT: ${{ github.event.workflow_run.head_sha }}
+      RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      # Public admin URL, e.g. https://<project>.vercel.app (the API URL comes from vercel.json).
+      ADMIN_URL: ${{ vars.ADMIN_URL }}
+      # Pinned: this CLI runs with the production token.
+      VERCEL_CLI: vercel@65.16.0
+    steps:
+      # Nothing configured: the workflow stays green and ships nothing. Half configured: it fails,
+      # so a renamed or missing setting is noticed instead of silently skipping every deploy.
+      - name: Check deploy settings
+        id: settings
+        run: |
+          missing=""
+          present=0
+          for name in RENDER_DEPLOY_HOOK_URL VERCEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID ADMIN_URL; do
+            if [ -z "${!name}" ]; then missing="$missing $name"; else present=$((present + 1)); fi
+          done
+          if [ "$present" -eq 0 ]; then
+            echo "::notice::Deploy skipped, not configured yet."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          elif [ -n "$missing" ]; then
+            echo "::error::Deploy settings incomplete, missing:$missing"
+            exit 1
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check out the commit CI tested
+        if: steps.settings.outputs.ready == 'true'
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ env.COMMIT }}
+          # Build scripts run later; they have no use for the repository token.
+          persist-credentials: false
+
+      # One place names the API host: the /api rewrite in vercel.json.
+      - name: Read the API URL from vercel.json
+        if: steps.settings.outputs.ready == 'true'
+        run: |
+          api_url=$(node -p "new URL(require('./apps/admin/vercel.json').rewrites[0].destination.replace('/:path*', '')).origin")
+          echo "API_URL=$api_url" >> "$GITHUB_ENV"
+
+      # Deploys exactly the tested commit, not whatever is newest on the branch.
+      - name: Deploy API
+        if: steps.settings.outputs.ready == 'true'
+        run: curl --fail --silent --show-error --max-time 30 -X POST "$RENDER_DEPLOY_HOOK_URL&ref=$COMMIT" > /dev/null
+
+      # The old instance keeps answering until the new one is live, so wait for this commit's
+      # version in /health, with a healthy database. The free instance builds and may be asleep.
+      - name: Wait for the new API build
+        if: steps.settings.outputs.ready == 'true'
+        run: |
+          for _ in $(seq 1 60); do
+            body=$(curl --silent --max-time 10 "$API_URL/api/health" || true)
+            if echo "$body" | grep -q "\"version\":\"$COMMIT\"" && echo "$body" | grep -q '"database":"up"'; then
+              echo "API $COMMIT is live and healthy"; exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::API $COMMIT did not become live and healthy at $API_URL/api/health"; exit 1
+
+      - uses: pnpm/action-setup@v4
+        if: steps.settings.outputs.ready == 'true'
+
+      - uses: actions/setup-node@v5
+        if: steps.settings.outputs.ready == 'true'
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      # Builds with the project settings from Vercel (root directory apps/admin) and vercel.json.
+      - name: Deploy admin
+        if: steps.settings.outputs.ready == 'true'
+        run: |
+          npx --yes "$VERCEL_CLI" pull --yes --environment=production --token="$VERCEL_TOKEN"
+          npx --yes "$VERCEL_CLI" build --prod --token="$VERCEL_TOKEN"
+          npx --yes "$VERCEL_CLI" deploy --prebuilt --prod --token="$VERCEL_TOKEN"
+
+      - name: Smoke-check the admin and its API rewrite
+        if: steps.settings.outputs.ready == 'true'
+        run: |
+          curl --fail --silent --max-time 30 "$ADMIN_URL" | grep -q '<div id="root">'
+          curl --fail --silent --max-time 30 "$ADMIN_URL/api/health" | grep -q "\"version\":\"$COMMIT\""
+          echo "Admin and API $COMMIT reachable through $ADMIN_URL"
