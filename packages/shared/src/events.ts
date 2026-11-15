@@ -37,3 +37,9 @@ export interface EventDetail extends EventListItem {
   createdAt: string;
   updatedAt: string;
 }
+
+/** API path of the signed-in staff member's pinned events (below /api). */
+export const PINNED_EVENTS_PATH = 'pinned-events';
+
+/** How many events one person can pin to their dashboard; a short list stays a quick view. */
+export const MAX_PINNED_EVENTS = 12;

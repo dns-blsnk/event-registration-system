@@ -20,3 +20,6 @@ export interface SessionListItem {
   fillRate: number;
   waitlistCount: number;
 }
+
+/** The sessions list's "almost full" filter: the query field and the one value it takes. */
+export const ALMOST_FULL_FILTER = { field: 'almostFull', value: 'true' } as const;
