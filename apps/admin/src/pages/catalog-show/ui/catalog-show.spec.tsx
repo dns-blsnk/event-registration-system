@@ -317,7 +317,7 @@ describe('CatalogShow', () => {
     expect(await screen.findByRole('button', { name: 'Book State of React' })).toBeInTheDocument();
   });
 
-  it('undoes a booking made by mistake from its notice, and the seat can be booked again', async () => {
+  it('lets the customer book again after booking and cancelling on the page', async () => {
     const booked = {
       id: 'r1',
       status: 'CONFIRMED',
@@ -325,11 +325,16 @@ describe('CatalogShow', () => {
       cancelledAt: null,
       waitlistPosition: null,
     };
-    const { calls } = showEvent(
+    showEvent(
       [session({})],
       [
         { method: 'post', url: '/my-registrations', status: 201, body: booked },
-        { method: 'get', url: '/catalog/e1', status: 200, body: detail([session({})]) },
+        {
+          method: 'get',
+          url: '/catalog/e1',
+          status: 200,
+          body: detail([session({ myRegistration: { id: 'r1', status: 'CONFIRMED' } })]),
+        },
         {
           method: 'post',
           url: '/my-registrations/r1/cancel',
@@ -340,12 +345,13 @@ describe('CatalogShow', () => {
       ],
     );
     await userEvent.click(await screen.findByRole('button', { name: 'Book State of React' }));
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Cancel booking for State of React' }),
+    );
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Undo' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Cancel booking' }));
 
-    expect(await screen.findByText('Booking undone')).toBeInTheDocument();
-    expect(calls.some((call) => call.url === '/my-registrations/r1/cancel')).toBe(true);
-    expect(screen.getByRole('button', { name: 'Book State of React' })).toBeEnabled();
+    expect(await screen.findByRole('button', { name: 'Book State of React' })).toBeEnabled();
   });
 
   it('offers to cancel a held booking next to it while the session has not started', async () => {

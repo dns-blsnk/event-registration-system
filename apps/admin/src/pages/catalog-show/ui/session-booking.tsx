@@ -11,14 +11,10 @@ import {
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
-import { useCustomMutation, useInvalidate, useNotification } from '@refinedev/core';
+import { useCustomMutation, useInvalidate } from '@refinedev/core';
 
 import { RegistrationStatusChip } from '@/entities/registration';
-import { CancelBookingButton, useCancelBooking } from '@/features/cancel-booking';
-import { undoNoticeKey } from '@/shared/lib/undo-notice';
-
-/** How long a new booking can be undone from its notification, for a click that was a slip. */
-const UNDO_SECONDS = 5;
+import { CancelBookingButton } from '@/features/cancel-booking';
 
 function bookedMessage(registration: MyRegistration): string {
   if (registration.status !== RegistrationStatus.WAITLISTED) return 'Seat booked';
@@ -52,8 +48,6 @@ export function SessionBooking({
 }): React.JSX.Element {
   const { mutate, mutation } = useCustomMutation<MyRegistration>();
   const invalidate = useInvalidate();
-  const { open } = useNotification();
-  const { cancel } = useCancelBooking();
   const held = session.myRegistration;
   if (held !== null && HELD_REGISTRATION_STATUSES.includes(held.status)) {
     return (
@@ -79,22 +73,13 @@ export function SessionBooking({
         url: '/my-registrations',
         method: 'post',
         values: { sessionId: session.id },
-        // Said by the notification below instead, which can also undo the booking.
-        successNotification: false,
+        successNotification: (response) => ({
+          type: 'success',
+          message: response === undefined ? 'Booking saved' : bookedMessage(response.data),
+        }),
       },
       {
-        onSuccess: ({ data }) => {
-          // The seat is held at once (no one can take it meanwhile); Undo cancels it again.
-          open?.({
-            key: undoNoticeKey(data.id),
-            type: 'progress',
-            message: bookedMessage(data),
-            undoableTimeout: UNDO_SECONDS,
-            cancelMutation: () => {
-              mutation.reset();
-              cancel({ registrationId: data.id, eventId }, 'Booking undone');
-            },
-          });
+        onSuccess: () => {
           // Seat totals change in the list too, not only on this page.
           void invalidate({
             resource: Resource.CATALOG,

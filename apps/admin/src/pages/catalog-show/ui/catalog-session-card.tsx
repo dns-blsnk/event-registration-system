@@ -46,7 +46,13 @@ export function CatalogSessionCard({
           </Box>
         </Box>
         <Box sx={{ alignSelf: { sm: 'center' } }}>
-          <SessionBooking session={session} eventId={eventId} eventTitle={eventTitle} />
+          <SessionBooking
+            // A new booking state starts afresh: after cancelling, the Book button is usable again.
+            key={session.myRegistration?.status ?? 'none'}
+            session={session}
+            eventId={eventId}
+            eventTitle={eventTitle}
+          />
         </Box>
       </Stack>
     </Paper>
