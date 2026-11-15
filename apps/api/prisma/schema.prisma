@@ -18,20 +18,21 @@ enum Role {
 
 /// Admins, organizers and customers. Customers book seats; organizers run their own events.
 model User {
-  id           String        @id @default(uuid()) @db.Uuid
+  id              String         @id @default(uuid()) @db.Uuid
   /// Stored lower-cased and trimmed (CHECK constraint in the migration), so uniqueness is case-insensitive.
-  email        String        @unique @db.VarChar(254)
-  name         String        @db.VarChar(120)
+  email           String         @unique @db.VarChar(254)
+  name            String         @db.VarChar(120)
   /// argon2id hash; null for accounts that only sign in through OAuth.
-  passwordHash String?       @map("password_hash") @db.VarChar(255)
-  role         Role          @default(CUSTOMER)
-  githubId     String?       @unique @map("github_id") @db.VarChar(64)
-  avatarKey    String?       @map("avatar_key") @db.VarChar(512)
-  createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt    DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+  passwordHash    String?        @map("password_hash") @db.VarChar(255)
+  role            Role           @default(CUSTOMER)
+  githubId        String?        @unique @map("github_id") @db.VarChar(64)
+  avatarKey       String?        @map("avatar_key") @db.VarChar(512)
+  createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
   authSessions    AuthSession[]
   organizedEvents Event[]
   registrations   Registration[]
+  pinnedEvents    PinnedEvent[]
 
   @@index([role])
   @@map("users")
@@ -75,23 +76,24 @@ enum RegistrationStatus {
 
 /// An event run by one organizer. Deleting the organizer is refused while they own events.
 model Event {
-  id          String      @id @default(uuid()) @db.Uuid
-  title       String      @db.VarChar(200)
-  slug        String      @unique @db.VarChar(220)
-  description String      @db.VarChar(5000)
-  venue       String      @db.VarChar(200)
-  city        String      @db.VarChar(100)
-  startsAt    DateTime    @map("starts_at") @db.Timestamptz(3)
-  endsAt      DateTime    @map("ends_at") @db.Timestamptz(3)
-  status      EventStatus @default(DRAFT)
+  id          String        @id @default(uuid()) @db.Uuid
+  title       String        @db.VarChar(200)
+  slug        String        @unique @db.VarChar(220)
+  description String        @db.VarChar(5000)
+  venue       String        @db.VarChar(200)
+  city        String        @db.VarChar(100)
+  startsAt    DateTime      @map("starts_at") @db.Timestamptz(3)
+  endsAt      DateTime      @map("ends_at") @db.Timestamptz(3)
+  status      EventStatus   @default(DRAFT)
   /// Object key of the banner image in S3 storage; null until one is uploaded.
-  bannerKey   String?     @map("banner_key") @db.VarChar(512)
-  organizerId String      @map("organizer_id") @db.Uuid
-  organizer   User        @relation(fields: [organizerId], references: [id], onDelete: Restrict)
-  createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt   DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
+  bannerKey   String?       @map("banner_key") @db.VarChar(512)
+  organizerId String        @map("organizer_id") @db.Uuid
+  organizer   User          @relation(fields: [organizerId], references: [id], onDelete: Restrict)
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
   sessions    Session[]
   tags        EventTag[]
+  pinnedBy    PinnedEvent[]
 
   @@index([status, startsAt])
   @@index([city])
@@ -203,4 +205,17 @@ model AppLog {
   @@index([statusCode, createdAt])
   @@index([category, createdAt])
   @@map("app_logs")
+}
+
+/// An event a staff member keeps on their dashboard. Per user; removed with the user or the event.
+model PinnedEvent {
+  userId    String   @map("user_id") @db.Uuid
+  eventId   String   @map("event_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@id([userId, eventId])
+  @@index([eventId])
+  @@map("pinned_events")
 }

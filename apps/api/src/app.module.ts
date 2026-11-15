@@ -19,6 +19,7 @@ import { ChatModule } from './modules/chat/chat.module.js';
 import { CustomersModule } from './modules/customers/customers.module.js';
 import { EventsModule } from './modules/events/events.module.js';
 import { HealthModule } from './modules/health/health.module.js';
+import { PinnedEventsModule } from './modules/pinned-events/pinned-events.module.js';
 import { RegistrationsModule } from './modules/registrations/registrations.module.js';
 import { SessionsModule } from './modules/sessions/sessions.module.js';
 import { StorageModule } from './modules/storage/storage.module.js';
@@ -42,6 +43,7 @@ const REQUESTS_PER_MINUTE_PER_IP = 300;
     AuthModule,
     UsersModule,
     EventsModule,
+    PinnedEventsModule,
     SessionsModule,
     RegistrationsModule,
     TagsModule,
