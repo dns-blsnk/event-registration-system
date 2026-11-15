@@ -26,7 +26,14 @@ export function CatalogShow(): React.JSX.Element {
     }
   }, [isLoaded, hash]);
   return (
-    <Show isLoading={query.isLoading} title="Event" canEdit={false} canDelete={false}>
+    <Show
+      isLoading={query.isLoading}
+      title="Event"
+      canEdit={false}
+      canDelete={false}
+      // Refine's list and refresh buttons are admin tools; the breadcrumb and Back already lead back.
+      headerButtons={() => null}
+    >
       {query.isError && event === undefined && (
         <Alert severity="error">This event is not available.</Alert>
       )}
