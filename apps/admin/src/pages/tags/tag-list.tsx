@@ -1,11 +1,12 @@
 import { Action, Resource, TAG_FIELDS, TAG_LIST_CONTROLS, type TagListItem } from '@ers/shared';
-import { DataGrid, type GridColDef } from '@mui/x-data-grid';
+import { type GridColDef } from '@mui/x-data-grid';
 import { useCan, useInvalidate } from '@refinedev/core';
-import { CreateButton, DeleteButton, EditButton, List, useDataGrid } from '@refinedev/mui';
+import { CreateButton, DeleteButton, EditButton, List } from '@refinedev/mui';
 import { useCallback, useMemo, useState } from 'react';
 
 import { applyFiltersFromFirstPage, SearchFilterForm } from '../../components/filter-form';
 import { ACTIONS_COLUMN_HEADER } from '../../components/grid';
+import { ListGrid, useListGrid } from '../../components/list-grid';
 
 import { TagFormDialog } from './tag-form-dialog';
 
@@ -18,7 +19,7 @@ type DialogState = { kind: 'closed' } | { kind: 'create' } | { kind: 'edit'; tag
  */
 export function TagList(): React.JSX.Element {
   const [dialog, setDialog] = useState<DialogState>({ kind: 'closed' });
-  const { dataGridProps, filters, setFilters, setCurrentPage } = useDataGrid<TagListItem>({
+  const { dataGridProps, filters, setFilters, setCurrentPage } = useListGrid<TagListItem>({
     sorters: { initial: [{ field: 'name', order: 'asc' }] },
     syncWithLocation: true,
   });
@@ -91,7 +92,7 @@ export function TagList(): React.JSX.Element {
         filters={filters}
         onChange={applyFiltersFromFirstPage({ setCurrentPage, setFilters })}
       />
-      <DataGrid {...dataGridProps} columns={columns} disableColumnFilter autoHeight />
+      <ListGrid {...dataGridProps} columns={columns} />
       {dialog.kind !== 'closed' && (
         <TagFormDialog
           tag={dialog.kind === 'edit' ? dialog.tag : undefined}

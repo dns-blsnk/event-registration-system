@@ -1,10 +1,10 @@
 import { SESSION_FIELDS, type SessionListItem } from '@ers/shared';
-import Link from '@mui/material/Link';
-import { DataGrid, type GridColDef } from '@mui/x-data-grid';
-import { List, useDataGrid } from '@refinedev/mui';
-import { Link as RouterLink } from 'react-router';
+import { type GridColDef } from '@mui/x-data-grid';
+import { List } from '@refinedev/mui';
 
 import { applyFiltersFromFirstPage } from '../../components/filter-form';
+import { ListGrid, useListGrid } from '../../components/list-grid';
+import { RowLink } from '../../components/row-link';
 
 import { SESSION_COLUMNS } from './session-columns';
 import { SessionFilters } from './session-filters';
@@ -17,18 +17,14 @@ const columns: GridColDef<SessionListItem>[] = [
     minWidth: 180,
     sortable: false,
     // Sessions are managed on their event's page, so the event is the way in.
-    renderCell: ({ row }) => (
-      <Link component={RouterLink} to={`/events/${row.eventId}`}>
-        {row.eventTitle}
-      </Link>
-    ),
+    renderCell: ({ row }) => <RowLink to={`/events/${row.eventId}`}>{row.eventTitle}</RowLink>,
   },
   ...SESSION_COLUMNS,
 ];
 
 /** Every session the user may see, with the "almost full" filter for spotting sessions to grow. */
 export function SessionList(): React.JSX.Element {
-  const { dataGridProps, filters, setFilters, setCurrentPage } = useDataGrid<SessionListItem>({
+  const { dataGridProps, filters, setFilters, setCurrentPage } = useListGrid<SessionListItem>({
     sorters: { initial: [{ field: 'startsAt', order: 'asc' }] },
     syncWithLocation: true,
   });
@@ -38,7 +34,7 @@ export function SessionList(): React.JSX.Element {
         filters={filters}
         onChange={applyFiltersFromFirstPage({ setCurrentPage, setFilters })}
       />
-      <DataGrid {...dataGridProps} columns={columns} disableColumnFilter autoHeight />
+      <ListGrid {...dataGridProps} columns={columns} />
     </List>
   );
 }

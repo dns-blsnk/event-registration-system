@@ -1,10 +1,11 @@
 import { Resource, SessionPhase, sessionPhase, type SessionListItem } from '@ers/shared';
 import Box from '@mui/material/Box';
-import { DataGrid, type GridColDef } from '@mui/x-data-grid';
-import { CreateButton, DeleteButton, EditButton, useDataGrid } from '@refinedev/mui';
+import { type GridColDef } from '@mui/x-data-grid';
+import { CreateButton, DeleteButton, EditButton } from '@refinedev/mui';
 import { useMemo, useState } from 'react';
 
 import { ACTIONS_COLUMN_HEADER } from '../../components/grid';
+import { ListGrid, useListGrid } from '../../components/list-grid';
 import { SESSION_COLUMNS } from '../sessions/session-columns';
 import { SessionFormDialog, type SessionDialogTarget } from '../sessions/session-form-dialog';
 
@@ -28,7 +29,7 @@ function canDeleteSession(session: SessionListItem): boolean {
 /** The sessions of one event, paged and sorted on the server, added and edited in a dialog. */
 export function EventSessions({ eventId, canChange }: EventSessionsProps): React.JSX.Element {
   const [dialog, setDialog] = useState<SessionDialogTarget | undefined>();
-  const { dataGridProps } = useDataGrid<SessionListItem>({
+  const { dataGridProps } = useListGrid<SessionListItem>({
     resource: Resource.SESSIONS,
     filters: { permanent: [{ field: 'eventId', operator: 'eq', value: eventId }] },
     sorters: { initial: [{ field: 'startsAt', order: 'asc' }] },
@@ -82,7 +83,7 @@ export function EventSessions({ eventId, canChange }: EventSessionsProps): React
           </CreateButton>
         </Box>
       )}
-      <DataGrid {...dataGridProps} columns={columns} disableColumnFilter autoHeight />
+      <ListGrid {...dataGridProps} columns={columns} />
       {dialog !== undefined && (
         <SessionFormDialog
           target={dialog}

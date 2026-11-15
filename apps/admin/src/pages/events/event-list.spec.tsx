@@ -60,6 +60,17 @@ describe('EventList', () => {
     expect(cells.getByText('Published')).toBeInTheDocument();
   });
 
+  it('opens an event from its title as well as from the view button', async () => {
+    mockHttp([signedIn, eventsRoute()]);
+
+    renderAdminPage({ path: '/events', route: '/events', element: <EventList /> });
+
+    expect(await screen.findByRole('link', { name: 'Kyiv Frontend Summit' })).toHaveAttribute(
+      'href',
+      '/events/e1',
+    );
+  });
+
   it('asks the server for the first page sorted by start date', async () => {
     const { calls } = mockHttp([signedIn, eventsRoute()]);
 

@@ -4,12 +4,14 @@ import {
   SESSION_FIELDS,
   type CatalogEventListItem,
 } from '@ers/shared';
-import { DataGrid, type GridColDef } from '@mui/x-data-grid';
-import { List, ShowButton, useDataGrid } from '@refinedev/mui';
+import { type GridColDef } from '@mui/x-data-grid';
+import { List, ShowButton } from '@refinedev/mui';
 
 import { applyFiltersFromFirstPage, SearchFilterForm } from '../../components/filter-form';
 import { formatDateTime } from '../../components/format';
 import { ACTIONS_COLUMN_HEADER } from '../../components/grid';
+import { ListGrid, useListGrid } from '../../components/list-grid';
+import { RowLink } from '../../components/row-link';
 
 /** Seats left only means something when a session can still be booked. */
 function seatsText(event: CatalogEventListItem): string {
@@ -18,7 +20,13 @@ function seatsText(event: CatalogEventListItem): string {
 }
 
 const columns: GridColDef<CatalogEventListItem>[] = [
-  { field: 'title', headerName: EVENT_FIELDS.title.label, flex: 2, minWidth: 200 },
+  {
+    field: 'title',
+    headerName: EVENT_FIELDS.title.label,
+    flex: 2,
+    minWidth: 200,
+    renderCell: ({ row }) => <RowLink to={`/catalog/${row.id}`}>{row.title}</RowLink>,
+  },
   { field: 'city', headerName: EVENT_FIELDS.city.label, flex: 1, minWidth: 120, sortable: false },
   {
     field: 'startsAt',
@@ -55,7 +63,7 @@ const columns: GridColDef<CatalogEventListItem>[] = [
 
 /** Published events a customer can still attend, soonest first. */
 export function CatalogList(): React.JSX.Element {
-  const { dataGridProps, filters, setFilters, setCurrentPage } = useDataGrid<CatalogEventListItem>({
+  const { dataGridProps, filters, setFilters, setCurrentPage } = useListGrid<CatalogEventListItem>({
     sorters: { initial: [{ field: 'startsAt', order: 'asc' }] },
     syncWithLocation: true,
   });
@@ -70,7 +78,7 @@ export function CatalogList(): React.JSX.Element {
         filters={filters}
         onChange={onFilters}
       />
-      <DataGrid {...dataGridProps} columns={columns} disableColumnFilter autoHeight />
+      <ListGrid {...dataGridProps} columns={columns} />
     </List>
   );
 }

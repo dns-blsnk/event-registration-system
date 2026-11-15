@@ -6,9 +6,9 @@ import {
   type PublicUser,
   type UserListItem,
 } from '@ers/shared';
-import { DataGrid, type GridColDef } from '@mui/x-data-grid';
+import { type GridColDef } from '@mui/x-data-grid';
 import { useGetIdentity } from '@refinedev/core';
-import { CreateButton, DeleteButton, EditButton, List, useDataGrid } from '@refinedev/mui';
+import { CreateButton, DeleteButton, EditButton, List } from '@refinedev/mui';
 import { useMemo, useState } from 'react';
 
 import {
@@ -18,6 +18,7 @@ import {
 } from '../../components/filter-form';
 import { formatDateTime } from '../../components/format';
 import { ACTIONS_COLUMN_HEADER } from '../../components/grid';
+import { ListGrid, useListGrid } from '../../components/list-grid';
 
 import { UserFormDialog } from './user-form-dialog';
 
@@ -45,7 +46,7 @@ const BASE_COLUMNS: GridColDef<UserListItem>[] = [
 export function UserList(): React.JSX.Element {
   const { data: me } = useGetIdentity<PublicUser>();
   const [dialog, setDialog] = useState<DialogState>({ kind: 'closed' });
-  const { dataGridProps, filters, setFilters, setCurrentPage } = useDataGrid<UserListItem>({
+  const { dataGridProps, filters, setFilters, setCurrentPage } = useListGrid<UserListItem>({
     sorters: { initial: [{ field: 'createdAt', order: 'desc' }] },
     syncWithLocation: true,
   });
@@ -105,7 +106,7 @@ export function UserList(): React.JSX.Element {
           onChange={onFilters}
         />
       </SearchFilterForm>
-      <DataGrid {...dataGridProps} columns={columns} disableColumnFilter autoHeight />
+      <ListGrid {...dataGridProps} columns={columns} />
       {dialog.kind !== 'closed' && (
         <UserFormDialog
           user={dialog.kind === 'edit' ? dialog.user : undefined}

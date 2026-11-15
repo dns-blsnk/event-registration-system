@@ -1,17 +1,25 @@
 import { EVENT_FIELDS, type EventListItem, formatPercent } from '@ers/shared';
-import { DataGrid, type GridColDef } from '@mui/x-data-grid';
-import { List, ShowButton, useDataGrid } from '@refinedev/mui';
+import { type GridColDef } from '@mui/x-data-grid';
+import { List, ShowButton } from '@refinedev/mui';
 
 import { EventStatusChip } from '../../components/event-status-chip';
 import { applyFiltersFromFirstPage } from '../../components/filter-form';
 import { formatDateTime } from '../../components/format';
 import { ACTIONS_COLUMN_HEADER } from '../../components/grid';
+import { ListGrid, useListGrid } from '../../components/list-grid';
+import { RowLink } from '../../components/row-link';
 
 import { EventFilters } from './event-filters';
 
 /** Columns the API can sort by; the rest are computed per row and stay unsortable. */
 const columns: GridColDef<EventListItem>[] = [
-  { field: 'title', headerName: EVENT_FIELDS.title.label, flex: 2, minWidth: 200 },
+  {
+    field: 'title',
+    headerName: EVENT_FIELDS.title.label,
+    flex: 2,
+    minWidth: 200,
+    renderCell: ({ row }) => <RowLink to={`/events/${row.id}`}>{row.title}</RowLink>,
+  },
   { field: 'city', headerName: EVENT_FIELDS.city.label, flex: 1, minWidth: 120 },
   {
     field: 'startsAt',
@@ -58,7 +66,7 @@ const columns: GridColDef<EventListItem>[] = [
 
 /** Events with server-side paging, sorting and filters; organizers only ever see their own. */
 export function EventList(): React.JSX.Element {
-  const { dataGridProps, filters, setFilters, setCurrentPage } = useDataGrid<EventListItem>({
+  const { dataGridProps, filters, setFilters, setCurrentPage } = useListGrid<EventListItem>({
     sorters: { initial: [{ field: 'startsAt', order: 'asc' }] },
     syncWithLocation: true,
   });
@@ -68,7 +76,7 @@ export function EventList(): React.JSX.Element {
         filters={filters}
         onChange={applyFiltersFromFirstPage({ setCurrentPage, setFilters })}
       />
-      <DataGrid {...dataGridProps} columns={columns} disableColumnFilter autoHeight />
+      <ListGrid {...dataGridProps} columns={columns} />
     </List>
   );
 }

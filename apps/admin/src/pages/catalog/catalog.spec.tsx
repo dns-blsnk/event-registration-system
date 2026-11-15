@@ -85,6 +85,16 @@ describe('CatalogList', () => {
     expect(screen.getByText('12')).toBeInTheDocument();
   });
 
+  it('opens an event from its title', async () => {
+    mockHttp([signedIn, { method: 'get', url: '/catalog', status: 200, body: [listItem] }]);
+    renderAdminPage({ path: '/catalog', route: '/catalog', element: <CatalogList /> });
+
+    expect(await screen.findByRole('link', { name: 'Kyiv Frontend Summit' })).toHaveAttribute(
+      'href',
+      '/catalog/e1',
+    );
+  });
+
   it.each([
     [{ seatsLeft: 0 }, 'Waitlist only'],
     [{ seatsLeft: 0, upcomingSessionsCount: 0 }, 'Nothing left to book'],

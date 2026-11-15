@@ -1,9 +1,10 @@
 import { CUSTOMER_FIELDS, CUSTOMER_LIST_CONTROLS, type CustomerListItem } from '@ers/shared';
-import { DataGrid, type GridColDef } from '@mui/x-data-grid';
-import { List, useDataGrid } from '@refinedev/mui';
+import { type GridColDef } from '@mui/x-data-grid';
+import { List } from '@refinedev/mui';
 
 import { applyFiltersFromFirstPage, SearchFilterForm } from '../../components/filter-form';
 import { formatDateTime } from '../../components/format';
+import { ListGrid, useListGrid } from '../../components/list-grid';
 
 const columns: GridColDef<CustomerListItem>[] = [
   { field: 'name', headerName: CUSTOMER_FIELDS.name.label, flex: 1, minWidth: 160 },
@@ -25,7 +26,7 @@ const columns: GridColDef<CustomerListItem>[] = [
 
 /** Customers who booked with the viewer: every customer for admins, own events' bookers for organizers. */
 export function CustomerList(): React.JSX.Element {
-  const { dataGridProps, filters, setFilters, setCurrentPage } = useDataGrid<CustomerListItem>({
+  const { dataGridProps, filters, setFilters, setCurrentPage } = useListGrid<CustomerListItem>({
     sorters: { initial: [{ field: 'name', order: 'asc' }] },
     syncWithLocation: true,
   });
@@ -36,7 +37,7 @@ export function CustomerList(): React.JSX.Element {
         filters={filters}
         onChange={applyFiltersFromFirstPage({ setCurrentPage, setFilters })}
       />
-      <DataGrid {...dataGridProps} columns={columns} disableColumnFilter autoHeight />
+      <ListGrid {...dataGridProps} columns={columns} />
     </List>
   );
 }

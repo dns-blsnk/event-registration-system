@@ -7,8 +7,8 @@ import {
   AppLogLevel,
   type AppLogListItem,
 } from '@ers/shared';
-import { DataGrid, type GridColDef } from '@mui/x-data-grid';
-import { List, ShowButton, useDataGrid } from '@refinedev/mui';
+import { type GridColDef } from '@mui/x-data-grid';
+import { List, ShowButton } from '@refinedev/mui';
 
 import {
   applyFiltersFromFirstPage,
@@ -17,6 +17,8 @@ import {
 } from '../../components/filter-form';
 import { formatDateTime } from '../../components/format';
 import { ACTIONS_COLUMN_HEADER } from '../../components/grid';
+import { ListGrid, useListGrid } from '../../components/list-grid';
+import { RowLink } from '../../components/row-link';
 
 const LEVELS = Object.values(AppLogLevel);
 const CATEGORIES = Object.values(AppLogCategory);
@@ -58,6 +60,7 @@ const columns: GridColDef<AppLogListItem>[] = [
     flex: 1,
     minWidth: 240,
     sortable: false,
+    renderCell: ({ row }) => <RowLink to={`/logs/${row.id}`}>{row.message}</RowLink>,
   },
   {
     field: 'actions',
@@ -73,7 +76,7 @@ const columns: GridColDef<AppLogListItem>[] = [
 
 /** The error and security journal for admins, newest first, with request id lookup. */
 export function AppLogList(): React.JSX.Element {
-  const { dataGridProps, filters, setFilters, setCurrentPage } = useDataGrid<AppLogListItem>({
+  const { dataGridProps, filters, setFilters, setCurrentPage } = useListGrid<AppLogListItem>({
     sorters: { initial: [{ field: 'createdAt', order: 'desc' }] },
     syncWithLocation: true,
   });
@@ -105,7 +108,7 @@ export function AppLogList(): React.JSX.Element {
           onChange={onFilters}
         />
       </SearchFilterForm>
-      <DataGrid {...dataGridProps} columns={columns} disableColumnFilter autoHeight />
+      <ListGrid {...dataGridProps} columns={columns} />
     </List>
   );
 }

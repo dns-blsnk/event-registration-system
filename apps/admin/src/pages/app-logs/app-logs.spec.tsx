@@ -60,6 +60,16 @@ describe('AppLogList', () => {
     expect(lastQuery(calls)).toMatchObject({ _sort: 'createdAt', _order: 'desc' });
   });
 
+  it('opens an entry from its message', async () => {
+    mockHttp([signedIn, { method: 'get', url: '/app-logs', status: 200, body: [entry] }]);
+    renderAdminPage({ path: '/logs', route: '/logs', element: <AppLogList /> });
+
+    expect(await screen.findByRole('link', { name: 'Database timeout' })).toHaveAttribute(
+      'href',
+      '/logs/l1',
+    );
+  });
+
   it('finds the entry behind an error by its request id', async () => {
     const list: MockRoute = { method: 'get', url: '/app-logs', status: 200, body: [entry] };
     const { calls } = mockHttp([signedIn, list, list]);

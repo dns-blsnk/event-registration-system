@@ -5,16 +5,16 @@ import {
   SESSION_FIELDS,
   type MyRegistration,
 } from '@ers/shared';
-import Link from '@mui/material/Link';
 import Stack from '@mui/material/Stack';
-import { DataGrid, type GridColDef } from '@mui/x-data-grid';
-import { List, useDataGrid } from '@refinedev/mui';
-import { Link as RouterLink } from 'react-router';
+import { type GridColDef } from '@mui/x-data-grid';
+import { List } from '@refinedev/mui';
 
 import { applyFiltersFromFirstPage, SelectFilterField } from '../../components/filter-form';
 import { formatDateTime } from '../../components/format';
 import { ACTIONS_COLUMN_HEADER } from '../../components/grid';
+import { ListGrid, useListGrid } from '../../components/list-grid';
 import { RegistrationStatusChip } from '../../components/registration-status-chip';
+import { RowLink } from '../../components/row-link';
 
 import { canCancel, MyRegistrationCancel } from './my-registration-cancel';
 
@@ -28,9 +28,7 @@ const columns: GridColDef<MyRegistration>[] = [
     // The catalog only shows events still open to customers; past bookings name the event as text.
     renderCell: ({ row }) =>
       canCancel(row, new Date()) ? (
-        <Link component={RouterLink} to={`/catalog/${row.event.id}`}>
-          {row.event.title}
-        </Link>
+        <RowLink to={`/catalog/${row.event.id}`}>{row.event.title}</RowLink>
       ) : (
         row.event.title
       ),
@@ -81,7 +79,7 @@ const columns: GridColDef<MyRegistration>[] = [
 
 /** The signed-in customer's bookings, newest first, with cancellation while it is still allowed. */
 export function MyRegistrationList(): React.JSX.Element {
-  const { dataGridProps, filters, setFilters, setCurrentPage } = useDataGrid<MyRegistration>({
+  const { dataGridProps, filters, setFilters, setCurrentPage } = useListGrid<MyRegistration>({
     sorters: { initial: [{ field: 'createdAt', order: 'desc' }] },
     syncWithLocation: true,
   });
@@ -97,7 +95,7 @@ export function MyRegistrationList(): React.JSX.Element {
           onChange={applyFiltersFromFirstPage({ setCurrentPage, setFilters })}
         />
       </Stack>
-      <DataGrid {...dataGridProps} columns={columns} disableColumnFilter autoHeight />
+      <ListGrid {...dataGridProps} columns={columns} />
     </List>
   );
 }
