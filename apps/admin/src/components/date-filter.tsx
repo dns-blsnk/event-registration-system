@@ -1,6 +1,8 @@
 import TextField from '@mui/material/TextField';
 import dayjs from 'dayjs';
+import { useState } from 'react';
 
+import { EMPTY_DATE_SX } from './date-input';
 import { filterText } from './filter-form';
 
 import type { FieldDescription } from '@ers/shared';
@@ -50,12 +52,25 @@ export function DateFilter({
   limit,
 }: DateFilterProps): React.JSX.Element {
   const day = instantToDay(filterText(name, filters));
+  // Grey only while really blank; a half-typed date reads as blank to `value` but not `badInput`.
+  const [isBlank, setBlank] = useState(day === '');
+  const [followedDay, setFollowedDay] = useState(day);
+  // The field is remounted for a new filter value (see the key), and starts blank or not with it.
+  if (day !== followedDay) {
+    setFollowedDay(day);
+    setBlank(day === '');
+  }
   const limitDay = limit === undefined || limit === '' ? undefined : instantToDay(limit);
   return (
     <TextField
       // Keyed by the active value, so the field follows filters changed elsewhere (Back, clearing).
       key={`${name}:${day}`}
       type="date"
+      sx={isBlank ? EMPTY_DATE_SX : {}}
+      onInput={(event) => {
+        const input = event.target as HTMLInputElement;
+        setBlank(input.value === '' && !input.validity.badInput);
+      }}
       label={description.label}
       helperText={description.help}
       defaultValue={day}

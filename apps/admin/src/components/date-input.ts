@@ -11,3 +11,15 @@ export function toInputDateTime(iso: string): string {
 export function fromInputDateTime(local: string): string {
   return new Date(local).toISOString();
 }
+
+/**
+ * Native date inputs print their format ("dd.mm.yyyy") in full text colour, unlike the grey
+ * placeholders of other fields; these styles grey an empty one until it is focused.
+ */
+const PLACEHOLDER_LOOK = { color: 'text.disabled' } as const;
+
+/** For a required date field: the browser marks it :invalid while it is empty (or half typed). */
+export const REQUIRED_DATE_SX = { '& input:invalid:not(:focus)': PLACEHOLDER_LOOK } as const;
+
+/** For an optional date field whose emptiness the caller knows. */
+export const EMPTY_DATE_SX = { '& input:not(:focus)': PLACEHOLDER_LOOK } as const;

@@ -14,6 +14,7 @@ import TextField, { type TextFieldProps } from '@mui/material/TextField';
 import { useAutocomplete } from '@refinedev/mui';
 import { Controller, type Control, type FieldErrors, type UseFormRegister } from 'react-hook-form';
 
+import { REQUIRED_DATE_SX } from '../../components/date-input';
 import { searchByQ } from '../../components/filter-form';
 import { fieldHelp, REQUIRED } from '../../components/forms';
 
@@ -79,6 +80,7 @@ export function EventFormFields({
         <TextField
           {...register('startsAt', { required: REQUIRED })}
           type="datetime-local"
+          sx={REQUIRED_DATE_SX}
           label={EVENT_FIELDS.startsAt.label}
           helperText={fieldHelp(errors.startsAt, EVENT_FIELDS.startsAt.help)}
           error={errors.startsAt !== undefined}
@@ -89,6 +91,7 @@ export function EventFormFields({
         <TextField
           {...register('endsAt', { required: REQUIRED })}
           type="datetime-local"
+          sx={REQUIRED_DATE_SX}
           label={EVENT_FIELDS.endsAt.label}
           helperText={fieldHelp(errors.endsAt, EVENT_FIELDS.endsAt.help)}
           error={errors.endsAt !== undefined}

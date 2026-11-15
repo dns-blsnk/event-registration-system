@@ -8,6 +8,7 @@ import {
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 
+import { REQUIRED_DATE_SX } from '../../components/date-input';
 import { fieldHelp, REQUIRED, REQUIRED_TEXT } from '../../components/forms';
 
 import type { SessionFormValues } from './session-form-values';
@@ -77,6 +78,7 @@ export function SessionFormFields({
         <TextField
           {...register('startsAt', { required: REQUIRED })}
           type="datetime-local"
+          sx={REQUIRED_DATE_SX}
           label={SESSION_FIELDS.startsAt.label}
           helperText={scheduleHelp(errors.startsAt, SESSION_FIELDS.startsAt.help)}
           disabled={isScheduleLocked}
@@ -88,6 +90,7 @@ export function SessionFormFields({
         <TextField
           {...register('endsAt', ENDS_RULES)}
           type="datetime-local"
+          sx={REQUIRED_DATE_SX}
           label={SESSION_FIELDS.endsAt.label}
           helperText={scheduleHelp(errors.endsAt, SESSION_FIELDS.endsAt.help)}
           disabled={isScheduleLocked}
