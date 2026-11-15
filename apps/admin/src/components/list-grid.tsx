@@ -7,8 +7,15 @@ import {
   type GridValidRowModel,
 } from '@mui/x-data-grid';
 import { useDataGrid } from '@refinedev/mui';
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 
+import {
+  headerMinWidth,
+  rememberWidth,
+  savedWidthsOf,
+  tableKeyOf,
+  withSavedWidth,
+} from './column-widths';
 import { PageFill } from './page-fill';
 
 import type { SxProps, Theme } from '@mui/material/styles';
@@ -71,23 +78,25 @@ function NoRowsOverlay(): React.JSX.Element {
   );
 }
 
-/** Room for a short title such as "Seats left" plus the sort and menu buttons it keeps. */
-const NUMBER_COLUMN_MIN_WIDTH = 130;
-
 /**
  * Shared column rules: the first column names the row, so it can never be hidden and leave a
- * table of bare buttons; number columns get room for their title and header buttons.
+ * table of bare buttons; no column is narrower than its title and header buttons; a width the
+ * user set earlier comes back.
  */
 export function normalizeColumns<R extends GridValidRowModel>(
   columns: readonly GridColDef<R>[],
+  savedWidths: ReadonlyMap<string, number> = new Map(),
 ): GridColDef<R>[] {
-  return columns.map((column, index) => ({
-    ...column,
-    ...(index === 0 ? { hideable: false } : {}),
-    ...(column.type === 'number' && column.minWidth === undefined
-      ? { minWidth: NUMBER_COLUMN_MIN_WIDTH }
-      : {}),
-  }));
+  return columns.map((column, index) =>
+    withSavedWidth(
+      {
+        ...column,
+        ...(index === 0 ? { hideable: false } : {}),
+        minWidth: Math.max(column.minWidth ?? 0, headerMinWidth(column)),
+      },
+      savedWidths.get(column.field),
+    ),
+  );
 }
 
 // The browser flags form fields with neither a name nor an id; the page size picker gets a name.
@@ -110,8 +119,19 @@ export function ListGrid<R extends GridValidRowModel>({
   // Look and filtering are the same for every list, so callers cannot set them; height is fillsWindow.
   ...props
 }: ListGridProps<R>): React.JSX.Element {
-  const { columns, slots, slotProps, ...rest } = props;
-  const visibleColumns = useMemo(() => normalizeColumns(columns), [columns]);
+  const { columns, slots, slotProps, onColumnWidthChange, ...rest } = props;
+  const table = tableKeyOf(columns, fillsWindow);
+  const visibleColumns = useMemo(
+    () => normalizeColumns(columns, savedWidthsOf(table)),
+    [columns, table],
+  );
+  const handleColumnWidthChange = useCallback<NonNullable<typeof onColumnWidthChange>>(
+    (params, event, details) => {
+      rememberWidth(table, params.colDef.field, params.width);
+      onColumnWidthChange?.(params, event, details);
+    },
+    [table, onColumnWidthChange],
+  );
   const isEmpty = rest.rowCount === 0 && rest.loading !== true;
   const grid = (
     <DataGrid
@@ -119,6 +139,7 @@ export function ListGrid<R extends GridValidRowModel>({
       columns={visibleColumns}
       disableColumnFilter
       autoHeight={!fillsWindow}
+      onColumnWidthChange={handleColumnWidthChange}
       hideFooter={isEmpty}
       disableColumnSorting={isEmpty}
       slots={{ noRowsOverlay: NoRowsOverlay, ...slots }}

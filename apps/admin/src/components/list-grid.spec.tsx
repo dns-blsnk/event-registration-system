@@ -1,10 +1,18 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
+import { authProvider } from '../providers/auth-provider';
 import { mockHttp, type MockRoute } from '../test/http-mock';
 import { renderAdminPage } from '../test/render-admin';
 
+import {
+  forgetWidths,
+  headerMinWidth,
+  rememberWidth,
+  savedWidthsOf,
+  tableKeyOf,
+} from './column-widths';
 import { ListGrid, normalizeColumns, useListGrid } from './list-grid';
 
 import type { GridColDef } from '@mui/x-data-grid';
@@ -88,15 +96,78 @@ describe('normalizeColumns', () => {
     expect(second?.hideable).toBeUndefined();
   });
 
-  it('gives number columns room for their title and header buttons, unless they set their own', () => {
-    const [, seats] = normalizeColumns(COLUMNS);
-    const [, own] = normalizeColumns([
-      { field: 'title' },
-      { field: 'seats', type: 'number', minWidth: 80 },
+  it('keeps every column wide enough for its title and header buttons, or wider if it asks', () => {
+    const [title, seats] = normalizeColumns([
+      { field: 'title', headerName: 'Title', minWidth: 200 },
+      { field: 'seats', headerName: 'Seats left', minWidth: 80 },
     ]);
 
-    expect(seats?.minWidth).toBe(130);
-    expect(own?.minWidth).toBe(80);
+    expect(title?.minWidth).toBe(200);
+    expect(seats?.minWidth).toBe(headerMinWidth({ field: 'seats', headerName: 'Seats left' }));
+  });
+
+  it('brings back a width the user set, which no longer stretches with flex', () => {
+    const [title, seats] = normalizeColumns(
+      [{ field: 'title', flex: 2 }, { field: 'seats' }],
+      new Map([['title', 320]]),
+    );
+
+    expect(title).toMatchObject({ width: 320, flex: 0 });
+    expect(seats?.width).toBeUndefined();
+  });
+});
+
+describe('headerMinWidth', () => {
+  it('leaves room for the sort and menu buttons only where the column has them', () => {
+    const full = headerMinWidth({ field: 'seats', headerName: 'Seats' });
+    const unsortable = headerMinWidth({ field: 'seats', headerName: 'Seats', sortable: false });
+    const bare = headerMinWidth({
+      field: 'seats',
+      headerName: 'Seats',
+      sortable: false,
+      disableColumnMenu: true,
+    });
+
+    expect(full).toBeGreaterThan(unsortable);
+    expect(unsortable).toBeGreaterThan(bare);
+  });
+});
+
+describe('remembered column widths', () => {
+  beforeEach(() => {
+    forgetWidths();
+  });
+
+  it('keeps a width per table, so another table with other columns is not affected', () => {
+    const events = tableKeyOf([{ field: 'title' }, { field: 'city' }], true);
+    const sessions = tableKeyOf([{ field: 'title' }, { field: 'room' }], true);
+
+    rememberWidth(events, 'title', 300);
+
+    expect(savedWidthsOf(events).get('title')).toBe(300);
+    expect(savedWidthsOf(sessions).get('title')).toBeUndefined();
+  });
+
+  it('keeps a list page and the same columns inside another page apart', () => {
+    const columns = [{ field: 'customer' }, { field: 'status' }];
+
+    rememberWidth(tableKeyOf(columns, true), 'customer', 700);
+
+    expect(savedWidthsOf(tableKeyOf(columns, false)).get('customer')).toBeUndefined();
+  });
+
+  it('forgets every width when the user signs out', async () => {
+    mockHttp([
+      { method: 'post', url: '/auth/login', status: 200, body: signedIn.body },
+      { method: 'post', url: '/auth/logout', status: 204 },
+    ]);
+    await authProvider.login({ email: 'a@demo.test', password: 'long-enough-pass' });
+    const table = tableKeyOf([{ field: 'title' }], true);
+    rememberWidth(table, 'title', 300);
+
+    await authProvider.logout({});
+
+    expect(savedWidthsOf(table).size).toBe(0);
   });
 });
 
