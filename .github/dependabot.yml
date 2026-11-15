@@ -1,0 +1,7 @@
+# Keeps the workflow actions current (they are referenced by major version).
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

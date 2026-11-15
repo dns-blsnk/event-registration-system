@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+
+# A newer push makes an older run of the same branch or PR pointless; runs on main and dev are
+# kept, so every commit there gets its own result.
+concurrency:
+  group: ci-${{ github.head_ref || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/dev' }}
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Lint, typecheck, test, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      # Install runs the root `prepare` script, which builds the shared package and the Prisma
+      # client once; the steps below call the package scripts directly so they do not redo it.
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Check formatting
+        run: pnpm format:check
+
+      - name: Typecheck
+        run: pnpm -r --if-present typecheck
+
+      # The same containers as local development: Postgres for integration tests and SeaweedFS as
+      # the S3 store (it needs command-line options, which job service containers cannot take).
+      # s3-setup waits until storage answers and creates the buckets; its output is in this log.
+      - name: Start test database and storage
+        run: |
+          docker compose up -d --wait postgres-test s3
+          docker compose run --rm s3-setup
+
+      - name: Test (unit and integration)
+        run: pnpm -r --if-present test
+
+      - name: Build
+        run: pnpm build
+
+      - name: Show container logs on failure
+        if: failure()
+        run: docker compose logs --no-color postgres-test s3
