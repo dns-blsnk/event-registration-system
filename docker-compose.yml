@@ -64,7 +64,7 @@ services:
           sleep 1
         done
         [ "$$ready" = 1 ] || { echo "S3 storage did not become ready" >&2; exit 1; }
-        for bucket in ers-uploads ers-uploads-test; do
+        for bucket in ers-uploads ers-uploads-test ers-uploads-e2e; do
           $$S3 s3api head-bucket --bucket "$$bucket" 2>/dev/null || $$S3 s3 mb "s3://$$bucket"
         done
         $$S3 s3 ls
