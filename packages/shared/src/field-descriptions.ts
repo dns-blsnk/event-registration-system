@@ -243,6 +243,15 @@ export const CATALOG_FIELDS = {
   },
 } as const satisfies Record<string, FieldDescription>;
 
+/** Headings of the fact cards at the top of an event page (staff and customer alike). */
+export const EVENT_PAGE_LABELS = {
+  when: 'When',
+  where: 'Where',
+  /** Before the end time, under the start time. */
+  until: 'until',
+  organizer: 'Organizer',
+} as const;
+
 /** A customer's own bookings. */
 export const MY_REGISTRATION_FIELDS = {
   event: { label: 'Event', help: 'The event you booked.' },
