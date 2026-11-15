@@ -12,6 +12,7 @@ export * from './files.js';
 export * from './format.js';
 export * from './lists.js';
 export * from './permissions.js';
+export * from './registration-actions.js';
 export * from './registrations.js';
 export * from './roles.js';
 export * from './sessions.js';

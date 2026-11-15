@@ -4,21 +4,12 @@ import {
   eventTimingProblem,
   isEventLocked,
   RegistrationStatus,
+  STAFF_REGISTRATION_TRANSITIONS,
 } from '@ers/shared';
 
 import { DomainError } from '../common/errors/domain-error.js';
 
 import type { EventStatus, EventTiming } from '@ers/shared';
-
-/** What staff may do by hand (admin and bulk actions). */
-const MANUAL_REGISTRATION_TRANSITIONS: Readonly<
-  Record<RegistrationStatus, readonly RegistrationStatus[]>
-> = {
-  [RegistrationStatus.CONFIRMED]: [RegistrationStatus.CANCELLED, RegistrationStatus.ATTENDED],
-  [RegistrationStatus.WAITLISTED]: [RegistrationStatus.CANCELLED],
-  [RegistrationStatus.CANCELLED]: [],
-  [RegistrationStatus.ATTENDED]: [],
-};
 
 /**
  * What the system may do on top: promote from the waitlist when a seat frees up. Staff cannot use it
@@ -27,7 +18,7 @@ const MANUAL_REGISTRATION_TRANSITIONS: Readonly<
 const SYSTEM_REGISTRATION_TRANSITIONS: Readonly<
   Record<RegistrationStatus, readonly RegistrationStatus[]>
 > = {
-  ...MANUAL_REGISTRATION_TRANSITIONS,
+  ...STAFF_REGISTRATION_TRANSITIONS,
   [RegistrationStatus.WAITLISTED]: [RegistrationStatus.CANCELLED, RegistrationStatus.CONFIRMED],
 };
 
@@ -48,7 +39,7 @@ export function canTransitionRegistration(
   to: RegistrationStatus,
   { manual }: { manual: boolean },
 ): boolean {
-  const table = manual ? MANUAL_REGISTRATION_TRANSITIONS : SYSTEM_REGISTRATION_TRANSITIONS;
+  const table = manual ? STAFF_REGISTRATION_TRANSITIONS : SYSTEM_REGISTRATION_TRANSITIONS;
   return table[from].includes(to);
 }
 

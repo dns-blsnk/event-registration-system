@@ -1,4 +1,4 @@
-import { ErrorCode, EventStatus, RegistrationStatus } from '@ers/shared';
+import { ATTENDANCE_EVENT_STATUSES, ErrorCode, EventStatus, RegistrationStatus } from '@ers/shared';
 
 import { DomainError } from '../common/errors/domain-error.js';
 
@@ -60,11 +60,6 @@ export function assertCanCancel(
   }
   assertNotStarted(session, now);
 }
-
-const ATTENDANCE_EVENT_STATUSES: readonly EventStatus[] = [
-  EventStatus.PUBLISHED,
-  EventStatus.COMPLETED,
-];
 
 /** Attendance belongs to events that actually ran: published or completed, never draft or cancelled. */
 export function assertCanRecordAttendance(event: { status: EventStatus }): void {
