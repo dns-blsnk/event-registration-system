@@ -110,13 +110,12 @@ describe('EventList', () => {
     });
   });
 
-  it('trims the search text and drops an empty one', async () => {
+  it('searches as you type, trimmed, and leaves untouched boxes out', async () => {
     const { calls } = mockHttp([signedIn, eventsRoute(), eventsRoute([])]);
     renderAdminPage({ path: '/events', route: '/events', element: <EventList /> });
     await screen.findByText('Kyiv Frontend Summit');
 
     await userEvent.type(screen.getByRole('textbox', { name: 'City' }), '  Lviv  ');
-    await userEvent.click(screen.getByRole('button', { name: 'Apply search' }));
 
     await waitFor(() => {
       expect(lastEventsQuery(calls)).toMatchObject({ city: 'Lviv' });
@@ -131,8 +130,12 @@ describe('EventList', () => {
 
     await userEvent.type(screen.getByRole('textbox', { name: 'Search' }), 'summit{Enter}');
 
-    await waitFor(() => {
-      expect(lastEventsQuery(calls)).toMatchObject({ q: 'summit' });
-    });
+    // Sooner than the typing pause would apply it: Enter searches at once.
+    await waitFor(
+      () => {
+        expect(lastEventsQuery(calls)).toMatchObject({ q: 'summit' });
+      },
+      { timeout: 200 },
+    );
   });
 });
