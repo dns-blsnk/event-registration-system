@@ -1,4 +1,9 @@
-import { EVENT_FIELDS, SESSION_FIELDS, type CatalogEventDetail } from '@ers/shared';
+import {
+  CATALOG_FIELDS,
+  seatsLeftLabel,
+  SESSION_FIELDS,
+  type CatalogEventDetail,
+} from '@ers/shared';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
@@ -7,8 +12,10 @@ import Typography from '@mui/material/Typography';
 import { useShow } from '@refinedev/core';
 import { Show } from '@refinedev/mui';
 
+import { EventDescription, EventFacts } from '../../components/event-facts';
+import { EventHero } from '../../components/event-hero';
+import { FillBar } from '../../components/fill-bar';
 import { formatDateTime } from '../../components/format';
-import { LabelledValue } from '../../components/labelled-value';
 
 import { SessionBooking } from './session-booking';
 
@@ -24,31 +31,15 @@ export function CatalogShow(): React.JSX.Element {
       )}
       {event !== undefined && (
         <Stack spacing={3}>
-          {event.bannerUrl !== null && (
-            <Box
-              component="img"
-              src={event.bannerUrl}
-              alt={`Banner of ${event.title}`}
-              sx={{ maxWidth: '100%', borderRadius: 1 }}
-            />
-          )}
-          <Typography variant="h5" component="h2">
-            {event.title}
-          </Typography>
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={4} useFlexGap flexWrap="wrap">
-            <LabelledValue label={EVENT_FIELDS.startsAt.label}>
-              {formatDateTime(event.startsAt)}
-            </LabelledValue>
-            <LabelledValue label={EVENT_FIELDS.endsAt.label}>
-              {formatDateTime(event.endsAt)}
-            </LabelledValue>
-            <LabelledValue label={EVENT_FIELDS.city.label}>{event.city}</LabelledValue>
-            <LabelledValue label={EVENT_FIELDS.venue.label}>{event.venue}</LabelledValue>
-            <LabelledValue label={EVENT_FIELDS.organizer.label}>
-              {event.organizerName}
-            </LabelledValue>
-          </Stack>
-          <Typography sx={{ whiteSpace: 'pre-line' }}>{event.description}</Typography>
+          <EventHero title={event.title} bannerUrl={event.bannerUrl} />
+          <EventFacts
+            startsAt={event.startsAt}
+            endsAt={event.endsAt}
+            city={event.city}
+            venue={event.venue}
+            organizerName={event.organizerName}
+          />
+          <EventDescription label={CATALOG_FIELDS.description.label} text={event.description} />
           <Typography variant="h6" component="h3">
             Sessions
           </Typography>
@@ -68,11 +59,15 @@ export function CatalogShow(): React.JSX.Element {
                     {formatDateTime(session.startsAt)} – {formatDateTime(session.endsAt)}
                     {session.room === null ? '' : ` · ${session.room}`}
                     {session.speaker === null ? '' : ` · ${session.speaker}`}
+                    {` · ${String(session.capacity)} seats`}
                   </Typography>
-                  <Typography variant="body2">
-                    {SESSION_FIELDS.seatsLeft.label}: {String(session.seatsLeft)} of{' '}
-                    {String(session.capacity)}
-                  </Typography>
+                  <Box sx={{ maxWidth: 260, mt: 1 }}>
+                    <FillBar
+                      rate={session.fillRate}
+                      label={seatsLeftLabel(session.seatsLeft)}
+                      name={SESSION_FIELDS.seatsLeft.label}
+                    />
+                  </Box>
                 </Box>
                 <Box sx={{ alignSelf: { sm: 'center' } }}>
                   <SessionBooking session={session} eventId={event.id} />

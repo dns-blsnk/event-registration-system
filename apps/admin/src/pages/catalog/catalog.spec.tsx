@@ -44,6 +44,7 @@ function session(overrides: Partial<CatalogSession>): CatalogSession {
     endsAt: '2099-12-01T10:00:00Z',
     capacity: 50,
     seatsLeft: 12,
+    fillRate: 0.76,
     isUpcoming: true,
     myRegistration: null,
     ...overrides,
@@ -130,7 +131,13 @@ describe('CatalogShow', () => {
       await screen.findByRole('heading', { name: 'Kyiv Frontend Summit' }),
     ).toBeInTheDocument();
     expect(screen.getByText('Two days of talks.')).toBeInTheDocument();
-    expect(screen.getByText('Seats left: 12 of 50')).toBeInTheDocument();
+    expect(screen.getByRole('progressbar', { name: 'Seats left' })).toHaveAttribute(
+      'aria-valuetext',
+      '12 left',
+    );
+    expect(screen.getByText(/50 seats/)).toBeInTheDocument();
+    // Customers see seats per session, not the event's overall fill rate.
+    expect(screen.queryByRole('progressbar', { name: 'Filled' })).not.toBeInTheDocument();
     expect(screen.getByText(/–/)).toBeInTheDocument();
   });
 

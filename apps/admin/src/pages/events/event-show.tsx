@@ -1,4 +1,4 @@
-import { EVENT_FIELDS, isEventLocked, type EventDetail, formatPercent } from '@ers/shared';
+import { EVENT_FIELDS, isEventLocked, type EventDetail } from '@ers/shared';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
@@ -7,9 +7,9 @@ import Typography from '@mui/material/Typography';
 import { useShow } from '@refinedev/core';
 import { EditButton, Show } from '@refinedev/mui';
 
+import { EventDescription, EventFacts } from '../../components/event-facts';
+import { EventHero } from '../../components/event-hero';
 import { EventStatusChip } from '../../components/event-status-chip';
-import { formatDateTime } from '../../components/format';
-import { LabelledValue } from '../../components/labelled-value';
 
 import { EventActions } from './event-actions';
 import { EventSessions } from './event-sessions';
@@ -39,46 +39,34 @@ export function EventShow(): React.JSX.Element {
       )}
       {event !== undefined && (
         <Stack spacing={3}>
-          {event.bannerUrl !== null && (
-            <Box
-              component="img"
-              src={event.bannerUrl}
-              alt={`Banner of ${event.title}`}
-              sx={{ maxWidth: '100%', borderRadius: 1 }}
-            />
-          )}
-          <Typography variant="h5" component="h2">
-            {event.title}
-          </Typography>
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={4} useFlexGap flexWrap="wrap">
-            <LabelledValue label={EVENT_FIELDS.status.label}>
-              <EventStatusChip status={event.status} />
-            </LabelledValue>
-            <LabelledValue label={EVENT_FIELDS.startsAt.label}>
-              {formatDateTime(event.startsAt)}
-            </LabelledValue>
-            <LabelledValue label={EVENT_FIELDS.endsAt.label}>
-              {formatDateTime(event.endsAt)}
-            </LabelledValue>
-            <LabelledValue label={EVENT_FIELDS.city.label}>{event.city}</LabelledValue>
-            <LabelledValue label={EVENT_FIELDS.venue.label}>{event.venue}</LabelledValue>
-            <LabelledValue label={EVENT_FIELDS.organizer.label}>
-              {event.organizer.name}
-            </LabelledValue>
-            <LabelledValue label={EVENT_FIELDS.fillRate.label}>
-              {formatPercent(event.fillRate)}
-            </LabelledValue>
-          </Stack>
-          <LabelledValue label={EVENT_FIELDS.tags.label}>
-            <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-              {event.tags.length === 0
-                ? '—'
-                : event.tags.map((tag) => <Chip key={tag.id} size="small" label={tag.name} />)}
+          <EventHero
+            title={event.title}
+            bannerUrl={event.bannerUrl}
+            status={<EventStatusChip status={event.status} />}
+            statusLabel={EVENT_FIELDS.status.label}
+          />
+          <EventFacts
+            startsAt={event.startsAt}
+            endsAt={event.endsAt}
+            city={event.city}
+            venue={event.venue}
+            organizerName={event.organizer.name}
+            fillRate={event.fillRate}
+          />
+          <EventDescription label={EVENT_FIELDS.description.label} text={event.description}>
+            <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" alignItems="center">
+              <Typography variant="caption" color="text.secondary">
+                {EVENT_FIELDS.tags.label}
+              </Typography>
+              {event.tags.length === 0 ? (
+                <Typography variant="body2">—</Typography>
+              ) : (
+                event.tags.map((tag) => (
+                  <Chip key={tag.id} size="small" variant="outlined" label={tag.name} />
+                ))
+              )}
             </Stack>
-          </LabelledValue>
-          <LabelledValue label={EVENT_FIELDS.description.label}>
-            <Typography sx={{ whiteSpace: 'pre-line' }}>{event.description}</Typography>
-          </LabelledValue>
+          </EventDescription>
           <Box>
             <Typography variant="h6" component="h3" sx={{ mb: 1 }}>
               Sessions

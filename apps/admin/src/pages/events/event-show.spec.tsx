@@ -84,10 +84,10 @@ describe('EventShow', () => {
       await screen.findByRole('heading', { name: 'Kyiv Frontend Summit' }),
     ).toBeInTheDocument();
     expect(screen.getByText('Frontend')).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: 'Banner of Kyiv Frontend Summit' })).toHaveAttribute(
-      'src',
-      'https://files.test/banner.png',
-    );
+    // Decorative behind the title (alt=""), so it is found by its source, not by a name.
+    expect(document.querySelector('img[src="https://files.test/banner.png"]')).not.toBeNull();
+    expect(screen.getByRole('group', { name: 'Status' })).toHaveTextContent('Published');
+    expect(screen.getByRole('progressbar', { name: 'Filled' })).toBeInTheDocument();
     expect(await screen.findByText('State of React')).toBeInTheDocument();
     const sessionsCall = calls.find((call) => call.url?.startsWith('/sessions'));
     expect(
