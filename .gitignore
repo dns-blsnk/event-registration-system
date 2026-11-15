@@ -37,3 +37,4 @@ apps/api/src/generated/
 # Playwright
 **/test-results/
 **/playwright-report/
+.playwright-mcp/
