@@ -100,6 +100,9 @@ Tests, migrations and seed are exempt from size limits and `no-magic-numbers`.
 
 ### Frontend (Refine + React)
 
+- The admin follows Feature-Sliced Design: `src/app` → `pages` → `widgets` → `features` → `entities` → `shared`. A layer imports only the layers below it, and slices of one layer never import each other **[lint: Steiger]**
+- Across slices, import only a slice's public API (`@/entities/event`, `@/shared/ui/list-grid`); inside a slice, use relative paths. `shared/ui` and `shared/lib` have one public API per module, so the sign-in page never downloads the data grid
+- Code used by one page lives in that page's slice; it moves down to `widgets`, `features` or `entities` once a second slice needs it. Test helpers live in `src/test`, outside the layers
 - Follow the Refine docs: resources, `useTable`/`useDataGrid`, `useForm`, providers. Do not reimplement what Refine already provides
 - Server state comes from Refine data hooks (TanStack Query underneath); no `useEffect` + `fetch`
 - `useEffect` only to sync with something outside React (socket, DOM). Derived values are computed during render, not stored in state

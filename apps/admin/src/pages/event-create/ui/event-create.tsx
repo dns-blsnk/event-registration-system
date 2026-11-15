@@ -1,0 +1,32 @@
+import { Create } from '@refinedev/mui';
+import { useForm } from '@refinedev/react-hook-form';
+
+import { EventFormFields } from '@/features/event-form';
+import { EMPTY_EVENT_FORM, toEventPayload, type EventFormValues } from '@/features/event-form';
+import { submitConverted } from '@/shared/lib/forms';
+
+import type { EventDetail } from '@ers/shared';
+import type { HttpError } from '@refinedev/core';
+
+/** A new event always starts as a draft owned by the creator; it opens on its page afterwards. */
+export function EventCreate(): React.JSX.Element {
+  const {
+    saveButtonProps,
+    refineCore: { onFinish },
+    handleSubmit,
+    register,
+    control,
+    formState: { errors },
+  } = useForm<EventDetail, HttpError, EventFormValues>({
+    defaultValues: EMPTY_EVENT_FORM,
+    refineCoreProps: { redirect: 'show' },
+  });
+  const save = handleSubmit(async (values) => {
+    await submitConverted(onFinish, toEventPayload(values));
+  });
+  return (
+    <Create saveButtonProps={{ ...saveButtonProps, onClick: (event) => void save(event) }}>
+      <EventFormFields register={register} control={control} errors={errors} />
+    </Create>
+  );
+}

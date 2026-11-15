@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "pnpm codegen && pnpm --parallel --filter @ers/api --filter @ers/admin dev",
-    "lint": "eslint . --max-warnings=0",
+    "lint": "eslint . --max-warnings=0 && pnpm --filter @ers/admin lint:fsd",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

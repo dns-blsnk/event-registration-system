@@ -7,7 +7,7 @@ import {
 } from 'axios';
 import { vi } from 'vitest';
 
-import { http } from '../api/http';
+import { http } from '@/shared/api';
 
 export interface MockRoute {
   method: string;

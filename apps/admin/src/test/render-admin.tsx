@@ -5,11 +5,10 @@ import routerProvider from '@refinedev/react-router';
 import { render, type RenderResult } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 
-import { accessControlProvider } from '../providers/access-control-provider';
-import { authProvider } from '../providers/auth-provider';
-import { dataProvider } from '../providers/data-provider';
-import { resources } from '../resources';
-import { theme } from '../theme/theme';
+import { resources } from '@/app/config/resources';
+import { accessControlProvider, authProvider } from '@/entities/viewer';
+import { dataProvider } from '@/shared/api';
+import { theme } from '@/shared/theme';
 
 /** Renders one admin page at a path with the real providers (HTTP is mocked with mockHttp). */
 export function renderAdminPage({
