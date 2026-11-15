@@ -126,6 +126,18 @@ describe('RegistrationList', () => {
     expect(await screen.findByText('1 selected')).toBeInTheDocument();
   });
 
+  it('sizes the counter and buttons for the largest count, so a growing count shifts nothing', async () => {
+    const started = [registration('r1', 'Ann Customer', { startsAt: STARTED })];
+    mockHttp([signedIn, { ...list, body: started }]);
+    renderList();
+    await selectRow('Ann Customer');
+
+    // The widest version is laid out, invisible and silent, under the visible text.
+    expect(screen.getByText('100 selected')).toHaveAttribute('aria-hidden', 'true');
+    expect(screen.getByText('Mark attended (100)')).toHaveAttribute('aria-hidden', 'true');
+    expect(screen.getByRole('button', { name: 'Mark attended (1)' })).toBeInTheDocument();
+  });
+
   it('cancels bookings only after confirmation', async () => {
     const { calls } = mockHttp([
       signedIn,

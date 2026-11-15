@@ -1,4 +1,5 @@
 import {
+  MAX_PAGE_SIZE,
   RegistrationStatus,
   Resource,
   type BulkStatusResponse,
@@ -17,7 +18,17 @@ import Typography from '@mui/material/Typography';
 import { useCustomMutation, useInvalidate, useNotification } from '@refinedev/core';
 import { useState } from 'react';
 
+import { StableWidthText } from '../../components/stable-width-text';
+
 import { bulkSelection, bulkSummary, offReason, type BulkSelection } from './bulk-selection';
+
+function buttonText(label: string, count: number): string {
+  return count > 0 ? `${label} (${String(count)})` : label;
+}
+
+function selectedText(count: number): string {
+  return `${String(count)} selected`;
+}
 
 interface RegistrationBulkActionsProps {
   selectedRows: readonly RegistrationListItem[];
@@ -45,7 +56,11 @@ function BulkActionButton({
       {/* A disabled button fires no events, so the tooltip hangs on a wrapper. */}
       <span>
         <Button {...buttonProps} disabled={count === 0 || hint !== '' || isBusy} onClick={onClick}>
-          {count > 0 ? `${label} (${String(count)})` : label}
+          {/* As wide as the largest selection a page can hold, so the count never moves the bar. */}
+          <StableWidthText
+            text={buttonText(label, count)}
+            widest={buttonText(label, MAX_PAGE_SIZE)}
+          />
         </Button>
       </span>
     </Tooltip>
@@ -99,9 +114,16 @@ export function RegistrationBulkActions({
   const count = selectedRows.length;
   const cancelCount = toCancel.eligibleIds.length;
   return (
-    <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
-      <Typography variant="body2" aria-live="polite">
-        {String(count)} selected
+    <Stack
+      direction="row"
+      spacing={2}
+      useFlexGap
+      alignItems="center"
+      flexWrap="wrap"
+      sx={{ mb: 2 }}
+    >
+      <Typography variant="body2" aria-live="polite" aria-atomic>
+        <StableWidthText text={selectedText(count)} widest={selectedText(MAX_PAGE_SIZE)} />
       </Typography>
       <BulkActionButton
         label="Mark attended"
