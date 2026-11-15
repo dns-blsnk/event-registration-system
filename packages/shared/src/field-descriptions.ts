@@ -85,7 +85,7 @@ export const SESSION_LIST_CONTROLS = {
   search: { label: 'Search', help: 'Matches the title, speaker or room.' },
   almostFull: {
     label: 'Almost full',
-    help: `Only sessions with at least ${formatPercent(ALMOST_FULL_RATIO)} of seats taken.`,
+    help: `Only sessions with at least ${formatPercent(ALMOST_FULL_RATIO)} of seats taken; their seats bar is red.`,
   },
 } as const satisfies Record<string, FieldDescription>;
 
