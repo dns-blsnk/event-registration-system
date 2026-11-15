@@ -317,6 +317,52 @@ describe('CatalogShow', () => {
     expect(await screen.findByRole('button', { name: 'Book State of React' })).toBeInTheDocument();
   });
 
+  it('undoes a booking made by mistake from its notice, and the seat can be booked again', async () => {
+    const booked = {
+      id: 'r1',
+      status: 'CONFIRMED',
+      createdAt: '2026-11-14T10:00:00Z',
+      cancelledAt: null,
+      waitlistPosition: null,
+    };
+    const { calls } = showEvent(
+      [session({})],
+      [
+        { method: 'post', url: '/my-registrations', status: 201, body: booked },
+        { method: 'get', url: '/catalog/e1', status: 200, body: detail([session({})]) },
+        {
+          method: 'post',
+          url: '/my-registrations/r1/cancel',
+          status: 200,
+          body: { ...booked, status: 'CANCELLED' },
+        },
+        { method: 'get', url: '/catalog/e1', status: 200, body: detail([session({})]) },
+      ],
+    );
+    await userEvent.click(await screen.findByRole('button', { name: 'Book State of React' }));
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Undo' }));
+
+    expect(await screen.findByText('Booking undone')).toBeInTheDocument();
+    expect(calls.some((call) => call.url === '/my-registrations/r1/cancel')).toBe(true);
+    expect(screen.getByRole('button', { name: 'Book State of React' })).toBeEnabled();
+  });
+
+  it('offers to cancel a held booking next to it while the session has not started', async () => {
+    showEvent([session({ myRegistration: { id: 'r1', status: 'WAITLISTED' } })]);
+
+    expect(
+      await screen.findByRole('button', { name: 'Cancel booking for State of React' }),
+    ).toBeInTheDocument();
+  });
+
+  it('offers no cancel for a booking already marked attended', async () => {
+    showEvent([session({ myRegistration: { id: 'r1', status: 'ATTENDED' } })]);
+
+    expect(await screen.findByText('Attended')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Cancel booking for/ })).not.toBeInTheDocument();
+  });
+
   it('explains when the event is not available', async () => {
     mockHttp([
       signedIn,

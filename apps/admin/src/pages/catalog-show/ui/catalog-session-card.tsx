@@ -14,10 +14,12 @@ import { SessionBooking } from './session-booking';
 export function CatalogSessionCard({
   session,
   eventId,
+  eventTitle,
   isTargeted,
 }: {
   session: CatalogSession;
   eventId: string;
+  eventTitle: string;
   isTargeted: boolean;
 }): React.JSX.Element {
   return (
@@ -44,7 +46,7 @@ export function CatalogSessionCard({
           </Box>
         </Box>
         <Box sx={{ alignSelf: { sm: 'center' } }}>
-          <SessionBooking session={session} eventId={eventId} />
+          <SessionBooking session={session} eventId={eventId} eventTitle={eventTitle} />
         </Box>
       </Stack>
     </Paper>

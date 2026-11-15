@@ -52,6 +52,7 @@ export function CatalogShow(): React.JSX.Element {
               key={session.id}
               session={session}
               eventId={event.id}
+              eventTitle={event.title}
               isTargeted={hash === `#${catalogSessionAnchor(session.id)}`}
             />
           ))}

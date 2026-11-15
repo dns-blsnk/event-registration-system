@@ -12,6 +12,7 @@ import { List } from '@refinedev/mui';
 
 import { RegistrationStatusChip } from '@/entities/registration';
 import { catalogSessionAnchor } from '@/entities/session';
+import { CancelBookingButton } from '@/features/cancel-booking';
 import { formatDateTime } from '@/shared/lib/format';
 import { ACTIONS_COLUMN_HEADER } from '@/shared/lib/grid';
 import { applyFiltersFromFirstPage, SelectFilterField } from '@/shared/ui/filter-form';
@@ -19,7 +20,7 @@ import { ListGrid, useListGrid } from '@/shared/ui/list-grid';
 import { FILL_LIST_PROPS } from '@/shared/ui/page-fill';
 import { RowLink } from '@/shared/ui/row-link';
 
-import { canCancel, MyRegistrationCancel } from './my-registration-cancel';
+import { canCancel } from './my-registration-cancel';
 
 /**
  * The event in the catalog, or one of its sessions there. Only events the catalog still shows
@@ -92,7 +93,13 @@ const columns: GridColDef<MyRegistration>[] = [
     disableColumnMenu: true,
     minWidth: 110,
     renderCell: ({ row }) =>
-      canCancel(row, new Date()) ? <MyRegistrationCancel registration={row} /> : null,
+      canCancel(row, new Date()) ? (
+        <CancelBookingButton
+          booking={{ registrationId: row.id, eventId: row.event.id }}
+          sessionTitle={row.session.title}
+          eventTitle={row.event.title}
+        />
+      ) : null,
   },
 ];
 

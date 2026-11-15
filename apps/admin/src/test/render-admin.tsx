@@ -1,10 +1,11 @@
 import { ThemeProvider } from '@mui/material/styles';
 import { Refine } from '@refinedev/core';
-import { RefineSnackbarProvider, useNotificationProvider } from '@refinedev/mui';
+import { RefineSnackbarProvider } from '@refinedev/mui';
 import routerProvider from '@refinedev/react-router';
 import { render, type RenderResult } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 
+import { useAppNotificationProvider } from '@/app/config/notification-provider';
 import { resources } from '@/app/config/resources';
 import { accessControlProvider, authProvider } from '@/entities/viewer';
 import { dataProvider } from '@/shared/api';
@@ -29,7 +30,7 @@ export function renderAdminPage({
             authProvider={authProvider}
             dataProvider={dataProvider}
             accessControlProvider={accessControlProvider}
-            notificationProvider={useNotificationProvider}
+            notificationProvider={useAppNotificationProvider}
             resources={resources}
             // No retries in tests: a failed request should show its error state right away.
             options={{

@@ -2,7 +2,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 import GlobalStyles from '@mui/material/GlobalStyles';
 import { ThemeProvider } from '@mui/material/styles';
 import { CanAccess, Refine } from '@refinedev/core';
-import { ErrorComponent, RefineSnackbarProvider, useNotificationProvider } from '@refinedev/mui';
+import { ErrorComponent, RefineSnackbarProvider } from '@refinedev/mui';
 import routerProvider, { CatchAllNavigate, DocumentTitleHandler } from '@refinedev/react-router';
 import { Suspense } from 'react';
 import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router';
@@ -15,6 +15,7 @@ import { documentTitle, HOME_PATH, LOGIN_PATH, REGISTER_PATH } from '@/shared/co
 import { theme } from '@/shared/theme';
 import { ErrorBoundary } from '@/shared/ui/error-boundary';
 
+import { useAppNotificationProvider } from './config/notification-provider';
 import { queryClient } from './config/query-client';
 import { resources } from './config/resources';
 import { forgetPersonalStateOnSignOut } from './model/session-cleanup';
@@ -67,7 +68,7 @@ export function App(): React.JSX.Element {
             authProvider={authProvider}
             dataProvider={dataProvider}
             accessControlProvider={accessControlProvider}
-            notificationProvider={useNotificationProvider}
+            notificationProvider={useAppNotificationProvider}
             resources={resources}
             options={{
               syncWithLocation: true,
