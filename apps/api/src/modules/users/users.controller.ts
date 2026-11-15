@@ -1,4 +1,4 @@
-import { Action, Resource, ROLES, type UserListItem } from '@ers/shared';
+import { Action, EVENT_OWNERS_FILTER, Resource, ROLES, type UserListItem } from '@ers/shared';
 import {
   Body,
   Controller,
@@ -45,6 +45,10 @@ export class UsersController {
     });
     const result = await this.users.list(listQuery, {
       role: enumFilter(query.role, 'role', ROLES),
+      canOrganize:
+        enumFilter(query[EVENT_OWNERS_FILTER.field], EVENT_OWNERS_FILTER.field, [
+          EVENT_OWNERS_FILTER.value,
+        ]) === EVENT_OWNERS_FILTER.value,
     });
     return sendList(response, { items: result.items.map(toUserListItem), total: result.total });
   }

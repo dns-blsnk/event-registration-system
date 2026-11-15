@@ -62,6 +62,27 @@ describe('users API (admin only)', () => {
       expect(response.body[0].role).toBe('ORGANIZER');
     });
 
+    it('keeps only people who can own an event when asked', async () => {
+      const marker = randomUUID().slice(0, 8);
+      await createUser(prisma, { name: `Owner ${marker}`, role: 'ORGANIZER' });
+      await createUser(prisma, { name: `Owner ${marker}`, role: 'ADMIN' });
+      await createUser(prisma, { name: `Owner ${marker}`, role: 'CUSTOMER' });
+
+      const response = await admin.agent
+        .get('/api/users')
+        .query({ q: marker, canOrganize: 'true' })
+        .expect(200);
+
+      expect(response.body.map((user: { role: string }) => user.role).sort()).toEqual([
+        'ADMIN',
+        'ORGANIZER',
+      ]);
+    });
+
+    it('refuses an unknown value for the owner filter', async () => {
+      await admin.agent.get('/api/users').query({ canOrganize: 'maybe' }).expect(400);
+    });
+
     it('paginates with _start and _end', async () => {
       const marker = randomUUID().slice(0, 8);
       for (const suffix of ['a', 'b', 'c']) {

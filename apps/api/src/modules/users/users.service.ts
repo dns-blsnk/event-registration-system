@@ -1,4 +1,4 @@
-import { Action, can, ErrorCode, Resource, Role } from '@ers/shared';
+import { Action, can, ErrorCode, EVENT_OWNER_ROLES, Resource, Role } from '@ers/shared';
 import { Injectable } from '@nestjs/common';
 
 import { DomainError } from '../../common/errors/domain-error.js';
@@ -18,6 +18,8 @@ export type UserSortField = 'createdAt' | 'name' | 'email' | 'role';
 
 export interface UserFilters {
   role?: Role | undefined;
+  /** Only users who can own an event (admins and organizers), for the events owner filter. */
+  canOrganize?: boolean;
 }
 
 const NOT_FOUND_MESSAGE = 'User not found';
@@ -40,7 +42,10 @@ export class UsersService {
 
   async list(query: ListQuery<UserSortField>, filters: UserFilters): Promise<ListResult<User>> {
     const where: Prisma.UserWhereInput = {
-      ...(filters.role === undefined ? {} : { role: filters.role }),
+      AND: [
+        filters.role === undefined ? {} : { role: filters.role },
+        filters.canOrganize === true ? { role: { in: [...EVENT_OWNER_ROLES] } } : {},
+      ],
       ...personSearch(query.search),
     };
     const [items, total] = await this.prisma.$transaction([

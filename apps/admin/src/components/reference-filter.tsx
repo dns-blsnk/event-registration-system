@@ -9,6 +9,7 @@ import type { FieldDescription } from '@ers/shared';
 import type { BaseRecord, CrudFilters } from '@refinedev/core';
 
 const NOT_FOUND_LABEL = 'Not found (clear to remove)';
+const NO_OPTION_FILTERS: CrudFilters = [];
 
 interface ReferenceFilterProps {
   /** URL filter it sets, such as `tagId`. */
@@ -19,6 +20,8 @@ interface ReferenceFilterProps {
   labelOf: (record: ReferenceOption) => string;
   filters: CrudFilters;
   onChange: (filters: CrudFilters) => void;
+  /** Fixed filters on the options themselves, such as "only possible owners". */
+  optionFilters?: CrudFilters;
 }
 
 /** An option record: its id, plus whatever fields its label uses. */
@@ -37,6 +40,7 @@ export function ReferenceFilter({
   labelOf,
   filters,
   onChange,
+  optionFilters = NO_OPTION_FILTERS,
 }: ReferenceFilterProps): React.JSX.Element {
   const selectedId = filterText(name, filters);
   // Only an id that came with the URL needs loading; a picked one is already among the options.
@@ -44,6 +48,7 @@ export function ReferenceFilter({
   const { autocompleteProps } = useAutocomplete<ReferenceOption>({
     resource,
     onSearch: searchByQ,
+    filters: optionFilters,
     ...(initialId === '' ? {} : { defaultValue: initialId }),
   });
   const found = autocompleteProps.options.find((option) => option.id === selectedId);

@@ -14,7 +14,7 @@ const REPEATS = 10;
 function signedIn(role: Role): MockRoute {
   return {
     method: 'get',
-    url: '/auth/me',
+    url: '/auth/session',
     status: 200,
     body: { user: { id: 'u1', email: 'u@demo.test', name: 'U', role }, csrfToken: 't' },
   };
@@ -156,6 +156,11 @@ describe('event filters', () => {
     await waitFor(() => {
       expect(eventsQuery(calls)).toMatchObject({ organizerId: 'o1' });
     });
+    // Only possible owners are offered, never customers.
+    const usersCall = calls.find((call) => call.url?.startsWith('/users'));
+    expect(
+      new URL(String(usersCall?.url), 'http://admin.test').searchParams.get('canOrganize'),
+    ).toBe('true');
   });
 
   it('offers no organizer filter to an organizer, who only sees their own events', async () => {

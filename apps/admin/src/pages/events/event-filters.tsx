@@ -2,6 +2,7 @@ import {
   Action,
   EVENT_FIELDS,
   EVENT_LIST_CONTROLS,
+  EVENT_OWNERS_FILTER,
   EVENT_STATUS_LABELS,
   EVENT_STATUSES,
   isRole,
@@ -25,7 +26,12 @@ function tagLabel(tag: ReferenceOption): string {
   return typeof tag.name === 'string' ? tag.name : '';
 }
 
-/** Admins can own events too, so owners are picked among all users, with the role shown. */
+/** Only people who can own an event (organizers and admins), never customers. */
+const OWNER_OPTIONS: CrudFilters = [
+  { field: EVENT_OWNERS_FILTER.field, operator: 'eq', value: EVENT_OWNERS_FILTER.value },
+];
+
+/** Admins can own events too, so the role is shown next to the name. */
 function ownerLabel(user: ReferenceOption): string {
   const name = typeof user.name === 'string' ? user.name : '';
   return isRole(user.role) ? `${name} (${ROLE_LABELS[user.role]})` : name;
@@ -42,7 +48,7 @@ export function EventFilters({ filters, onChange }: EventFiltersProps): React.JS
     <SearchFilterForm
       textFilters={[
         { name: 'q', description: EVENT_LIST_CONTROLS.search },
-        { name: 'city', description: EVENT_FIELDS.city },
+        { name: 'city', description: EVENT_LIST_CONTROLS.city },
       ]}
       filters={filters}
       onChange={onChange}
@@ -85,6 +91,7 @@ export function EventFilters({ filters, onChange }: EventFiltersProps): React.JS
           description={EVENT_LIST_CONTROLS.organizer}
           resource={Resource.USERS}
           labelOf={ownerLabel}
+          optionFilters={OWNER_OPTIONS}
           filters={filters}
           onChange={onChange}
         />
