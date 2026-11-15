@@ -7,6 +7,7 @@
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "types": ["vite/client", "@testing-library/jest-dom/vitest"],
     "noEmit": true,
+    "paths": { "@/*": ["./src/*"] },
     "declaration": false
   },
   "include": ["src", "vite.config.ts"]

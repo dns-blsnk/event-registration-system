@@ -1,3 +1,5 @@
+import { fileURLToPath } from 'node:url';
+
 import { API_PREFIX } from '@ers/shared';
 import react from '@vitejs/plugin-react';
 import { defineConfig, loadEnv } from 'vite';
@@ -23,6 +25,8 @@ export default defineConfig(({ mode }) => {
   return {
     envDir: ENV_DIR,
     plugins: [react()],
+    // `@/` is the root of the Feature-Sliced layers (app, pages, widgets, features, entities, shared).
+    resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
     server: {
       host: adminOrigin.hostname,
       port: Number(adminOrigin.port),

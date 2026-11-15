@@ -62,7 +62,14 @@ export default tseslint.config(
   {
     plugins: { 'import-x': importX },
     settings: {
-      'import-x/resolver-next': [createTypeScriptImportResolver({ alwaysTryTypes: true })],
+      'import-x/resolver-next': [
+        createTypeScriptImportResolver({
+          alwaysTryTypes: true,
+          // Each app's own tsconfig, so the admin's `@/` alias resolves.
+          project: ['apps/*/tsconfig.json', 'packages/*/tsconfig.json'],
+          noWarnOnMultipleProjects: true,
+        }),
+      ],
     },
     rules: {
       'import-x/no-cycle': 'error',
