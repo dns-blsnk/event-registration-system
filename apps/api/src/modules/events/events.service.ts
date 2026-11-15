@@ -5,13 +5,13 @@ import { DomainError } from '../../common/errors/domain-error.js';
 import { fieldError } from '../../common/errors/field-error.js';
 import { omitUndefined } from '../../common/objects.js';
 import { orderByOf, type DateRange, type ListQuery } from '../../common/pagination/list-query.js';
-import { containsInsensitive } from '../../common/pagination/search.js';
 import { isValidRange } from '../../domain/schedule.js';
 import { assertEventEditable } from '../../domain/status-transitions.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 
 import { EVENT_NOT_FOUND_MESSAGE, lockScopedEvent } from './event-lock.js';
 import { eventScope } from './event-scope.js';
+import { eventTextFilters } from './event-text-filters.js';
 import { EVENT_INCLUDE, type EventWithRelations } from './event-view.js';
 import { makeSlug } from './slug.js';
 
@@ -36,19 +36,10 @@ function filtersToWhere(
 ): Prisma.EventWhereInput[] {
   return [
     filters.status === undefined ? {} : { status: filters.status },
-    filters.city === undefined ? {} : { city: { equals: filters.city, mode: 'insensitive' } },
     filters.tagId === undefined ? {} : { tags: { some: { tagId: filters.tagId } } },
     filters.organizerId === undefined ? {} : { organizerId: filters.organizerId },
     filters.startsAt === undefined ? {} : { startsAt: filters.startsAt },
-    search === undefined
-      ? {}
-      : {
-          OR: [
-            { title: containsInsensitive(search) },
-            { city: containsInsensitive(search) },
-            { venue: containsInsensitive(search) },
-          ],
-        },
+    ...eventTextFilters(filters.city, search),
   ];
 }
 

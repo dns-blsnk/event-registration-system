@@ -103,6 +103,7 @@ describe('events API', () => {
     it.each([
       ['status', { status: 'CANCELLED' }],
       ['city, ignoring case', { city: 'odesa' }],
+      ['part of the city name', { city: 'des' }],
     ])('filters by %s', async (_label, filter) => {
       const marker = randomUUID().slice(0, 8);
       await createEvent(prisma, { title: `Match ${marker}`, status: 'CANCELLED', city: 'Odesa' });
@@ -116,6 +117,16 @@ describe('events API', () => {
       expect(response.body.map((event: { title: string }) => event.title)).toEqual([
         `Match ${marker}`,
       ]);
+    });
+
+    it('does not search by city, which has its own filter', async () => {
+      const marker = randomUUID().slice(0, 8);
+      const city = `Town${marker}`;
+      await createEvent(prisma, { title: 'Unrelated title', city });
+
+      const response = await admin.agent.get('/api/events').query({ q: city }).expect(200);
+
+      expect(response.body).toEqual([]);
     });
 
     it('filters by tag', async () => {

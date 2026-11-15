@@ -73,7 +73,7 @@ export function CatalogList(): React.JSX.Element {
       <SearchFilterForm
         textFilters={[
           { name: 'q', description: EVENT_LIST_CONTROLS.search },
-          { name: 'city', description: EVENT_FIELDS.city },
+          { name: 'city', description: EVENT_LIST_CONTROLS.city },
         ]}
         filters={filters}
         onChange={onFilters}

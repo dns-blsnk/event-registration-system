@@ -8,9 +8,9 @@ import { Injectable } from '@nestjs/common';
 
 import { DomainError } from '../../common/errors/domain-error.js';
 import { orderByOf, type DateRange, type ListQuery } from '../../common/pagination/list-query.js';
-import { containsInsensitive } from '../../common/pagination/search.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { EventBannerService } from '../events/event-banner.service.js';
+import { eventTextFilters } from '../events/event-text-filters.js';
 
 import {
   CATALOG_LIST_INCLUDE,
@@ -45,18 +45,9 @@ function filtersToWhere(
   search: string | undefined,
 ): Prisma.EventWhereInput[] {
   return [
-    filters.city === undefined ? {} : { city: { equals: filters.city, mode: 'insensitive' } },
     filters.tagId === undefined ? {} : { tags: { some: { tagId: filters.tagId } } },
     filters.startsAt === undefined ? {} : { startsAt: filters.startsAt },
-    search === undefined
-      ? {}
-      : {
-          OR: [
-            { title: containsInsensitive(search) },
-            { city: containsInsensitive(search) },
-            { venue: containsInsensitive(search) },
-          ],
-        },
+    ...eventTextFilters(filters.city, search),
   ];
 }
 

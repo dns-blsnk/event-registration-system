@@ -141,7 +141,7 @@ describe('catalog API', () => {
 
     const response = await customer.agent
       .get('/api/catalog')
-      .query({ q: title, city: 'lviv', _sort: 'startsAt', _order: 'asc' })
+      .query({ q: title, city: 'lvi', _sort: 'startsAt', _order: 'asc' })
       .expect(200);
 
     expect(response.body.map((event: { id: string }) => event.id)).toEqual([sooner.id, later.id]);
