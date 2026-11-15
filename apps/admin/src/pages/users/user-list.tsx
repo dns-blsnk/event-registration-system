@@ -19,6 +19,7 @@ import {
 import { formatDateTime } from '../../components/format';
 import { ACTIONS_COLUMN_HEADER } from '../../components/grid';
 import { ListGrid, useListGrid } from '../../components/list-grid';
+import { FILL_LIST_PROPS } from '../../components/page-fill';
 
 import { UserFormDialog } from './user-form-dialog';
 
@@ -82,6 +83,7 @@ export function UserList(): React.JSX.Element {
   );
   return (
     <List
+      {...FILL_LIST_PROPS}
       headerButtons={
         <CreateButton
           onClick={() => {
@@ -106,7 +108,7 @@ export function UserList(): React.JSX.Element {
           onChange={onFilters}
         />
       </SearchFilterForm>
-      <ListGrid {...dataGridProps} columns={columns} />
+      <ListGrid {...dataGridProps} columns={columns} fillsWindow />
       {dialog.kind !== 'closed' && (
         <UserFormDialog
           user={dialog.kind === 'edit' ? dialog.user : undefined}

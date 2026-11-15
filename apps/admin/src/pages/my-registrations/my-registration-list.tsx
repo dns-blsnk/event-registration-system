@@ -13,6 +13,7 @@ import { applyFiltersFromFirstPage, SelectFilterField } from '../../components/f
 import { formatDateTime } from '../../components/format';
 import { ACTIONS_COLUMN_HEADER } from '../../components/grid';
 import { ListGrid, useListGrid } from '../../components/list-grid';
+import { FILL_LIST_PROPS } from '../../components/page-fill';
 import { RegistrationStatusChip } from '../../components/registration-status-chip';
 import { RowLink } from '../../components/row-link';
 
@@ -84,7 +85,7 @@ export function MyRegistrationList(): React.JSX.Element {
     syncWithLocation: true,
   });
   return (
-    <List title="My registrations">
+    <List {...FILL_LIST_PROPS} title="My registrations">
       <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
         <SelectFilterField
           name="status"
@@ -95,7 +96,7 @@ export function MyRegistrationList(): React.JSX.Element {
           onChange={applyFiltersFromFirstPage({ setCurrentPage, setFilters })}
         />
       </Stack>
-      <ListGrid {...dataGridProps} columns={columns} />
+      <ListGrid {...dataGridProps} columns={columns} fillsWindow />
     </List>
   );
 }

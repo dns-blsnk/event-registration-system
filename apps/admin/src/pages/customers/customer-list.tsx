@@ -5,6 +5,7 @@ import { List } from '@refinedev/mui';
 import { applyFiltersFromFirstPage, SearchFilterForm } from '../../components/filter-form';
 import { formatDateTime } from '../../components/format';
 import { ListGrid, useListGrid } from '../../components/list-grid';
+import { FILL_LIST_PROPS } from '../../components/page-fill';
 
 const columns: GridColDef<CustomerListItem>[] = [
   { field: 'name', headerName: CUSTOMER_FIELDS.name.label, flex: 1, minWidth: 160 },
@@ -31,13 +32,13 @@ export function CustomerList(): React.JSX.Element {
     syncWithLocation: true,
   });
   return (
-    <List>
+    <List {...FILL_LIST_PROPS}>
       <SearchFilterForm
         textFilters={[{ name: 'q', description: CUSTOMER_LIST_CONTROLS.search }]}
         filters={filters}
         onChange={applyFiltersFromFirstPage({ setCurrentPage, setFilters })}
       />
-      <ListGrid {...dataGridProps} columns={columns} />
+      <ListGrid {...dataGridProps} columns={columns} fillsWindow />
     </List>
   );
 }

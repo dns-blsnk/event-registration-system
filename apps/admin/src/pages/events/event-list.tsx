@@ -8,6 +8,7 @@ import { applyFiltersFromFirstPage } from '../../components/filter-form';
 import { formatDateTime } from '../../components/format';
 import { ACTIONS_COLUMN_HEADER } from '../../components/grid';
 import { ListGrid, useListGrid } from '../../components/list-grid';
+import { FILL_LIST_PROPS } from '../../components/page-fill';
 import { PinButton } from '../../components/pin-button';
 import { RowLink } from '../../components/row-link';
 
@@ -85,12 +86,12 @@ export function EventList(): React.JSX.Element {
     syncWithLocation: true,
   });
   return (
-    <List>
+    <List {...FILL_LIST_PROPS}>
       <EventFilters
         filters={filters}
         onChange={applyFiltersFromFirstPage({ setCurrentPage, setFilters })}
       />
-      <ListGrid {...dataGridProps} columns={columns} />
+      <ListGrid {...dataGridProps} columns={columns} fillsWindow />
     </List>
   );
 }

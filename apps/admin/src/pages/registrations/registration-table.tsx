@@ -116,6 +116,7 @@ export function RegistrationTable({ sessionId }: RegistrationTableProps): React.
       <ListGrid
         {...dataGridProps}
         columns={columns}
+        fillsWindow={sessionId === undefined}
         checkboxSelection={canBulk}
         // A selection is of the rows on screen; another page or order starts with none.
         onPaginationModelChange={(model, details) => {

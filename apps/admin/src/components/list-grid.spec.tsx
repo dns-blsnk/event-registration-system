@@ -52,6 +52,19 @@ describe('ListGrid', () => {
     }
   });
 
+  it('fills the window on a list page and grows with its rows inside another page', () => {
+    const rows = [{ id: '1', title: 'Keynote', seats: 4 }];
+    const { container, rerender } = render(
+      <ListGrid rows={rows} rowCount={1} columns={COLUMNS} fillsWindow />,
+    );
+    expect(container.firstElementChild).toHaveStyle({ flexGrow: '1', minHeight: '400px' });
+    expect(container.querySelector('.MuiDataGrid-autoHeight')).toBeNull();
+
+    rerender(<ListGrid rows={rows} rowCount={1} columns={COLUMNS} />);
+    expect(container.firstElementChild).toHaveClass('MuiDataGrid-autoHeight');
+    expect(screen.getByText('Keynote')).toBeInTheDocument();
+  });
+
   it('pages as usual when there are rows', () => {
     render(
       <ListGrid

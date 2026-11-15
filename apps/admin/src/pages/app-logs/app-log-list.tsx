@@ -18,6 +18,7 @@ import {
 import { formatDateTime } from '../../components/format';
 import { ACTIONS_COLUMN_HEADER } from '../../components/grid';
 import { ListGrid, useListGrid } from '../../components/list-grid';
+import { FILL_LIST_PROPS } from '../../components/page-fill';
 import { RowLink } from '../../components/row-link';
 
 const LEVELS = Object.values(AppLogLevel);
@@ -82,7 +83,7 @@ export function AppLogList(): React.JSX.Element {
   });
   const onFilters = applyFiltersFromFirstPage({ setCurrentPage, setFilters });
   return (
-    <List title="Logs">
+    <List {...FILL_LIST_PROPS} title="Logs">
       <SearchFilterForm
         textFilters={[
           { name: 'q', description: APP_LOG_LIST_CONTROLS.search },
@@ -108,7 +109,7 @@ export function AppLogList(): React.JSX.Element {
           onChange={onFilters}
         />
       </SearchFilterForm>
-      <ListGrid {...dataGridProps} columns={columns} />
+      <ListGrid {...dataGridProps} columns={columns} fillsWindow />
     </List>
   );
 }

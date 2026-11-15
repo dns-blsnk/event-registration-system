@@ -4,6 +4,7 @@ import { List } from '@refinedev/mui';
 
 import { applyFiltersFromFirstPage } from '../../components/filter-form';
 import { ListGrid, useListGrid } from '../../components/list-grid';
+import { FILL_LIST_PROPS } from '../../components/page-fill';
 import { RowLink } from '../../components/row-link';
 
 import { SESSION_COLUMNS } from './session-columns';
@@ -29,12 +30,12 @@ export function SessionList(): React.JSX.Element {
     syncWithLocation: true,
   });
   return (
-    <List>
+    <List {...FILL_LIST_PROPS}>
       <SessionFilters
         filters={filters}
         onChange={applyFiltersFromFirstPage({ setCurrentPage, setFilters })}
       />
-      <ListGrid {...dataGridProps} columns={columns} />
+      <ListGrid {...dataGridProps} columns={columns} fillsWindow />
     </List>
   );
 }

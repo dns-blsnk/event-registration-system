@@ -9,6 +9,8 @@ import {
 import { useDataGrid } from '@refinedev/mui';
 import { useMemo } from 'react';
 
+import { PageFill } from './page-fill';
+
 import type { SxProps, Theme } from '@mui/material/styles';
 import type { BaseRecord, HttpError } from '@refinedev/core';
 
@@ -19,7 +21,7 @@ type UseDataGridProps<TData extends BaseRecord> = Parameters<
 const GRID_FILTER_MODEL_KEYS: ReadonlySet<string> = new Set(['filterModel', 'onFilterModelChange']);
 
 type DataGridResult<TData extends BaseRecord> = ReturnType<typeof useDataGrid<TData, HttpError>>;
-type ListGridProps<TData extends BaseRecord> = Omit<
+type ListGridDataProps<TData extends BaseRecord> = Omit<
   DataGridResult<TData>['dataGridProps'],
   'filterModel' | 'onFilterModelChange'
 >;
@@ -33,11 +35,11 @@ type ListGridProps<TData extends BaseRecord> = Omit<
  */
 export function useListGrid<TData extends BaseRecord>(
   props: UseDataGridProps<TData>,
-): Omit<DataGridResult<TData>, 'dataGridProps'> & { dataGridProps: ListGridProps<TData> } {
+): Omit<DataGridResult<TData>, 'dataGridProps'> & { dataGridProps: ListGridDataProps<TData> } {
   const result = useDataGrid<TData>(props);
   const gridProps = Object.fromEntries(
     Object.entries(result.dataGridProps).filter(([key]) => !GRID_FILTER_MODEL_KEYS.has(key)),
-  ) as ListGridProps<TData>;
+  ) as ListGridDataProps<TData>;
   const total = result.tableQuery.data?.total;
   return { ...result, dataGridProps: { ...gridProps, rowCount: total ?? gridProps.rowCount } };
 }
@@ -91,23 +93,32 @@ export function normalizeColumns<R extends GridValidRowModel>(
 // The browser flags form fields with neither a name nor an id; the page size picker gets a name.
 const PAGINATION_PROPS = { material: { slotProps: { select: { name: 'pageSize' } } } };
 
+type ListGridProps<R extends GridValidRowModel> = Omit<
+  DataGridProps<R>,
+  'sx' | 'autoHeight' | 'disableColumnFilter'
+> & {
+  /** A list page's table fills the window and scrolls its rows; one inside another page grows. */
+  fillsWindow?: boolean;
+};
+
 /**
  * The data table every list uses: server paging and sorting from Refine, filters in the page's own
  * form. With no rows there is nothing to page or sort, so those controls switch off.
  */
-export function ListGrid<R extends GridValidRowModel>(
-  // Look, height and filtering are the same for every list, so callers cannot set them.
-  props: Omit<DataGridProps<R>, 'sx' | 'autoHeight' | 'disableColumnFilter'>,
-): React.JSX.Element {
+export function ListGrid<R extends GridValidRowModel>({
+  fillsWindow = false,
+  // Look and filtering are the same for every list, so callers cannot set them; height is fillsWindow.
+  ...props
+}: ListGridProps<R>): React.JSX.Element {
   const { columns, slots, slotProps, ...rest } = props;
   const visibleColumns = useMemo(() => normalizeColumns(columns), [columns]);
   const isEmpty = rest.rowCount === 0 && rest.loading !== true;
-  return (
+  const grid = (
     <DataGrid
       {...rest}
       columns={visibleColumns}
       disableColumnFilter
-      autoHeight
+      autoHeight={!fillsWindow}
       hideFooter={isEmpty}
       disableColumnSorting={isEmpty}
       slots={{ noRowsOverlay: NoRowsOverlay, ...slots }}
@@ -118,4 +129,5 @@ export function ListGrid<R extends GridValidRowModel>(
       sx={GRID_SX}
     />
   );
+  return fillsWindow ? <PageFill>{grid}</PageFill> : grid;
 }

@@ -11,6 +11,7 @@ import { applyFiltersFromFirstPage, SearchFilterForm } from '../../components/fi
 import { formatDateTime } from '../../components/format';
 import { ACTIONS_COLUMN_HEADER } from '../../components/grid';
 import { ListGrid, useListGrid } from '../../components/list-grid';
+import { FILL_LIST_PROPS } from '../../components/page-fill';
 import { RowLink } from '../../components/row-link';
 
 /** Seats left only means something when a session can still be booked. */
@@ -69,7 +70,7 @@ export function CatalogList(): React.JSX.Element {
   });
   const onFilters = applyFiltersFromFirstPage({ setCurrentPage, setFilters });
   return (
-    <List title="Catalog">
+    <List {...FILL_LIST_PROPS} title="Catalog">
       <SearchFilterForm
         textFilters={[
           { name: 'q', description: EVENT_LIST_CONTROLS.search },
@@ -78,7 +79,7 @@ export function CatalogList(): React.JSX.Element {
         filters={filters}
         onChange={onFilters}
       />
-      <ListGrid {...dataGridProps} columns={columns} />
+      <ListGrid {...dataGridProps} columns={columns} fillsWindow />
     </List>
   );
 }

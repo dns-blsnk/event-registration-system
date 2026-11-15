@@ -7,6 +7,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { applyFiltersFromFirstPage, SearchFilterForm } from '../../components/filter-form';
 import { ACTIONS_COLUMN_HEADER } from '../../components/grid';
 import { ListGrid, useListGrid } from '../../components/list-grid';
+import { FILL_LIST_PROPS } from '../../components/page-fill';
 
 import { TagFormDialog } from './tag-form-dialog';
 
@@ -77,6 +78,7 @@ export function TagList(): React.JSX.Element {
   }, [canManage, refreshTagged]);
   return (
     <List
+      {...FILL_LIST_PROPS}
       headerButtons={
         <CreateButton
           onClick={() => {
@@ -92,7 +94,7 @@ export function TagList(): React.JSX.Element {
         filters={filters}
         onChange={applyFiltersFromFirstPage({ setCurrentPage, setFilters })}
       />
-      <ListGrid {...dataGridProps} columns={columns} />
+      <ListGrid {...dataGridProps} columns={columns} fillsWindow />
       {dialog.kind !== 'closed' && (
         <TagFormDialog
           tag={dialog.kind === 'edit' ? dialog.tag : undefined}
