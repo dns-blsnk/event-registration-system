@@ -1,6 +1,6 @@
 # event-registration-system
 
-Admin panel for events, sessions and registrations: three roles, a managed Postgres database, private object storage for event banners and an AI help chat that knows the screen you are on.
+Admin panel for events, sessions and registrations: four roles, a managed Postgres database, private object storage for event banners and an AI help chat that knows the screen you are on.
 
 ## Features
 
@@ -10,15 +10,17 @@ Admin panel for events, sessions and registrations: three roles, a managed Postg
 - **Computed fields.** Seats left, fill rate per session and per event, total registrations, and an "almost full" filter (90% or more).
 - **Roles.** Every route declares its access, and the server scopes every query to what that role may see. The admin hides what you cannot use, from the same permission matrix in `packages/shared`.
 
-  |                   | Admin                | Organizer                                   | Customer                         |
-  | ----------------- | -------------------- | ------------------------------------------- | -------------------------------- |
-  | Users             | manage, change roles | –                                           | –                                |
-  | Tags              | manage               | read                                        | –                                |
-  | Events / sessions | all                  | own events only                             | catalog of published events      |
-  | Registrations     | all, bulk actions    | on own events, bulk "attended" and "cancel" | "My registrations": book, cancel |
-  | Customers         | all                  | people booked on own events                 | –                                |
-  | Logs              | read                 | –                                           | –                                |
-  | Help chat         | yes                  | yes                                         | yes                              |
+  |                   | Admin                                                           | Organizer                                   | Customer                         |
+  | ----------------- | --------------------------------------------------------------- | ------------------------------------------- | -------------------------------- |
+  | Users             | manage organizers and customers; admins only as **super admin** | –                                           | –                                |
+  | Tags              | manage                                                          | read                                        | –                                |
+  | Events / sessions | all                                                             | own events only                             | catalog of published events      |
+  | Registrations     | all, bulk actions                                               | on own events, bulk "attended" and "cancel" | "My registrations": book, cancel |
+  | Customers         | all                                                             | people booked on own events                 | –                                |
+  | Logs              | read                                                            | –                                           | –                                |
+  | Help chat         | yes                                                             | yes                                         | yes                              |
+
+  A super admin is an admin who, on top, is the only one who can create, demote or delete admins and super admins; the last super admin can never be removed. So one admin can never lock another out.
 
 - **Event banners** in private S3-compatible storage. The file type is checked by its content (magic bytes) and size before storing, and images are served through short-lived presigned links.
 - **AI help chat.** A streamed answer about the field or screen you are on, generated from the same field descriptions the forms use. See [Help chat](#help-chat).
@@ -49,7 +51,7 @@ pnpm db:reset                # apply migrations and load demo data (asks nothing
 pnpm dev                     # API on http://localhost:3000, admin on http://localhost:5173
 ```
 
-`SESSION_SECRET` needs at least 32 random characters (`openssl rand -hex 32`); `SEED_DEMO_PASSWORD` must be 10 to 128 characters. The seed creates three demo accounts that all use `SEED_DEMO_PASSWORD`: `admin@demo.test`, `organizer@demo.test` and `customer@demo.test`, plus events, sessions, registrations and banners.
+`SESSION_SECRET` needs at least 32 random characters (`openssl rand -hex 32`); `SEED_DEMO_PASSWORD` must be 10 to 128 characters. The seed creates four demo accounts that all use `SEED_DEMO_PASSWORD`: `owner@demo.test` (super admin), `admin@demo.test`, `organizer@demo.test` and `customer@demo.test`, plus events, sessions, registrations and banners.
 
 The chat needs `AI_API_KEY` (a Gemini key from [Google AI Studio](https://aistudio.google.com/api-keys); `AI_BASE_URL` and `AI_MODEL` switch to another OpenAI-compatible provider, with `AI_REASONING_EFFORT=default` for models that have no reasoning); without it the widget says the assistant is unavailable and everything else works. GitHub sign-in needs `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` (callback `http://localhost:5173/api/auth/github/callback`); without them the button is hidden.
 

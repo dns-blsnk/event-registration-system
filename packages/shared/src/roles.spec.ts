@@ -4,7 +4,7 @@ import { isRole, Role, ROLES } from './roles.js';
 
 describe('roles', () => {
   it('lists every role exactly once', () => {
-    expect(ROLES).toEqual(['ADMIN', 'ORGANIZER', 'CUSTOMER']);
+    expect(ROLES).toEqual(['SUPER_ADMIN', 'ADMIN', 'ORGANIZER', 'CUSTOMER']);
   });
 
   it.each(ROLES)('accepts %s as a role', (role) => {

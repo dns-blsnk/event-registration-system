@@ -31,11 +31,12 @@ describe('generateSeedPlan', () => {
     const demo = plan.users.filter((user) => user.isDemo);
 
     expect(demo.map((user) => [user.email, user.role])).toEqual([
+      [DEMO_EMAILS.owner, 'SUPER_ADMIN'],
       [DEMO_EMAILS.admin, 'ADMIN'],
       [DEMO_EMAILS.organizer, 'ORGANIZER'],
       [DEMO_EMAILS.customer, 'CUSTOMER'],
     ]);
-    expect(plan.users).toHaveLength(3 + SMALL.organizers + SMALL.customers);
+    expect(plan.users).toHaveLength(4 + SMALL.organizers + SMALL.customers);
   });
 
   it('gives every user a unique lowercase email', () => {

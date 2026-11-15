@@ -14,6 +14,7 @@ function user(id: string, role: User['role']): User {
 }
 
 const actor = user('actor', 'ADMIN');
+const owner = user('owner', 'SUPER_ADMIN');
 
 function setup(
   target: User,
@@ -79,20 +80,36 @@ describe('UsersService role changes', () => {
     expect(revokeAllForUser).toHaveBeenCalledWith('target', undefined, tx);
   });
 
-  it('refuses to demote the only admin', async () => {
-    const { service } = setup(user('only', 'ADMIN'), 1);
+  it('refuses to demote the only super admin', async () => {
+    const { service } = setup(user('only', 'SUPER_ADMIN'), 1, owner);
 
-    expect(await messageOf(() => service.update('only', { role: 'CUSTOMER' }, actor))).toBe(
-      'At least one admin must remain',
+    expect(await messageOf(() => service.update('only', { role: 'CUSTOMER' }, owner))).toBe(
+      'At least one super admin must remain',
     );
   });
 
-  it('allows demoting an admin when another admin remains', async () => {
-    const { service } = setup(user('second', 'ADMIN'), 2);
+  it('lets a super admin demote another super admin while one remains', async () => {
+    const { service } = setup(user('second', 'SUPER_ADMIN'), 2, owner);
 
     expect(
-      await messageOf(() => service.update('second', { role: 'ORGANIZER' }, actor)),
+      await messageOf(() => service.update('second', { role: 'ORGANIZER' }, owner)),
     ).toBeUndefined();
+  });
+
+  it('does not let an admin demote another admin', async () => {
+    const { service } = setup(user('other', 'ADMIN'), 2);
+
+    expect(await messageOf(() => service.update('other', { role: 'CUSTOMER' }, actor))).toBe(
+      'Only a super admin can change or delete an admin',
+    );
+  });
+
+  it('does not let an admin grant an admin role', async () => {
+    const { service } = setup(user('target', 'ORGANIZER'), 2);
+
+    expect(await messageOf(() => service.update('target', { role: 'ADMIN' }, actor))).toBe(
+      'Only a super admin can grant an admin role',
+    );
   });
 
   it('refuses a role change from a role without the change-role permission', async () => {
@@ -138,11 +155,19 @@ describe('UsersService role changes', () => {
 });
 
 describe('UsersService deletion', () => {
-  it('refuses to delete the only admin', async () => {
-    const { service } = setup(user('only', 'ADMIN'), 1);
+  it('refuses to delete the only super admin', async () => {
+    const { service } = setup(user('only', 'SUPER_ADMIN'), 1, owner);
 
-    expect(await messageOf(() => service.remove('only', actor))).toBe(
-      'At least one admin must remain',
+    expect(await messageOf(() => service.remove('only', owner))).toBe(
+      'At least one super admin must remain',
+    );
+  });
+
+  it('does not let an admin delete another admin', async () => {
+    const { service } = setup(user('other', 'ADMIN'), 2);
+
+    expect(await messageOf(() => service.remove('other', actor))).toBe(
+      'Only a super admin can change or delete an admin',
     );
   });
 

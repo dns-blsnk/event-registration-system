@@ -61,8 +61,11 @@ export class UsersController {
 
   @RequirePermission(Resource.USERS, Action.CREATE)
   @Post()
-  async create(@Body() dto: CreateUserDto): Promise<UserListItem> {
-    return toUserListItem(await this.users.create(dto));
+  async create(
+    @Body() dto: CreateUserDto,
+    @CurrentAuth() auth: AuthContext,
+  ): Promise<UserListItem> {
+    return toUserListItem(await this.users.create(dto, auth.user));
   }
 
   @RequirePermission(Resource.USERS, Action.EDIT)

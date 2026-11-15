@@ -10,14 +10,34 @@ import type { INestApplication } from '@nestjs/common';
 
 type Expectation = Record<Role, number>;
 
-const ROLES = ['ADMIN', 'ORGANIZER', 'CUSTOMER'] as const;
+const ROLES = ['SUPER_ADMIN', 'ADMIN', 'ORGANIZER', 'CUSTOMER'] as const;
 
 const MATRIX: [string, 'get' | 'post', Expectation][] = [
-  ['/api/test-permissions/users', 'get', { ADMIN: 200, ORGANIZER: 403, CUSTOMER: 403 }],
-  ['/api/test-permissions/events', 'post', { ADMIN: 201, ORGANIZER: 201, CUSTOMER: 403 }],
-  ['/api/test-permissions/my-registrations', 'get', { ADMIN: 403, ORGANIZER: 403, CUSTOMER: 200 }],
-  ['/api/test-permissions/signed-in', 'get', { ADMIN: 200, ORGANIZER: 200, CUSTOMER: 200 }],
-  ['/api/test-permissions/undeclared', 'get', { ADMIN: 403, ORGANIZER: 403, CUSTOMER: 403 }],
+  [
+    '/api/test-permissions/users',
+    'get',
+    { SUPER_ADMIN: 200, ADMIN: 200, ORGANIZER: 403, CUSTOMER: 403 },
+  ],
+  [
+    '/api/test-permissions/events',
+    'post',
+    { SUPER_ADMIN: 201, ADMIN: 201, ORGANIZER: 201, CUSTOMER: 403 },
+  ],
+  [
+    '/api/test-permissions/my-registrations',
+    'get',
+    { SUPER_ADMIN: 403, ADMIN: 403, ORGANIZER: 403, CUSTOMER: 200 },
+  ],
+  [
+    '/api/test-permissions/signed-in',
+    'get',
+    { SUPER_ADMIN: 200, ADMIN: 200, ORGANIZER: 200, CUSTOMER: 200 },
+  ],
+  [
+    '/api/test-permissions/undeclared',
+    'get',
+    { SUPER_ADMIN: 403, ADMIN: 403, ORGANIZER: 403, CUSTOMER: 403 },
+  ],
 ];
 
 describe('permission guard', () => {

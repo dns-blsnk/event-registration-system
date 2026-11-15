@@ -15,6 +15,7 @@ export * from './permissions.js';
 export * from './registration-actions.js';
 export * from './registrations.js';
 export * from './roles.js';
+export * from './user-management.js';
 export * from './sessions.js';
 export * from './tags.js';
 export * from './text.js';

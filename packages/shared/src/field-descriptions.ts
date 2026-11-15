@@ -126,7 +126,7 @@ export const USER_FIELDS = {
   email: { label: 'Email', help: 'Used to sign in; unique, stored in lower case.' },
   role: {
     label: 'Role',
-    help: 'Admin manages everything; organizer manages own events; customer books seats.',
+    help: 'Admin manages everything; only a super admin grants or takes away admin roles. Organizer manages own events; customer books seats.',
   },
   password: {
     label: 'Password',
@@ -144,6 +144,7 @@ export const USER_LIST_CONTROLS = {
 } as const satisfies Record<string, FieldDescription>;
 
 export const ROLE_LABELS: Readonly<Record<Role, string>> = {
+  SUPER_ADMIN: 'Super admin',
   ADMIN: 'Admin',
   ORGANIZER: 'Organizer',
   CUSTOMER: 'Customer',

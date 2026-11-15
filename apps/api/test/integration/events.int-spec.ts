@@ -66,6 +66,17 @@ describe('events API', () => {
       expect(asAdmin.headers['x-total-count']).toBe('2');
     });
 
+    it('shows a super admin every event, as an admin', async () => {
+      const owner = await signedInAgent(app, 'SUPER_ADMIN');
+      const marker = randomUUID().slice(0, 8);
+      await createEvent(prisma, { title: `One ${marker}`, organizerId: organizer.userId });
+      await createEvent(prisma, { title: `Two ${marker}`, organizerId: otherOrganizer.userId });
+
+      const response = await owner.agent.get('/api/events').query({ q: marker }).expect(200);
+
+      expect(response.headers['x-total-count']).toBe('2');
+    });
+
     it('ignores an organizerId filter that would reach another organizer', async () => {
       const marker = randomUUID().slice(0, 8);
       await createEvent(prisma, { title: `Hidden ${marker}`, organizerId: otherOrganizer.userId });

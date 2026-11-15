@@ -1,4 +1,15 @@
-import { Action, can, ErrorCode, EVENT_OWNER_ROLES, Resource, Role } from '@ers/shared';
+import {
+  Action,
+  ADMIN_ROLES,
+  can,
+  ErrorCode,
+  EVENT_OWNER_ROLES,
+  Resource,
+  Role,
+  roleChangeRefusal,
+  roleGrantRefusal,
+  userManagementRefusal,
+} from '@ers/shared';
 import { Injectable } from '@nestjs/common';
 
 import { DomainError } from '../../common/errors/domain-error.js';
@@ -27,10 +38,18 @@ const NOT_FOUND_MESSAGE = 'User not found';
 /** Lock waits can queue behind other user-management writes; allow for that, then fail as 409. */
 const LOCKING_TRANSACTION = { maxWait: 5000, timeout: 15_000 } as const;
 
+/** A refusal from the shared user-management rules becomes a 403. */
+function assertAllowed(refusal: string | undefined): void {
+  if (refusal !== undefined) {
+    throw new DomainError(ErrorCode.FORBIDDEN, refusal);
+  }
+}
+
 /**
- * Admin-only user management. Role changes and deletions lock the admin rows and re-read the target
- * and the actor inside the transaction, so concurrent requests run one after another and
- * the last admin can never be removed.
+ * Admin-only user management, with admins and super admins managed by super admins only (shared
+ * rules in @ers/shared). Role changes and deletions lock the admin rows and re-read the target and
+ * the actor inside the transaction, so concurrent requests run one after another and the last
+ * super admin can never be removed.
  */
 @Injectable()
 export class UsersService {
@@ -68,8 +87,17 @@ export class UsersService {
     return user;
   }
 
-  /** Admin-created accounts may have any role. A duplicate email is a 409 (unique index). */
-  async create(dto: CreateUserDto): Promise<User> {
+  /**
+   * Admins create organizers and customers; only a super admin creates admins. A duplicate email
+   * is a 409 (unique index).
+   */
+  async create(dto: CreateUserDto, actor: User): Promise<User> {
+    // Read again, not taken from the session: the actor may have been demoted a moment ago.
+    const actorNow = await this.prisma.user.findUnique({ where: { id: actor.id } });
+    if (actorNow === null) {
+      throw new DomainError(ErrorCode.UNAUTHENTICATED, 'Sign in required');
+    }
+    assertAllowed(roleGrantRefusal(actorNow.role, dto.role));
     return this.prisma.user.create({
       data: {
         email: normalizeEmail(dto.email),
@@ -88,12 +116,17 @@ export class UsersService {
   async update(id: string, dto: UpdateUserDto, actor: User): Promise<User> {
     const nameData = dto.name === undefined ? {} : { name: dto.name };
     const role = dto.role;
-    if (role === undefined) {
+    // Anyone may rename their own account, which needs no lock.
+    if (id === actor.id && role === undefined) {
       return this.prisma.user.update({ where: { id }, data: nameData });
     }
     return this.prisma.$transaction(async (tx) => {
       const { target, actorNow } = await this.lockAndRead(tx, id, actor.id);
-      if (target.role === role) {
+      if (role === undefined || target.role === role) {
+        // Any other account only within the rules, checked on the roles as they are now.
+        if (id !== actor.id) {
+          assertAllowed(userManagementRefusal(actorNow.role, target.role));
+        }
         return tx.user.update({ where: { id }, data: nameData });
       }
       if (id === actor.id) {
@@ -103,7 +136,8 @@ export class UsersService {
       if (!can(actorNow.role, Resource.USERS, Action.CHANGE_ROLE)) {
         throw new DomainError(ErrorCode.FORBIDDEN, 'You do not have permission to change roles');
       }
-      await this.assertNotLastAdmin(tx, target);
+      assertAllowed(roleChangeRefusal(actorNow.role, target.role, role));
+      await this.assertNotLastSuperAdmin(tx, target);
       const updated = await tx.user.update({ where: { id }, data: { ...nameData, role } });
       await this.sessions.revokeAllForUser(id, undefined, tx);
       return updated;
@@ -120,7 +154,8 @@ export class UsersService {
       if (!can(actorNow.role, Resource.USERS, Action.DELETE)) {
         throw new DomainError(ErrorCode.FORBIDDEN, 'You do not have permission to delete users');
       }
-      await this.assertNotLastAdmin(tx, target);
+      assertAllowed(userManagementRefusal(actorNow.role, target.role));
+      await this.assertNotLastSuperAdmin(tx, target);
       await this.assertHasNoHistory(tx, id);
       await tx.user.delete({ where: { id } });
     }, LOCKING_TRANSACTION);
@@ -139,7 +174,7 @@ export class UsersService {
   ): Promise<{ target: User; actorNow: User }> {
     await tx.$queryRaw`
       SELECT id FROM users
-      WHERE role = ${Role.ADMIN}::"Role" OR id IN (${targetId}::uuid, ${actorId}::uuid)
+      WHERE role = ANY(${[...ADMIN_ROLES]}::"Role"[]) OR id IN (${targetId}::uuid, ${actorId}::uuid)
       ORDER BY id
       FOR NO KEY UPDATE`;
     const [target, actorNow] = await Promise.all([
@@ -169,14 +204,17 @@ export class UsersService {
     }
   }
 
-  /** Keeps at least one admin, so the system can never lock itself out of user management. */
-  private async assertNotLastAdmin(tx: Prisma.TransactionClient, target: User): Promise<void> {
-    if (target.role !== Role.ADMIN) {
+  /**
+   * Keeps at least one super admin, so the system can never lock itself out of managing admins.
+   * Plain admins need no such guard: only a super admin can demote or delete them.
+   */
+  private async assertNotLastSuperAdmin(tx: Prisma.TransactionClient, target: User): Promise<void> {
+    if (target.role !== Role.SUPER_ADMIN) {
       return;
     }
-    const admins = await tx.user.count({ where: { role: Role.ADMIN } });
-    if (admins <= 1) {
-      throw new DomainError(ErrorCode.CONFLICT, 'At least one admin must remain');
+    const superAdmins = await tx.user.count({ where: { role: Role.SUPER_ADMIN } });
+    if (superAdmins <= 1) {
+      throw new DomainError(ErrorCode.CONFLICT, 'At least one super admin must remain');
     }
   }
 }

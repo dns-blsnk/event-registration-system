@@ -11,6 +11,7 @@ datasource db {
 
 /// Values match the Role constants in @ers/shared.
 enum Role {
+  SUPER_ADMIN
   ADMIN
   ORGANIZER
   CUSTOMER

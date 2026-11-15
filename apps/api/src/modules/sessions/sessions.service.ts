@@ -1,9 +1,9 @@
 import {
   ALMOST_FULL_RATIO,
   ErrorCode,
+  hasAdminPowers,
   isEventLocked,
   RegistrationStatus,
-  Role,
   sessionPhase,
   SessionPhase,
 } from '@ers/shared';
@@ -268,8 +268,9 @@ export class SessionsService {
    * result, the authoritative scope is still sessionScope in the Prisma query.
    */
   private async almostFullIds(actor: User): Promise<string[]> {
-    const ownerFilter =
-      actor.role === Role.ADMIN ? Prisma.empty : Prisma.sql`AND e.organizer_id = ${actor.id}::uuid`;
+    const ownerFilter = hasAdminPowers(actor.role)
+      ? Prisma.empty
+      : Prisma.sql`AND e.organizer_id = ${actor.id}::uuid`;
     const rows = await this.prisma.$queryRaw<{ id: string }[]>`
       SELECT s.id::text AS id FROM sessions s
       JOIN events e ON e.id = s.event_id

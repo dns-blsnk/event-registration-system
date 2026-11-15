@@ -302,13 +302,123 @@ describe('users API (admin only)', () => {
       );
     });
   });
-  // Last: it temporarily leaves exactly two admins in the shared test database.
+  describe('admins and super admins', () => {
+    let owner: SignedInAgent;
+
+    beforeAll(async () => {
+      owner = await signedInAgent(app, 'SUPER_ADMIN');
+    });
+
+    it.each(['ADMIN', 'SUPER_ADMIN'] as const)(
+      'does not let an admin create a %s',
+      async (role) => {
+        await admin.agent
+          .post('/api/users')
+          .set('x-csrf-token', admin.csrfToken)
+          .send({ email: `${randomUUID()}@test.local`, name: 'New', role, password: TEST_PASSWORD })
+          .expect(403);
+      },
+    );
+
+    it('lets a super admin create an admin', async () => {
+      const response = await owner.agent
+        .post('/api/users')
+        .set('x-csrf-token', owner.csrfToken)
+        .send({
+          email: `${randomUUID()}@test.local`,
+          name: 'New admin',
+          role: 'ADMIN',
+          password: TEST_PASSWORD,
+        })
+        .expect(201);
+
+      expect(response.body).toMatchObject({ role: 'ADMIN' });
+    });
+
+    it('does not let an admin promote an organizer to admin', async () => {
+      const organizer = await createUser(prisma, { role: 'ORGANIZER' });
+
+      await admin.agent
+        .patch(`/api/users/${organizer.id}`)
+        .set('x-csrf-token', admin.csrfToken)
+        .send({ role: 'ADMIN' })
+        .expect(403);
+      expect((await prisma.user.findUniqueOrThrow({ where: { id: organizer.id } })).role).toBe(
+        'ORGANIZER',
+      );
+    });
+
+    it('does not let an admin rename, demote or delete another admin', async () => {
+      const other = await createUser(prisma, { role: 'ADMIN' });
+
+      await admin.agent
+        .patch(`/api/users/${other.id}`)
+        .set('x-csrf-token', admin.csrfToken)
+        .send({ name: 'Renamed' })
+        .expect(403);
+      await admin.agent
+        .patch(`/api/users/${other.id}`)
+        .set('x-csrf-token', admin.csrfToken)
+        .send({ role: 'CUSTOMER' })
+        .expect(403);
+      await admin.agent
+        .delete(`/api/users/${other.id}`)
+        .set('x-csrf-token', admin.csrfToken)
+        .expect(403);
+      expect(await prisma.user.findUniqueOrThrow({ where: { id: other.id } })).toMatchObject({
+        name: 'Test User',
+        role: 'ADMIN',
+      });
+    });
+
+    it('lets a super admin demote and delete an admin', async () => {
+      const demoted = await createUser(prisma, { role: 'ADMIN' });
+      const deleted = await createUser(prisma, { role: 'ADMIN' });
+
+      await owner.agent
+        .patch(`/api/users/${demoted.id}`)
+        .set('x-csrf-token', owner.csrfToken)
+        .send({ role: 'ORGANIZER' })
+        .expect(200);
+      await owner.agent
+        .delete(`/api/users/${deleted.id}`)
+        .set('x-csrf-token', owner.csrfToken)
+        .expect(204);
+
+      expect((await prisma.user.findUniqueOrThrow({ where: { id: demoted.id } })).role).toBe(
+        'ORGANIZER',
+      );
+      expect(await prisma.user.findUnique({ where: { id: deleted.id } })).toBeNull();
+    });
+
+    it('lets an admin rename their own account', async () => {
+      await admin.agent
+        .patch(`/api/users/${admin.userId}`)
+        .set('x-csrf-token', admin.csrfToken)
+        .send({ name: 'Renamed admin' })
+        .expect(200);
+    });
+
+    it('does not let an admin touch a super admin', async () => {
+      await admin.agent
+        .patch(`/api/users/${owner.userId}`)
+        .set('x-csrf-token', admin.csrfToken)
+        .send({ role: 'CUSTOMER' })
+        .expect(403);
+      await admin.agent
+        .delete(`/api/users/${owner.userId}`)
+        .set('x-csrf-token', admin.csrfToken)
+        .expect(403);
+    });
+  });
+
+  // Last: it temporarily leaves exactly two super admins in the shared test database.
   describe('concurrent role changes', () => {
-    it('never leaves the system without an admin when two admins demote each other at once', async () => {
-      const first = await signedInAgent(app, 'ADMIN');
-      const second = await signedInAgent(app, 'ADMIN');
+    it('never leaves the system without a super admin when two demote each other at once', async () => {
+      const first = await signedInAgent(app, 'SUPER_ADMIN');
+      const second = await signedInAgent(app, 'SUPER_ADMIN');
       const others = await prisma.user.findMany({
-        where: { role: 'ADMIN', id: { notIn: [first.userId, second.userId] } },
+        where: { role: 'SUPER_ADMIN', id: { notIn: [first.userId, second.userId] } },
         select: { id: true },
       });
       const otherIds = others.map((other) => other.id);
@@ -333,9 +443,12 @@ describe('users API (admin only)', () => {
         const statuses = results.map((result) => result.status);
         expect(statuses.filter((status) => status === 200)).toHaveLength(1);
         expect(statuses.filter((status) => [401, 403, 409].includes(status))).toHaveLength(1);
-        expect(await prisma.user.count({ where: { role: 'ADMIN' } })).toBe(1);
+        expect(await prisma.user.count({ where: { role: 'SUPER_ADMIN' } })).toBe(1);
       } finally {
-        await prisma.user.updateMany({ where: { id: { in: otherIds } }, data: { role: 'ADMIN' } });
+        await prisma.user.updateMany({
+          where: { id: { in: otherIds } },
+          data: { role: 'SUPER_ADMIN' },
+        });
       }
     });
   });

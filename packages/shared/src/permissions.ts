@@ -1,4 +1,4 @@
-import { Role } from './roles.js';
+import { ADMIN_ROLES, Role } from './roles.js';
 
 /** Resource names match the admin's Refine resources and the API paths (/api/<resource>). */
 export const Resource = {
@@ -31,8 +31,8 @@ export const Action = {
 
 export type Action = (typeof Action)[keyof typeof Action];
 
-const { ADMIN, ORGANIZER, CUSTOMER } = Role;
-const STAFF = [ADMIN, ORGANIZER] as const;
+const { ORGANIZER, CUSTOMER } = Role;
+const STAFF = [...ADMIN_ROLES, ORGANIZER] as const;
 
 /**
  * Who may do what. Single source of truth for both the API (enforced) and the admin (what is shown).
@@ -41,12 +41,12 @@ const STAFF = [ADMIN, ORGANIZER] as const;
  */
 export const PERMISSIONS: Readonly<Record<Resource, Partial<Record<Action, readonly Role[]>>>> = {
   [Resource.USERS]: {
-    list: [ADMIN],
-    show: [ADMIN],
-    create: [ADMIN],
-    edit: [ADMIN],
-    delete: [ADMIN],
-    'change-role': [ADMIN],
+    list: ADMIN_ROLES,
+    show: ADMIN_ROLES,
+    create: ADMIN_ROLES,
+    edit: ADMIN_ROLES,
+    delete: ADMIN_ROLES,
+    'change-role': ADMIN_ROLES,
   },
   [Resource.EVENTS]: {
     list: STAFF,
@@ -56,7 +56,7 @@ export const PERMISSIONS: Readonly<Record<Resource, Partial<Record<Action, reado
     publish: STAFF,
     cancel: STAFF,
     complete: STAFF,
-    delete: [ADMIN],
+    delete: ADMIN_ROLES,
   },
   [Resource.SESSIONS]: { list: STAFF, show: STAFF, create: STAFF, edit: STAFF, delete: STAFF },
   [Resource.REGISTRATIONS]: {
@@ -64,11 +64,17 @@ export const PERMISSIONS: Readonly<Record<Resource, Partial<Record<Action, reado
     show: STAFF,
     edit: STAFF,
     'bulk-status': STAFF,
-    delete: [ADMIN],
+    delete: ADMIN_ROLES,
   },
-  [Resource.TAGS]: { list: STAFF, show: STAFF, create: [ADMIN], edit: [ADMIN], delete: [ADMIN] },
+  [Resource.TAGS]: {
+    list: STAFF,
+    show: STAFF,
+    create: ADMIN_ROLES,
+    edit: ADMIN_ROLES,
+    delete: ADMIN_ROLES,
+  },
   [Resource.CUSTOMERS]: { list: STAFF, show: STAFF },
-  [Resource.APP_LOGS]: { list: [ADMIN], show: [ADMIN] },
+  [Resource.APP_LOGS]: { list: ADMIN_ROLES, show: ADMIN_ROLES },
   [Resource.CATALOG]: { list: [CUSTOMER], show: [CUSTOMER] },
   [Resource.MY_REGISTRATIONS]: {
     list: [CUSTOMER],

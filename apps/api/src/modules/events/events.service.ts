@@ -1,4 +1,4 @@
-import { ErrorCode, EventStatus, Role } from '@ers/shared';
+import { ErrorCode, EventStatus, hasAdminPowers, Role } from '@ers/shared';
 import { Injectable } from '@nestjs/common';
 
 import { DomainError } from '../../common/errors/domain-error.js';
@@ -177,7 +177,7 @@ export class EventsService {
     if (requested === undefined || requested === actor.id) {
       return actor.id;
     }
-    if (actor.role !== Role.ADMIN) {
+    if (!hasAdminPowers(actor.role)) {
       throw fieldError('organizerId', 'Only admins can create events for another organizer');
     }
     const organizer = await this.prisma.user.findUnique({

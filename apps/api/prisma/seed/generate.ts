@@ -79,6 +79,7 @@ export interface SeedPlan {
 }
 
 export const DEMO_EMAILS = {
+  owner: 'owner@demo.test',
   admin: 'admin@demo.test',
   organizer: 'organizer@demo.test',
   customer: 'customer@demo.test',
@@ -175,6 +176,8 @@ function makeUsers(faker: Faker, sizes: SeedSizes, now: Date): SeedUser[] {
     };
   };
   return [
+    // The one super admin: the only account that can grant, take away or delete admin roles.
+    demo(DEMO_EMAILS.owner, 'Demo Owner', 'SUPER_ADMIN'),
     demo(DEMO_EMAILS.admin, 'Demo Admin', 'ADMIN'),
     demo(DEMO_EMAILS.organizer, 'Demo Organizer', 'ORGANIZER'),
     demo(DEMO_EMAILS.customer, 'Demo Customer', 'CUSTOMER'),
