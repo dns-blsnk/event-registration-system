@@ -51,6 +51,11 @@ describe('parseConfig', () => {
     expect(config.ai.model).toBe('claude-haiku-5-5');
   });
 
+  it('listens on the host-given PORT unless API_PORT is set', () => {
+    expect(parseConfig(envWith({ API_PORT: undefined, PORT: '10000' })).port).toBe(10000);
+    expect(parseConfig(envWith({ API_PORT: '3100', PORT: '10000' })).port).toBe(3100);
+  });
+
   it('reads an empty Anthropic key as no key, so the chat reports itself unavailable', () => {
     expect(parseConfig(envWith({ ANTHROPIC_API_KEY: '' })).ai.apiKey).toBeUndefined();
   });

@@ -20,7 +20,9 @@ const booleanString = z
 const envSchema = z.object({
   NODE_ENV: z.enum(NODE_ENVS),
   LOG_LEVEL: z.enum(LOG_LEVELS).default('info'),
-  API_PORT: z.coerce.number().int().positive().max(MAX_PORT).default(DEFAULT_API_PORT),
+  API_PORT: z.coerce.number().int().positive().max(MAX_PORT).optional(),
+  /** Set by hosts such as Render; API_PORT, when given, wins. */
+  PORT: z.coerce.number().int().positive().max(MAX_PORT).optional(),
   /** Reverse proxies in front of the API (Render, Vercel rewrite); needed for the real client IP. */
   TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(MAX_PROXY_HOPS).default(0),
   ADMIN_ORIGIN: httpUrl,
@@ -104,7 +106,7 @@ export function parseConfig(env: RawEnv): Config {
     nodeEnv: values.NODE_ENV,
     isProduction: values.NODE_ENV === 'production',
     logLevel: values.LOG_LEVEL,
-    port: values.API_PORT,
+    port: values.API_PORT ?? values.PORT ?? DEFAULT_API_PORT,
     trustProxyHops: values.TRUST_PROXY_HOPS,
     adminOrigin: new URL(values.ADMIN_ORIGIN).origin,
     databaseUrl: values.DATABASE_URL,
