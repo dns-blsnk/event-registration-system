@@ -19,7 +19,7 @@ async function findBookableSession(page: Page): Promise<Locator> {
       .nth(index)
       .click();
     // The sessions arrive after the page; check for a button only once they are shown.
-    await expect(page.getByText(/^Seats left:/).first()).toBeVisible();
+    await expect(page.getByRole('progressbar', { name: 'Seats left' }).first()).toBeVisible();
     const book = page.getByRole('button', { name: /^Book / }).first();
     if ((await book.count()) > 0) return book;
   }
@@ -43,7 +43,7 @@ test('a new customer signs up, books a seat from the catalog and sees it in thei
   await book.click();
   await expect(page.getByText(BOOKED)).toBeVisible();
 
-  await page.getByRole('link', { name: 'My registrations' }).click();
+  await page.getByRole('link', { name: 'My registrations', exact: true }).click();
   await expect(page.getByRole('gridcell', { name: sessionTitle, exact: true })).toBeVisible();
 });
 
