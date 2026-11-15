@@ -18,6 +18,7 @@ import routerProvider, {
 import { BrowserRouter, Outlet, Route, Routes, useLocation } from 'react-router';
 
 import { ChatWidget } from './chat/chat-widget';
+import { AppHeader, AppSider } from './components/app-layout-parts';
 import { AppTitle } from './components/app-title';
 import { documentTitle } from './components/brand';
 import { ErrorBoundary } from './components/error-boundary';
@@ -88,6 +89,8 @@ export function App(): React.JSX.Element {
                     <Authenticated key="protected" fallback={<CatchAllNavigate to={LOGIN_PATH} />}>
                       <ThemedLayout
                         Title={AppTitle}
+                        Header={AppHeader}
+                        Sider={AppSider}
                         // The page card fills the window, however few rows it shows.
                         containerBoxProps={{ sx: { minHeight: '100dvh' } }}
                         childrenBoxProps={{
