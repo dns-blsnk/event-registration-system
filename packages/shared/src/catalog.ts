@@ -29,6 +29,8 @@ export interface CatalogSession {
   endsAt: string;
   capacity: number;
   seatsLeft: number;
+  /** Share of seats taken, 0..1, computed by the API like the staff lists' fill rate. */
+  fillRate: number;
   /** False once the session has started: it can no longer be booked. */
   isUpcoming: boolean;
   /** The viewer's registration for this session (one per customer and session), or null. */

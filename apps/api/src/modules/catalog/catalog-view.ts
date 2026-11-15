@@ -1,6 +1,6 @@
 import { SessionPhase, sessionPhase } from '@ers/shared';
 
-import { seatsLeft } from '../../domain/capacity.js';
+import { fillRate, seatsLeft } from '../../domain/capacity.js';
 import { EVENT_TAGS_INCLUDE } from '../events/event-view.js';
 
 import type { Prisma } from '../../generated/prisma/client.js';
@@ -74,6 +74,7 @@ export function toCatalogEventDetail(
       endsAt: session.endsAt.toISOString(),
       capacity: session.capacity,
       seatsLeft: seatsLeft(session),
+      fillRate: fillRate(session),
       isUpcoming: isUpcoming(session, now),
       myRegistration: session.registrations[0] ?? null,
     })),

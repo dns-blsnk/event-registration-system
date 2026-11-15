@@ -175,6 +175,7 @@ describe('catalog API', () => {
       expect.objectContaining({
         id: first.id,
         seatsLeft: 2,
+        fillRate: 1 / 3,
         isUpcoming: true,
         myRegistration: { id: mine.id, status: 'CONFIRMED' },
       }),
