@@ -1,4 +1,4 @@
-import { SESSION_LIST_CONTROLS } from '@ers/shared';
+import { ALMOST_FULL_FILTER, SESSION_LIST_CONTROLS } from '@ers/shared';
 import FormControl from '@mui/material/FormControl';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import FormHelperText from '@mui/material/FormHelperText';
@@ -8,7 +8,6 @@ import { filterText, SearchFilterForm } from '../../components/filter-form';
 
 import type { CrudFilters } from '@refinedev/core';
 
-const ALMOST_FULL = 'true';
 const ALMOST_FULL_HELP_ID = 'almost-full-help';
 
 interface SessionFiltersProps {
@@ -29,10 +28,14 @@ export function SessionFilters({ filters, onChange }: SessionFiltersProps): Reac
           control={
             <Switch
               color="error"
-              checked={filterText('almostFull', filters) === ALMOST_FULL}
+              checked={filterText(ALMOST_FULL_FILTER.field, filters) === ALMOST_FULL_FILTER.value}
               onChange={(_event, checked) => {
                 onChange([
-                  { field: 'almostFull', operator: 'eq', value: checked ? ALMOST_FULL : undefined },
+                  {
+                    field: ALMOST_FULL_FILTER.field,
+                    operator: 'eq',
+                    value: checked ? ALMOST_FULL_FILTER.value : undefined,
+                  },
                 ]);
               }}
               slotProps={{ input: { 'aria-describedby': ALMOST_FULL_HELP_ID } }}
