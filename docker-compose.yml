@@ -1,4 +1,4 @@
-# Local development only. Production uses managed Postgres (Render) and Cloudflare R2.
+# Local development only. Production uses managed Postgres and Key Value (Render) and Cloudflare R2.
 name: ers
 
 services:
@@ -30,6 +30,31 @@ services:
       - /var/lib/postgresql/data
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U ers -d ers_test']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Short-lived shared state: chat tickets and history, login failure counters, rate limits.
+  redis:
+    image: redis:8.8.4-alpine
+    ports:
+      - '127.0.0.1:6389:6379'
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Integration and end-to-end tests. Nothing is saved to disk; every key there has a TTL.
+  redis-test:
+    image: redis:8.8.4-alpine
+    command: redis-server --save '' --appendonly no
+    ports:
+      - '127.0.0.1:6390:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 5s
       timeout: 3s
       retries: 10
@@ -71,4 +96,5 @@ services:
 
 volumes:
   postgres-data:
+  redis-data:
   s3-data:

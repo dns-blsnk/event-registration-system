@@ -43,12 +43,13 @@ jobs:
       - name: Typecheck
         run: pnpm -r --if-present typecheck
 
-      # The same containers as local development: Postgres for integration tests and SeaweedFS as
-      # the S3 store (it needs command-line options, which job service containers cannot take).
-      # s3-setup waits until storage answers and creates the buckets; its output is in this log.
-      - name: Start test database and storage
+      # The same containers as local development: Postgres and Redis for integration tests and
+      # SeaweedFS as the S3 store (it needs command-line options, which job service containers
+      # cannot take). s3-setup waits until storage answers and creates the buckets; its output is
+      # in this log.
+      - name: Start test database, Redis and storage
         run: |
-          docker compose up -d --wait postgres-test s3
+          docker compose up -d --wait postgres-test redis-test s3
           docker compose run --rm s3-setup
 
       - name: Test (unit and integration)
@@ -75,4 +76,4 @@ jobs:
 
       - name: Show container logs on failure
         if: failure()
-        run: docker compose logs --no-color postgres-test s3
+        run: docker compose logs --no-color postgres-test redis-test s3
