@@ -3,7 +3,7 @@ import { io, type Socket } from 'socket.io-client';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import { AppLogService } from '../../src/modules/app-logs/app-log.service.js';
-import { ANTHROPIC_CLIENT } from '../../src/modules/chat/chat-answer.service.js';
+import { AI_CLIENT } from '../../src/modules/chat/chat-answer.service.js';
 import { ChatGateway } from '../../src/modules/chat/chat.gateway.js';
 import { PrismaService } from '../../src/prisma/prisma.service.js';
 import { signedInAgent, type SignedInAgent } from '../helpers/auth.js';
@@ -23,25 +23,30 @@ const model = {
   isDown: false,
   prompts: [] as { system: string }[],
 };
-const fakeAnthropic = {
-  messages: {
-    stream: (params: { system: string }, options: { signal: AbortSignal }) => {
-      model.prompts.push(params);
-      return {
-        async *[Symbol.asyncIterator]() {
-          if (model.isDown) throw new Error('provider is down');
-          for (const text of model.words) {
-            yield { type: 'content_block_delta', delta: { type: 'text_delta', text } };
-          }
-          if (model.hang) {
-            await new Promise((resolve) => {
-              options.signal.addEventListener('abort', resolve);
-            });
-            throw new Error('aborted');
-          }
-        },
-        finalMessage: () => Promise.resolve({ stop_reason: 'end_turn' }),
-      };
+const fakeAiClient = {
+  chat: {
+    completions: {
+      create: (
+        params: { messages: { role: string; content: string }[] },
+        options: { signal: AbortSignal },
+      ) => {
+        model.prompts.push({ system: params.messages[0]?.content ?? '' });
+        return Promise.resolve({
+          async *[Symbol.asyncIterator]() {
+            if (model.isDown) throw new Error('provider is down');
+            for (const text of model.words) {
+              yield { choices: [{ delta: { content: text }, finish_reason: null }] };
+            }
+            if (model.hang) {
+              await new Promise((resolve) => {
+                options.signal.addEventListener('abort', resolve);
+              });
+              throw new Error('aborted');
+            }
+            yield { choices: [{ delta: {}, finish_reason: 'stop' }] };
+          },
+        });
+      },
     },
   },
 };
@@ -53,7 +58,7 @@ describe('chat gateway', () => {
 
   beforeAll(async () => {
     app = await createTestApp({
-      overrides: [{ provide: ANTHROPIC_CLIENT, useValue: fakeAnthropic }],
+      overrides: [{ provide: AI_CLIENT, useValue: fakeAiClient }],
     });
     await app.listen(0);
     url = `${await app.getUrl()}${CHAT_NAMESPACE}`.replace('[::1]', 'localhost');

@@ -1,21 +1,23 @@
-import Anthropic from '@anthropic-ai/sdk';
 import { ErrorCode } from '@ers/shared';
 import { Inject, Injectable } from '@nestjs/common';
+import OpenAI from 'openai';
 
 import { DomainError } from '../../common/errors/domain-error.js';
 import { SECOND_MS } from '../../common/time.js';
 
+import type { AiReasoningEffort } from '../../config/config.schema.js';
 import type { ChatPrompt } from '../../domain/chat-prompt.js';
+import type { ChatCompletionChunk } from 'openai/resources/chat/completions';
 
-/** The Anthropic client, or undefined when no key is configured (the chat is then unavailable). */
-export const ANTHROPIC_CLIENT = Symbol('ANTHROPIC_CLIENT');
-/** The model id from config (ANTHROPIC_MODEL). */
+/** The chat-completions client, or undefined when no key is configured (the chat is then unavailable). */
+export const AI_CLIENT = Symbol('AI_CLIENT');
+/** The model id from config (AI_MODEL). */
 export const CHAT_MODEL = Symbol('CHAT_MODEL');
+/** The reasoning effort from config (AI_REASONING_EFFORT). */
+export const CHAT_REASONING_EFFORT = Symbol('CHAT_REASONING_EFFORT');
 
-/** Room for a few paragraphs plus whatever thinking the model does by default at low effort. */
+/** Room for a few paragraphs plus whatever thinking the model does. */
 const ANSWER_MAX_TOKENS = 4096;
-/** Short factual help: low effort keeps answers quick and cheap. */
-const ANSWER_EFFORT = 'low';
 const ANSWER_TIMEOUT_SECONDS = 30;
 /** Longest an answer may take, retries included, before the user gets "took too long". */
 const ANSWER_TIMEOUT_MS = ANSWER_TIMEOUT_SECONDS * SECOND_MS;
@@ -34,7 +36,9 @@ export const CHAT_MESSAGES = {
 export type AnswerOutcome = 'completed' | 'cancelled';
 
 /** Just the part of the SDK client the service uses, so tests can pass a fake. */
-export type AnswerClient = Pick<Anthropic, 'messages'>;
+export type AnswerClient = Pick<OpenAI, 'chat'>;
+
+type FinishReason = ChatCompletionChunk.Choice['finish_reason'];
 
 /** Marks a failure of the caller's own callback, so it is not mistaken for a provider outage. */
 class CallbackFailure extends Error {}
@@ -50,19 +54,40 @@ function translate(error: unknown): DomainError {
     return error;
   }
   const code =
-    error instanceof Anthropic.RateLimitError
-      ? ErrorCode.RATE_LIMITED
-      : ErrorCode.SERVICE_UNAVAILABLE;
+    error instanceof OpenAI.RateLimitError ? ErrorCode.RATE_LIMITED : ErrorCode.SERVICE_UNAVAILABLE;
   const message = code === ErrorCode.RATE_LIMITED ? CHAT_MESSAGES.busy : CHAT_MESSAGES.unavailable;
   // The provider's own error stays as the cause, for the logs; the user gets the safe text.
   return withCause(new DomainError(code, message), error);
 }
 
-/** What to add after the streamed text, from how the answer ended. */
-function closingText(stopReason: string | null, wroteText: boolean): string | undefined {
-  if (stopReason === 'refusal') return wroteText ? undefined : CHAT_MESSAGES.declined;
+/** Forwards each text delta to `emit` and remembers how the model ended. */
+async function readStream(
+  stream: AsyncIterable<ChatCompletionChunk>,
+  emit: (text: string) => void,
+): Promise<{ wroteText: boolean; finishReason: FinishReason }> {
+  let wroteText = false;
+  let finishReason: FinishReason = null;
+  for await (const chunk of stream) {
+    const choice = chunk.choices[0];
+    if (choice === undefined) continue;
+    finishReason = choice.finish_reason ?? finishReason;
+    const text = choice.delta.content;
+    if (text !== null && text !== undefined && text !== '') {
+      wroteText = true;
+      emit(text);
+    }
+  }
+  return { wroteText, finishReason };
+}
+
+/**
+ * What to add after the streamed text, from how the answer ended. A stream that closes without a
+ * finish reason was interrupted on the way, so the user sees it marked as cut short too.
+ */
+function closingText(finishReason: FinishReason, wroteText: boolean): string | undefined {
+  if (finishReason === 'content_filter') return wroteText ? undefined : CHAT_MESSAGES.declined;
   if (!wroteText) return CHAT_MESSAGES.noAnswer;
-  return stopReason === 'max_tokens' ? CHAT_MESSAGES.cutShort : undefined;
+  return finishReason === 'length' || finishReason === null ? CHAT_MESSAGES.cutShort : undefined;
 }
 
 /**
@@ -73,8 +98,9 @@ function closingText(stopReason: string | null, wroteText: boolean): string | un
 @Injectable()
 export class ChatAnswerService {
   constructor(
-    @Inject(ANTHROPIC_CLIENT) private readonly client: AnswerClient | undefined,
+    @Inject(AI_CLIENT) private readonly client: AnswerClient | undefined,
     @Inject(CHAT_MODEL) private readonly model: string,
+    @Inject(CHAT_REASONING_EFFORT) private readonly reasoningEffort: AiReasoningEffort,
   ) {}
 
   get isAvailable(): boolean {
@@ -103,25 +129,22 @@ export class ChatAnswerService {
         throw new CallbackFailure('chat answer callback failed', { cause: error });
       }
     };
-    const stream = this.client.messages.stream(
-      {
-        model: this.model,
-        max_tokens: ANSWER_MAX_TOKENS,
-        output_config: { effort: ANSWER_EFFORT },
-        system: prompt.system,
-        messages: [{ role: 'user', content: prompt.question }],
-      },
-      { signal: AbortSignal.any([signal, timeout]) },
-    );
     try {
-      let wroteText = false;
-      for await (const event of stream) {
-        if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-          wroteText = true;
-          emit(event.delta.text);
-        }
-      }
-      const closing = closingText((await stream.finalMessage()).stop_reason, wroteText);
+      const stream = await this.client.chat.completions.create(
+        {
+          model: this.model,
+          max_completion_tokens: ANSWER_MAX_TOKENS,
+          ...(this.reasoningEffort === 'default' ? {} : { reasoning_effort: this.reasoningEffort }),
+          stream: true,
+          messages: [
+            { role: 'system', content: prompt.system },
+            { role: 'user', content: prompt.question },
+          ],
+        },
+        { signal: AbortSignal.any([signal, timeout]) },
+      );
+      const { wroteText, finishReason } = await readStream(stream, emit);
+      const closing = closingText(finishReason, wroteText);
       if (closing !== undefined) emit(closing);
       return 'completed';
     } catch (error) {

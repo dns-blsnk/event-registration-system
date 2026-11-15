@@ -41,7 +41,6 @@
     "vitest": "^5.1.0"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "1.8.0",
     "@aws-sdk/client-s3": "^3.1169.0",
     "@aws-sdk/s3-request-presigner": "^3.1169.0",
     "@ers/shared": "workspace:*",
@@ -60,6 +59,7 @@
     "cookie-parser": "^1.4.7",
     "helmet": "^8.3.0",
     "nestjs-pino": "^5.3.1",
+    "openai": "7.57.0",
     "pg": "^8.23.1",
     "prisma": "7.10.1",
     "pino": "^10.4.0",

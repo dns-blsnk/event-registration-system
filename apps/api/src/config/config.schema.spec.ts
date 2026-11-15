@@ -48,7 +48,9 @@ describe('parseConfig', () => {
     expect(config.logLevel).toBe('info');
     expect(config.port).toBe(3000);
     expect(config.s3.forcePathStyle).toBe(false);
-    expect(config.ai.model).toBe('claude-haiku-5-5');
+    expect(config.ai.model).toBe('gemini-3.5-flash-lite');
+    expect(config.ai.baseUrl).toBe('https://generativelanguage.googleapis.com/v1beta/openai/');
+    expect(config.ai.reasoningEffort).toBe('low');
   });
 
   it('reports the build commit the host gives, and refuses one that is not a commit hash', () => {
@@ -66,19 +68,28 @@ describe('parseConfig', () => {
     expect(parseConfig(envWith({ API_PORT: '3100', PORT: '10000' })).port).toBe(3100);
   });
 
-  it('reads an empty Anthropic key as no key, so the chat reports itself unavailable', () => {
-    expect(parseConfig(envWith({ ANTHROPIC_API_KEY: '' })).ai.apiKey).toBeUndefined();
+  it('reads an empty AI key as no key, so the chat reports itself unavailable', () => {
+    expect(parseConfig(envWith({ AI_API_KEY: '' })).ai.apiKey).toBeUndefined();
   });
 
   it('treats blank values as unset so defaults still apply', () => {
     const config = parseConfig(
-      envWith({ LOG_LEVEL: '', API_PORT: ' ', S3_FORCE_PATH_STYLE: '', ANTHROPIC_MODEL: '' }),
+      envWith({
+        LOG_LEVEL: '',
+        API_PORT: ' ',
+        S3_FORCE_PATH_STYLE: '',
+        AI_MODEL: '',
+        AI_BASE_URL: '',
+        AI_REASONING_EFFORT: '',
+      }),
     );
 
     expect(config.logLevel).toBe('info');
     expect(config.port).toBe(3000);
     expect(config.s3.forcePathStyle).toBe(false);
-    expect(config.ai.model).toBe('claude-haiku-5-5');
+    expect(config.ai.model).toBe('gemini-3.5-flash-lite');
+    expect(config.ai.baseUrl).toBe('https://generativelanguage.googleapis.com/v1beta/openai/');
+    expect(config.ai.reasoningEffort).toBe('low');
   });
 
   it('requires NODE_ENV so a deploy never silently runs as development', () => {
@@ -121,6 +132,9 @@ describe('parseConfig', () => {
     ['ADMIN_ORIGIN', 'mailto:admin@example.com'],
     ['DATABASE_URL', 'http://localhost:5442/ers'],
     ['S3_ENDPOINT', 'ftp://localhost:8333'],
+    ['AI_BASE_URL', 'ftp://ai.example.com/v1/'],
+    ['AI_BASE_URL', 'not a url'],
+    ['AI_REASONING_EFFORT', 'extreme'],
   ])('rejects invalid %s (%s)', (name, value) => {
     expect(configErrorFor(envWith({ [name]: value })).variables).toEqual([name]);
   });
@@ -132,7 +146,7 @@ describe('parseConfig', () => {
   });
 
   it('treats empty optional secrets as absent', () => {
-    const config = parseConfig(envWith({ ANTHROPIC_API_KEY: '  ', GITHUB_CLIENT_ID: '' }));
+    const config = parseConfig(envWith({ AI_API_KEY: '  ', GITHUB_CLIENT_ID: '' }));
 
     expect(config.ai.apiKey).toBeUndefined();
     expect(config.github).toBeUndefined();

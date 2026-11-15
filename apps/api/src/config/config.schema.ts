@@ -4,6 +4,11 @@ const MIN_SECRET_LENGTH = 32;
 const DEFAULT_API_PORT = 3000;
 const MAX_PORT = 65_535;
 const MAX_PROXY_HOPS = 5;
+/** Gemini's OpenAI-compatible endpoint; the free tier of AI Studio needs no card. */
+const DEFAULT_AI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/openai/';
+const DEFAULT_AI_MODEL = 'gemini-3.5-flash-lite';
+/** `default` sends no `reasoning_effort`, for providers or models that reject the parameter. */
+const AI_REASONING_EFFORTS = ['default', 'minimal', 'low', 'medium', 'high'] as const;
 
 const NODE_ENVS = ['development', 'test', 'production'] as const;
 const LOG_LEVELS = ['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'] as const;
@@ -39,8 +44,11 @@ const envSchema = z.object({
   S3_ACCESS_KEY_ID: z.string().min(1),
   S3_SECRET_ACCESS_KEY: z.string().min(1),
   S3_FORCE_PATH_STYLE: booleanString,
-  ANTHROPIC_API_KEY: z.string().optional(),
-  ANTHROPIC_MODEL: z.string().min(1).default('claude-haiku-5-5'),
+  /** Any OpenAI-compatible chat API; the defaults point at Google AI Studio (Gemini). */
+  AI_API_KEY: z.string().optional(),
+  AI_BASE_URL: httpUrl.default(DEFAULT_AI_BASE_URL),
+  AI_MODEL: z.string().min(1).default(DEFAULT_AI_MODEL),
+  AI_REASONING_EFFORT: z.enum(AI_REASONING_EFFORTS).default('low'),
   /** Password of the demo accounts the seed creates. Only the seed reads and checks it, so a bad
    * value never stops the API from starting. */
   SEED_DEMO_PASSWORD: z.string().optional(),
@@ -70,10 +78,17 @@ export interface Config {
     readonly secretAccessKey: string;
     readonly forcePathStyle: boolean;
   };
-  readonly ai: { readonly apiKey: string | undefined; readonly model: string };
+  readonly ai: {
+    readonly apiKey: string | undefined;
+    readonly baseUrl: string;
+    readonly model: string;
+    readonly reasoningEffort: AiReasoningEffort;
+  };
   readonly seedDemoPassword: string | undefined;
   readonly github: { readonly clientId: string; readonly clientSecret: string } | undefined;
 }
+
+export type AiReasoningEffort = (typeof AI_REASONING_EFFORTS)[number];
 
 /** Thrown at startup when the environment is incomplete. Lists variable names, never values. */
 export class ConfigError extends Error {
@@ -127,7 +142,12 @@ export function parseConfig(env: RawEnv): Config {
       secretAccessKey: values.S3_SECRET_ACCESS_KEY,
       forcePathStyle: values.S3_FORCE_PATH_STYLE,
     },
-    ai: { apiKey: values.ANTHROPIC_API_KEY, model: values.ANTHROPIC_MODEL },
+    ai: {
+      apiKey: values.AI_API_KEY,
+      baseUrl: values.AI_BASE_URL,
+      model: values.AI_MODEL,
+      reasoningEffort: values.AI_REASONING_EFFORT,
+    },
     seedDemoPassword: values.SEED_DEMO_PASSWORD,
     github:
       githubClientId !== undefined && githubClientSecret !== undefined

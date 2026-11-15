@@ -1,21 +1,21 @@
 import { CSRF_HEADER } from '@ers/shared';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { ANTHROPIC_CLIENT } from '../../src/modules/chat/chat-answer.service.js';
+import { AI_CLIENT } from '../../src/modules/chat/chat-answer.service.js';
 import { signedInAgent } from '../helpers/auth.js';
 import { createTestApp } from '../helpers/create-test-app.js';
 
 import type { INestApplication } from '@nestjs/common';
 
 /** Any object stands in for the client here: the ticket only needs to know a model is configured. */
-const configuredClient = { messages: {} };
+const configuredClient = { chat: {} };
 
 describe('chat ticket API', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
     app = await createTestApp({
-      overrides: [{ provide: ANTHROPIC_CLIENT, useValue: configuredClient }],
+      overrides: [{ provide: AI_CLIENT, useValue: configuredClient }],
     });
   });
 
@@ -60,7 +60,7 @@ describe('chat ticket API without a model key', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
-    app = await createTestApp({ overrides: [{ provide: ANTHROPIC_CLIENT, useValue: undefined }] });
+    app = await createTestApp({ overrides: [{ provide: AI_CLIENT, useValue: undefined }] });
   });
 
   afterAll(async () => {

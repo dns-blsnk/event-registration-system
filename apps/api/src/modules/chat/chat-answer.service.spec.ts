@@ -1,4 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { DomainError } from '../../common/errors/domain-error.js';
@@ -9,36 +9,42 @@ const prompt = { system: 'You help.', question: 'What is a slug?' };
 
 interface FakeStreamOptions {
   texts?: string[];
-  stopReason?: string;
+  finishReason?: 'stop' | 'length' | 'content_filter' | null;
+  /** Chunks the provider sends besides text: usage-only ones without choices, empty deltas. */
+  extraChunks?: unknown[];
   /** Throw this instead of finishing. */
   failWith?: Error;
   /** Keep the stream open until the request signal aborts. */
   hangUntilAbort?: boolean;
 }
 
-/** A stand-in for client.messages.stream that records its arguments. */
+/** A stand-in for client.chat.completions.create that records its arguments. */
 function fakeClient(options: FakeStreamOptions = {}) {
   const calls: { params: Record<string, unknown>; signal: AbortSignal }[] = [];
   const client = {
-    messages: {
-      stream: (params: Record<string, unknown>, requestOptions: { signal: AbortSignal }) => {
-        calls.push({ params, signal: requestOptions.signal });
-        const { signal } = requestOptions;
-        return {
-          async *[Symbol.asyncIterator]() {
-            for (const text of options.texts ?? []) {
-              yield { type: 'content_block_delta', delta: { type: 'text_delta', text } };
-            }
-            if (options.failWith !== undefined) throw options.failWith;
-            if (options.hangUntilAbort === true) {
-              await new Promise((resolve) => {
-                signal.addEventListener('abort', resolve);
-              });
-              throw new Error('aborted');
-            }
-          },
-          finalMessage: () => Promise.resolve({ stop_reason: options.stopReason ?? 'end_turn' }),
-        };
+    chat: {
+      completions: {
+        create: (params: Record<string, unknown>, requestOptions: { signal: AbortSignal }) => {
+          calls.push({ params, signal: requestOptions.signal });
+          const { signal } = requestOptions;
+          return Promise.resolve({
+            async *[Symbol.asyncIterator]() {
+              for (const text of options.texts ?? []) {
+                yield { choices: [{ delta: { content: text }, finish_reason: null }] };
+              }
+              yield* options.extraChunks ?? [];
+              if (options.failWith !== undefined) throw options.failWith;
+              if (options.hangUntilAbort === true) {
+                await new Promise((resolve) => {
+                  signal.addEventListener('abort', resolve);
+                });
+                throw new Error('aborted');
+              }
+              if (options.finishReason === null) return;
+              yield { choices: [{ delta: {}, finish_reason: options.finishReason ?? 'stop' }] };
+            },
+          });
+        },
       },
     },
   };
@@ -58,50 +64,79 @@ describe('ChatAnswerService', () => {
 
   it('streams the answer text and sends the prompt to the configured model', async () => {
     const { client, calls } = fakeClient({ texts: ['A slug ', 'is the URL name.'] });
-    const service = new ChatAnswerService(client, 'claude-haiku-5-5');
+    const service = new ChatAnswerService(client, 'gemini-3.5-flash-lite', 'low');
 
     const { outcome, texts } = await collect(service);
 
     expect(outcome).toBe('completed');
     expect(texts).toEqual(['A slug ', 'is the URL name.']);
     expect(calls[0]?.params).toMatchObject({
-      model: 'claude-haiku-5-5',
-      system: prompt.system,
-      messages: [{ role: 'user', content: prompt.question }],
+      model: 'gemini-3.5-flash-lite',
+      reasoning_effort: 'low',
+      stream: true,
+      messages: [
+        { role: 'system', content: prompt.system },
+        { role: 'user', content: prompt.question },
+      ],
     });
   });
 
-  it.each([
+  it.each<[string, FakeStreamOptions, string[]]>([
     [
       'declines without text',
-      { stopReason: 'refusal' },
+      { finishReason: 'content_filter' },
       ['I can’t help with that here. Try asking about a field on this screen.'],
     ],
     [
       'ends with no text',
-      { stopReason: 'end_turn' },
+      { finishReason: 'stop' },
       ['I don’t have an answer for that. Try asking about a field on this screen.'],
     ],
     [
       'hits the length limit',
-      { texts: ['A long'], stopReason: 'max_tokens' },
+      { texts: ['A long'], finishReason: 'length' },
       ['A long', ' … (answer cut short)'],
     ],
-    ['declines after some text', { texts: ['Partly'], stopReason: 'refusal' }, ['Partly']],
-  ])(
-    'says something readable when the model %s',
-    async (_case, options: FakeStreamOptions, expected) => {
-      const { client } = fakeClient(options);
+    ['declines after some text', { texts: ['Partly'], finishReason: 'content_filter' }, ['Partly']],
+    [
+      'stops streaming without a finish reason',
+      { texts: ['Half'], finishReason: null },
+      ['Half', ' … (answer cut short)'],
+    ],
+  ])('says something readable when the model %s', async (_case, options, expected) => {
+    const { client } = fakeClient(options);
 
-      const { texts } = await collect(new ChatAnswerService(client, 'm'));
+    const { texts } = await collect(new ChatAnswerService(client, 'm', 'low'));
 
-      expect(texts).toEqual(expected);
-    },
-  );
+    expect(texts).toEqual(expected);
+  });
+
+  it('leaves reasoning effort to the provider when configured so', async () => {
+    const { client, calls } = fakeClient({ texts: ['Hi'] });
+
+    await collect(new ChatAnswerService(client, 'm', 'default'));
+
+    expect(calls[0]?.params).not.toHaveProperty('reasoning_effort');
+  });
+
+  it('skips chunks without text, such as usage-only ones and empty deltas', async () => {
+    const { client } = fakeClient({
+      texts: ['Hi'],
+      extraChunks: [
+        { choices: [], usage: { total_tokens: 3 } },
+        { choices: [{ delta: { content: null }, finish_reason: null }] },
+        { choices: [{ delta: { content: '' }, finish_reason: null }] },
+      ],
+    });
+
+    const { texts } = await collect(new ChatAnswerService(client, 'm', 'low'));
+
+    expect(texts).toEqual(['Hi']);
+  });
 
   it('passes a failure of the caller’s own callback through, not as a provider outage', async () => {
     const { client } = fakeClient({ texts: ['Hi'] });
-    const service = new ChatAnswerService(client, 'm');
+    const service = new ChatAnswerService(client, 'm', 'low');
     const callbackError = new Error('socket closed');
 
     const result = service.answer(prompt, {
@@ -115,10 +150,10 @@ describe('ChatAnswerService', () => {
   });
 
   it('keeps the provider error as the cause for the logs', async () => {
-    const providerError = new Anthropic.InternalServerError(500, undefined, 'boom', new Headers());
+    const providerError = new OpenAI.InternalServerError(500, undefined, 'boom', new Headers());
     const { client } = fakeClient({ failWith: providerError });
 
-    const error: unknown = await collect(new ChatAnswerService(client, 'm')).catch(
+    const error: unknown = await collect(new ChatAnswerService(client, 'm', 'low')).catch(
       (caught: unknown) => caught,
     );
 
@@ -128,7 +163,7 @@ describe('ChatAnswerService', () => {
   it('stops when the user cancels', async () => {
     const { client } = fakeClient({ texts: ['Part'], hangUntilAbort: true });
     const controller = new AbortController();
-    const service = new ChatAnswerService(client, 'm');
+    const service = new ChatAnswerService(client, 'm', 'low');
 
     const pending = collect(service, controller.signal);
     setTimeout(() => {
@@ -142,7 +177,7 @@ describe('ChatAnswerService', () => {
     const timeout = new AbortController();
     vi.spyOn(AbortSignal, 'timeout').mockReturnValue(timeout.signal);
     const { client } = fakeClient({ hangUntilAbort: true });
-    const pending = collect(new ChatAnswerService(client, 'm'));
+    const pending = collect(new ChatAnswerService(client, 'm', 'low'));
     setTimeout(() => {
       timeout.abort();
     }, 0);
@@ -155,10 +190,10 @@ describe('ChatAnswerService', () => {
 
   it('reports a busy provider as rate limited', async () => {
     const { client } = fakeClient({
-      failWith: new Anthropic.RateLimitError(429, undefined, 'slow down', new Headers()),
+      failWith: new OpenAI.RateLimitError(429, undefined, 'slow down', new Headers()),
     });
 
-    await expect(collect(new ChatAnswerService(client, 'm'))).rejects.toMatchObject({
+    await expect(collect(new ChatAnswerService(client, 'm', 'low'))).rejects.toMatchObject({
       code: 'RATE_LIMITED',
     });
   });
@@ -166,13 +201,13 @@ describe('ChatAnswerService', () => {
   it.each([
     [
       'an API error',
-      new Anthropic.InternalServerError(500, undefined, 'secret provider detail', new Headers()),
+      new OpenAI.InternalServerError(500, undefined, 'secret provider detail', new Headers()),
     ],
     ['a network failure', new Error('socket hang up')],
   ])('turns %s into a safe "unavailable" message', async (_case, failure) => {
     const { client } = fakeClient({ failWith: failure });
 
-    const error: unknown = await collect(new ChatAnswerService(client, 'm')).catch(
+    const error: unknown = await collect(new ChatAnswerService(client, 'm', 'low')).catch(
       (caught: unknown) => caught,
     );
 
@@ -182,7 +217,7 @@ describe('ChatAnswerService', () => {
   });
 
   it('is unavailable without an API key', async () => {
-    const service = new ChatAnswerService(undefined, 'm');
+    const service = new ChatAnswerService(undefined, 'm', 'low');
 
     expect(service.isAvailable).toBe(false);
     await expect(collect(service)).rejects.toMatchObject({ code: 'SERVICE_UNAVAILABLE' });
