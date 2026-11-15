@@ -27,15 +27,15 @@ Admin panel for events, sessions and registrations: three roles, a managed Postg
 
 ## Stack
 
-| Part     | Technology                                                                                 |
-| -------- | ------------------------------------------------------------------------------------------ |
-| Monorepo | pnpm workspaces: `apps/api`, `apps/admin`, `packages/shared`, Node 24                      |
-| API      | Nest.js 12, Prisma 7 + PostgreSQL, Socket.IO, nestjs-pino                                  |
-| Admin    | Refine 5 + MUI 6, Vite                                                                     |
-| Storage  | S3-compatible: SeaweedFS locally and in CI, Cloudflare R2 in production                    |
-| AI       | Anthropic Claude through `@anthropic-ai/sdk`, streamed                                     |
-| Tests    | Vitest; API integration tests against a real Postgres, React Testing Library for the admin |
-| Hosting  | API and Postgres on Render, admin on Vercel (free plans)                                   |
+| Part     | Technology                                                                                                        |
+| -------- | ----------------------------------------------------------------------------------------------------------------- |
+| Monorepo | pnpm workspaces: `apps/api`, `apps/admin`, `packages/shared`, Node 24                                             |
+| API      | Nest.js 12, Prisma 7 + PostgreSQL, Socket.IO, nestjs-pino                                                         |
+| Admin    | Refine 5 + MUI 6, Vite                                                                                            |
+| Storage  | S3-compatible: SeaweedFS locally and in CI, Cloudflare R2 in production                                           |
+| AI       | Anthropic Claude through `@anthropic-ai/sdk`, streamed                                                            |
+| Tests    | Vitest; API integration tests against a real Postgres, React Testing Library for the admin, Playwright end to end |
+| Hosting  | API and Postgres on Render, admin on Vercel (free plans)                                                          |
 
 ## Getting started
 
@@ -55,15 +55,16 @@ The chat needs `ANTHROPIC_API_KEY`; without it the widget says the assistant is 
 
 ### Scripts
 
-| Command                             | What it does                                         |
-| ----------------------------------- | ---------------------------------------------------- |
-| `pnpm dev`                          | API and admin in watch mode                          |
-| `pnpm lint` / `pnpm lint:fix`       | ESLint (strict type-checked rules, size limits)      |
-| `pnpm format` / `pnpm format:check` | Prettier                                             |
-| `pnpm typecheck`                    | TypeScript in every package                          |
-| `pnpm test`                         | All tests; API integration tests use `postgres-test` |
-| `pnpm build`                        | Build every package                                  |
-| `pnpm db:reset` / `pnpm db:seed`    | Recreate the dev database / load demo data           |
+| Command                             | What it does                                                                                                                                                                                |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm dev`                          | API and admin in watch mode                                                                                                                                                                 |
+| `pnpm lint` / `pnpm lint:fix`       | ESLint (strict type-checked rules, size limits)                                                                                                                                             |
+| `pnpm format` / `pnpm format:check` | Prettier                                                                                                                                                                                    |
+| `pnpm typecheck`                    | TypeScript in every package                                                                                                                                                                 |
+| `pnpm test`                         | All tests; API integration tests use `postgres-test`                                                                                                                                        |
+| `pnpm test:e2e`                     | Playwright browser tests: seeds a fresh `ers_e2e` database on `postgres-test`, then runs the built API and the admin (first run: `pnpm --filter @ers/e2e exec playwright install chromium`) |
+| `pnpm build`                        | Build every package                                                                                                                                                                         |
+| `pnpm db:reset` / `pnpm db:seed`    | Recreate the dev database / load demo data                                                                                                                                                  |
 
 ## How it works
 
@@ -95,7 +96,7 @@ In production the socket connects to the API host directly (`VITE_CHAT_URL`), be
 
 ## Deployment
 
-CI (`.github/workflows/ci.yml`) runs lint, format check, typecheck, all tests against Postgres and S3 containers, and the build on pushes to `main` and `dev` and on every pull request. Deploy (`.github/workflows/deploy.yml`) runs only after a green CI run of a push to `main`:
+CI (`.github/workflows/ci.yml`) runs lint, format check, typecheck, all tests against Postgres and S3 containers, the build and the Playwright browser tests on pushes to `main` and `dev` and on every pull request. Deploy (`.github/workflows/deploy.yml`) runs only after a green CI run of a push to `main`:
 
 1. It asks Render to deploy that exact commit.
 2. It waits until `/api/health` reports that commit with the database up.
@@ -129,4 +130,3 @@ Until the deploy settings exist, the workflow skips itself. If only some setting
 - **"Almost full" filter.** It runs two queries rather than one. A single query would need a generated column, and the 90% threshold would then live both in a migration and in `packages/shared`.
 - **Waitlist after a conflict.** A waitlisted customer skipped because of an overlapping booking is promoted at the next change in that session, not immediately when the conflict disappears.
 - **GitHub and existing accounts.** GitHub sign-in never links to an existing account with the same email, because sign-up does not verify emails. An existing user cannot add GitHub to their account.
-- **No end-to-end browser tests yet** (Playwright); API and admin behaviour is covered by integration and component tests.
