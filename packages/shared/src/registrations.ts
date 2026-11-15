@@ -11,7 +11,14 @@ export interface MyRegistration {
   /** 1-based place in the waitlist; null unless WAITLISTED. */
   waitlistPosition: number | null;
   session: { id: string; title: string; room: string | null; startsAt: string; endsAt: string };
-  event: { id: string; title: string; city: string; venue: string };
+  event: {
+    id: string;
+    title: string;
+    city: string;
+    venue: string;
+    status: EventStatus;
+    endsAt: string;
+  };
 }
 
 /** A registration as staff see it in the admin. */

@@ -1,7 +1,19 @@
-import type { RegistrationStatus } from './domain.js';
+import { EventStatus, type RegistrationStatus } from './domain.js';
+
 import type { TagRef } from './events.js';
 
 /** A published event as customers browse it. */
+/** The only event status customers ever see in the catalog. */
+export const CATALOG_EVENT_STATUS = EventStatus.PUBLISHED;
+
+/**
+ * Whether customers can open the event in the catalog: published and not ended yet. The API's
+ * catalog query applies the same rule, so a link built from this never leads to "not found".
+ */
+export function isInCatalog(event: { status: EventStatus; endsAt: string }, now: Date): boolean {
+  return event.status === CATALOG_EVENT_STATUS && new Date(event.endsAt).getTime() > now.getTime();
+}
+
 export interface CatalogEventListItem {
   id: string;
   title: string;

@@ -1,28 +1,30 @@
-import {
-  CATALOG_FIELDS,
-  seatsLeftLabel,
-  SESSION_FIELDS,
-  type CatalogEventDetail,
-} from '@ers/shared';
+import { CATALOG_FIELDS, type CatalogEventDetail } from '@ers/shared';
 import Alert from '@mui/material/Alert';
-import Box from '@mui/material/Box';
-import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { useShow } from '@refinedev/core';
 import { Show } from '@refinedev/mui';
+import { useEffect } from 'react';
+import { useLocation } from 'react-router';
 
 import { EventDescription, EventFacts, EventHero } from '@/entities/event';
-import { formatDateTime } from '@/shared/lib/format';
-import { FillBar } from '@/shared/ui/fill-bar';
+import { catalogSessionAnchor } from '@/entities/session';
 
-import { SessionBooking } from './session-booking';
+import { CatalogSessionCard } from './catalog-session-card';
 
 /** One published event for a customer: details, then each session with its booking button. */
 export function CatalogShow(): React.JSX.Element {
   // The page explains a missing event itself; no second message as a toast.
   const { query } = useShow<CatalogEventDetail>({ errorNotification: false });
   const event = query.data?.data;
+  const { hash } = useLocation();
+  const isLoaded = event !== undefined;
+  // A link to one session (from "My registrations") opens the page scrolled to it, once it is drawn.
+  useEffect(() => {
+    if (isLoaded && hash !== '') {
+      document.getElementById(hash.slice(1))?.scrollIntoView({ block: 'center' });
+    }
+  }, [isLoaded, hash]);
   return (
     <Show isLoading={query.isLoading} title="Event" canEdit={false} canDelete={false}>
       {query.isError && event === undefined && (
@@ -46,33 +48,12 @@ export function CatalogShow(): React.JSX.Element {
             <Typography>No sessions have been announced yet.</Typography>
           )}
           {event.sessions.map((session) => (
-            <Paper key={session.id} variant="outlined" sx={{ p: 2 }}>
-              <Stack
-                direction={{ xs: 'column', sm: 'row' }}
-                spacing={2}
-                justifyContent="space-between"
-              >
-                <Box>
-                  <Typography fontWeight="bold">{session.title}</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {formatDateTime(session.startsAt)} – {formatDateTime(session.endsAt)}
-                    {session.room === null ? '' : ` · ${session.room}`}
-                    {session.speaker === null ? '' : ` · ${session.speaker}`}
-                    {` · ${String(session.capacity)} seats`}
-                  </Typography>
-                  <Box sx={{ maxWidth: 260, mt: 1 }}>
-                    <FillBar
-                      rate={session.fillRate}
-                      label={seatsLeftLabel(session.seatsLeft)}
-                      name={SESSION_FIELDS.seatsLeft.label}
-                    />
-                  </Box>
-                </Box>
-                <Box sx={{ alignSelf: { sm: 'center' } }}>
-                  <SessionBooking session={session} eventId={event.id} />
-                </Box>
-              </Stack>
-            </Paper>
+            <CatalogSessionCard
+              key={session.id}
+              session={session}
+              eventId={event.id}
+              isTargeted={hash === `#${catalogSessionAnchor(session.id)}`}
+            />
           ))}
         </Stack>
       )}

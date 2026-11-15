@@ -1,6 +1,6 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, onTestFinished, vi } from 'vitest';
 
 import { mockHttp, type MockRoute } from '@/test/http-mock';
 import { renderAdminPage } from '@/test/render-admin';
@@ -71,6 +71,31 @@ function showEvent(sessions: CatalogSession[], extra: MockRoute[] = []) {
 }
 
 describe('CatalogShow', () => {
+  it('opens scrolled to the session a link points at, and marks it', async () => {
+    // jsdom lays nothing out, so it has no scrolling of its own.
+    const scrollIntoView = vi.fn();
+    Object.defineProperty(Element.prototype, 'scrollIntoView', {
+      value: scrollIntoView,
+      configurable: true,
+    });
+    onTestFinished(() => {
+      Reflect.deleteProperty(Element.prototype, 'scrollIntoView');
+    });
+    mockHttp([
+      signedIn,
+      { method: 'get', url: '/catalog/e1', status: 200, body: detail([session({ id: 's2' })]) },
+    ]);
+    renderAdminPage({
+      path: '/catalog/e1#session-s2',
+      route: '/catalog/:id',
+      element: <CatalogShow />,
+    });
+
+    expect(await screen.findByText('State of React')).toBeInTheDocument();
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'center' });
+    expect(document.getElementById('session-s2')).toHaveStyle({ borderWidth: '2px' });
+  });
+
   it('shows the event and its sessions with seats', async () => {
     showEvent([session({})]);
 
@@ -102,7 +127,14 @@ describe('CatalogShow', () => {
         startsAt: '2099-12-01T09:00:00Z',
         endsAt: '2099-12-01T10:00:00Z',
       },
-      event: { id: 'e1', title: 'Kyiv Frontend Summit', city: 'Kyiv', venue: 'Main Hall' },
+      event: {
+        id: 'e1',
+        title: 'Kyiv Frontend Summit',
+        city: 'Kyiv',
+        venue: 'Main Hall',
+        status: 'PUBLISHED',
+        endsAt: '2099-12-02T18:00:00Z',
+      },
     };
     const { calls } = showEvent(
       [session({})],
@@ -140,7 +172,14 @@ describe('CatalogShow', () => {
         startsAt: '2099-12-01T09:00:00Z',
         endsAt: '2099-12-01T10:00:00Z',
       },
-      event: { id: 'e1', title: 'Kyiv Frontend Summit', city: 'Kyiv', venue: 'Main Hall' },
+      event: {
+        id: 'e1',
+        title: 'Kyiv Frontend Summit',
+        city: 'Kyiv',
+        venue: 'Main Hall',
+        status: 'PUBLISHED',
+        endsAt: '2099-12-02T18:00:00Z',
+      },
     };
     showEvent(
       [session({ seatsLeft: 0 })],
@@ -218,7 +257,14 @@ describe('CatalogShow', () => {
         startsAt: '2099-12-01T09:00:00Z',
         endsAt: '2099-12-01T10:00:00Z',
       },
-      event: { id: 'e1', title: 'Kyiv Frontend Summit', city: 'Kyiv', venue: 'Main Hall' },
+      event: {
+        id: 'e1',
+        title: 'Kyiv Frontend Summit',
+        city: 'Kyiv',
+        venue: 'Main Hall',
+        status: 'PUBLISHED',
+        endsAt: '2099-12-02T18:00:00Z',
+      },
     };
     showEvent(
       [session({ seatsLeft: 0 })],
@@ -244,7 +290,14 @@ describe('CatalogShow', () => {
         startsAt: '2099-12-01T09:00:00Z',
         endsAt: '2099-12-01T10:00:00Z',
       },
-      event: { id: 'e1', title: 'Kyiv Frontend Summit', city: 'Kyiv', venue: 'Main Hall' },
+      event: {
+        id: 'e1',
+        title: 'Kyiv Frontend Summit',
+        city: 'Kyiv',
+        venue: 'Main Hall',
+        status: 'PUBLISHED',
+        endsAt: '2099-12-02T18:00:00Z',
+      },
     };
     showEvent(
       [session({})],

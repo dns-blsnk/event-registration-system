@@ -30,7 +30,14 @@ function booking(overrides: Partial<MyRegistration> = {}): MyRegistration {
       startsAt: '2099-12-01T09:00:00Z',
       endsAt: '2099-12-01T10:00:00Z',
     },
-    event: { id: 'e1', title: 'Kyiv Frontend Summit', city: 'Kyiv', venue: 'Main Hall' },
+    event: {
+      id: 'e1',
+      title: 'Kyiv Frontend Summit',
+      city: 'Kyiv',
+      venue: 'Main Hall',
+      status: 'PUBLISHED',
+      endsAt: '2099-12-02T18:00:00Z',
+    },
     ...overrides,
   };
 }
@@ -58,11 +65,16 @@ describe('MyRegistrationList', () => {
       'href',
       '/catalog/e1',
     );
+    // Customers have no session page: the session opens its event's catalog page, scrolled to it.
+    expect(screen.getByRole('link', { name: 'State of React' })).toHaveAttribute(
+      'href',
+      '/catalog/e1#session-s1',
+    );
     expect(screen.getByText('Waitlisted')).toBeInTheDocument();
     expect(screen.getByText('#2')).toBeInTheDocument();
   });
 
-  it('offers no cancel and no catalog link for past, cancelled or attended bookings', async () => {
+  it('offers no cancel for past, cancelled or attended bookings', async () => {
     mockHttp([
       signedIn,
       list([
@@ -83,7 +95,26 @@ describe('MyRegistrationList', () => {
 
     expect(await screen.findByText('Old talk')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^Cancel booking for/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'Kyiv Frontend Summit' })).not.toBeInTheDocument();
+  });
+
+  it('links to the catalog only while it still shows the event, whatever the booking status', async () => {
+    mockHttp([
+      signedIn,
+      list([
+        booking({ id: 'r1', status: 'CANCELLED' }),
+        booking({
+          id: 'r2',
+          session: { ...booking().session, title: 'Old talk', ...PAST },
+          event: { ...booking().event, title: 'Past Summit', endsAt: PAST.endsAt },
+        }),
+      ]),
+    ]);
+    renderList();
+
+    expect(await screen.findByRole('link', { name: 'Kyiv Frontend Summit' })).toBeInTheDocument();
+    expect(screen.getByText('Past Summit')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Past Summit' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Old talk' })).not.toBeInTheDocument();
   });
 
   it('cancels a booking only after confirmation', async () => {

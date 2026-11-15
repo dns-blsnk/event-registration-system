@@ -1,6 +1,6 @@
 import {
   ErrorCode,
-  EventStatus,
+  CATALOG_EVENT_STATUS,
   type CatalogEventDetail,
   type CatalogEventListItem,
 } from '@ers/shared';
@@ -37,7 +37,8 @@ const NOT_FOUND_MESSAGE = 'Event not found';
  * completed events never appear, and asking for one by id looks like a missing event.
  */
 function visibleNow(now: Date): Prisma.EventWhereInput {
-  return { status: EventStatus.PUBLISHED, endsAt: { gt: now } };
+  // The same rule as `isInCatalog` in @ers/shared, which the admin uses to decide what to link.
+  return { status: CATALOG_EVENT_STATUS, endsAt: { gt: now } };
 }
 
 function filtersToWhere(

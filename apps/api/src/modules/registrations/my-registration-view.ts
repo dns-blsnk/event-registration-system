@@ -10,7 +10,9 @@ export const MY_REGISTRATION_INCLUDE = {
       room: true,
       startsAt: true,
       endsAt: true,
-      event: { select: { id: true, title: true, city: true, venue: true } },
+      event: {
+        select: { id: true, title: true, city: true, venue: true, status: true, endsAt: true },
+      },
     },
   },
 } satisfies Prisma.RegistrationInclude;
@@ -37,6 +39,6 @@ export function toMyRegistration(
       startsAt: session.startsAt.toISOString(),
       endsAt: session.endsAt.toISOString(),
     },
-    event: session.event,
+    event: { ...session.event, endsAt: session.event.endsAt.toISOString() },
   };
 }
