@@ -6,7 +6,6 @@ import { Authenticated, CanAccess, Refine } from '@refinedev/core';
 import {
   ErrorComponent,
   RefineSnackbarProvider,
-  RefineThemes,
   ThemedLayout,
   useNotificationProvider,
 } from '@refinedev/mui';
@@ -44,6 +43,7 @@ import { accessControlProvider } from './providers/access-control-provider';
 import { authProvider, HOME_PATH, LOGIN_PATH, REGISTER_PATH } from './providers/auth-provider';
 import { dataProvider } from './providers/data-provider';
 import { resources } from './resources';
+import { theme } from './theme/theme';
 
 function HomePage(): React.JSX.Element {
   return (
@@ -67,7 +67,7 @@ function PageErrorBoundary(): React.JSX.Element {
 export function App(): React.JSX.Element {
   return (
     <BrowserRouter>
-      <ThemeProvider theme={RefineThemes.Blue}>
+      <ThemeProvider theme={theme}>
         <CssBaseline />
         <GlobalStyles styles={{ html: { WebkitFontSmoothing: 'auto' } }} />
         <RefineSnackbarProvider>
