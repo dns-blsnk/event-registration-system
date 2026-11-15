@@ -219,6 +219,25 @@ describe('ChatWidget', () => {
     const dialog = await openChat();
 
     expect(await within(dialog).findByText(/Could not reach the assistant/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/Not available/)).toBeInTheDocument();
+  });
+
+  it('checks again when the chat is reopened after a failed check', async () => {
+    mockHttp([
+      signedIn,
+      { method: 'get', url: '/chat/status', status: 500, body: { message: 'boom' } },
+      status(false),
+    ]);
+    renderOnSessions();
+    const dialog = await openChat();
+    await within(dialog).findByText(/Could not reach the assistant/);
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Close help chat' }));
+
+    const reopened = await openChat();
+
+    expect(
+      await within(reopened).findByText('The assistant is not available right now.'),
+    ).toBeInTheDocument();
   });
 
   it('does not send an empty question', async () => {

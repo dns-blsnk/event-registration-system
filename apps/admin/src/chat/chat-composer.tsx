@@ -1,5 +1,7 @@
 import { CHAT_QUESTION_MAX_LENGTH } from '@ers/shared';
-import Button from '@mui/material/Button';
+import SendIcon from '@mui/icons-material/Send';
+import StopCircleIcon from '@mui/icons-material/StopCircle';
+import IconButton from '@mui/material/IconButton';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import { useEffect, useRef, useState, type SyntheticEvent } from 'react';
@@ -15,7 +17,7 @@ interface ChatComposerProps {
   onStop: () => void;
 }
 
-/** The question box: Send while idle, Stop while an answer is streaming. */
+/** The question box: a send button while idle, a stop button while an answer is streaming. */
 export function ChatComposer({
   fieldLabel,
   canAsk,
@@ -37,7 +39,14 @@ export function ChatComposer({
     setDraft('');
   };
   return (
-    <Stack component="form" direction="row" spacing={1} sx={{ p: 1 }} onSubmit={send}>
+    <Stack
+      component="form"
+      direction="row"
+      spacing={1}
+      alignItems="center"
+      onSubmit={send}
+      sx={{ p: 1.5, borderTop: 1, borderColor: 'divider' }}
+    >
       <TextField
         value={draft}
         onChange={(event) => {
@@ -50,6 +59,7 @@ export function ChatComposer({
         fullWidth
         inputRef={inputRef}
         disabled={!canAsk}
+        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 6 } }}
         slotProps={{
           htmlInput: {
             maxLength: CHAT_QUESTION_MAX_LENGTH,
@@ -59,11 +69,18 @@ export function ChatComposer({
         }}
       />
       {isAnswering ? (
-        <Button onClick={onStop}>Stop</Button>
+        <IconButton color="primary" aria-label="Stop" onClick={onStop}>
+          <StopCircleIcon />
+        </IconButton>
       ) : (
-        <Button type="submit" variant="contained" disabled={question === '' || !canAsk}>
-          Send
-        </Button>
+        <IconButton
+          type="submit"
+          color="primary"
+          aria-label="Send"
+          disabled={question === '' || !canAsk}
+        >
+          <SendIcon />
+        </IconButton>
       )}
     </Stack>
   );

@@ -1,9 +1,7 @@
 import { CHAT_FORM_FIELDS, isResource, type ChatStatus, type Resource } from '@ers/shared';
 import ChatIcon from '@mui/icons-material/Chat';
-import CloseIcon from '@mui/icons-material/Close';
-import Alert from '@mui/material/Alert';
+import CloudOffIcon from '@mui/icons-material/CloudOff';
 import Fab from '@mui/material/Fab';
-import IconButton from '@mui/material/IconButton';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
@@ -11,34 +9,19 @@ import { useCustom, useResourceParams } from '@refinedev/core';
 import { useEffect, useRef, useState } from 'react';
 
 import { ChatComposer } from './chat-composer';
+import { ChatHeader } from './chat-header';
 import { ChatMessages } from './chat-messages';
-import { useChat, type ChatConnection } from './use-chat';
+import { blocker, reachabilityOf, starterQuestions, type ChatAvailability } from './chat-state';
+import { useChat } from './use-chat';
 import { useFocusedField } from './use-focused-field';
 
 /** Above the tables' pagination row, which sits at the bottom right of most pages. */
 const CORNER = { position: 'fixed', right: 24, bottom: 72 } as const;
+const PANEL_SIZE = { width: 380, height: 520 } as const;
 
-const CONNECTION_NOTE: Readonly<Record<ChatConnection, string | undefined>> = {
-  connecting: 'Connecting…',
-  online: undefined,
-  offline: 'No connection to the assistant. Retrying…',
-};
-
-interface ChatAvailability {
-  isLoaded: boolean;
-  isFailed: boolean;
-  isAvailable: boolean;
-}
-
-/** What, if anything, keeps the user from asking right now; undefined when they can ask. */
-function blocker(
-  { isLoaded, isFailed, isAvailable }: ChatAvailability,
-  hasScreen: boolean,
-): string | undefined {
-  if (isFailed) return 'Could not reach the assistant. Close the chat and open it again to retry.';
-  if (!isLoaded) return undefined;
-  if (!isAvailable) return 'The assistant is not available right now.';
-  return hasScreen ? undefined : 'Open a screen to ask about its fields.';
+/** The screen's name as the menu shows it (the resource label), else its route name. */
+function labelOf(resource: { name: string; meta?: { label?: string } }): string {
+  return resource.meta?.label ?? resource.name;
 }
 
 /** The focused field of this screen, only if the screen's form has it (anything else is not sent). */
@@ -54,12 +37,12 @@ function screenField(
 interface ChatPanelProps {
   chat: ReturnType<typeof useChat>;
   availability: ChatAvailability;
-  screen: Resource | undefined;
+  screen: { name: Resource; label: string } | undefined;
   field: { name: string; label: string } | undefined;
   onClose: () => void;
 }
 
-/** The open panel: conversation, connection state and the question box. */
+/** The open panel: header, conversation (or why it cannot start) and the question box. */
 function ChatPanel({
   chat,
   availability,
@@ -68,7 +51,18 @@ function ChatPanel({
   onClose,
 }: ChatPanelProps): React.JSX.Element {
   const reason = blocker(availability, screen !== undefined);
-  const note = availability.isAvailable ? CONNECTION_NOTE[chat.connection] : undefined;
+  // One rule for both ways to ask (typing and the starter questions): only while connected.
+  const canAsk = availability.isAvailable && screen !== undefined && chat.connection === 'online';
+  const ask = (question: string): void => {
+    if (screen === undefined) return;
+    chat.ask({
+      resource: screen.name,
+      ...(field === undefined ? {} : { field: field.name }),
+      question,
+    });
+  };
+  const context =
+    screen === undefined ? undefined : [screen.label, field?.label].filter(Boolean).join(' · ');
   return (
     <Paper
       elevation={8}
@@ -76,45 +70,42 @@ function ChatPanel({
       aria-label="Help chat"
       sx={{
         ...CORNER,
-        width: 360,
+        ...PANEL_SIZE,
         maxWidth: 'calc(100vw - 48px)',
-        height: 480,
         display: 'flex',
         flexDirection: 'column',
+        overflow: 'hidden',
       }}
     >
-      <Stack
-        direction="row"
-        alignItems="center"
-        justifyContent="space-between"
-        sx={{ px: 2, py: 1 }}
-      >
-        <Typography variant="subtitle1" component="h2">
-          Help
-        </Typography>
-        <IconButton aria-label="Close help chat" onClick={onClose}>
-          <CloseIcon />
-        </IconButton>
-      </Stack>
-      {reason !== undefined && <Alert severity="info">{reason}</Alert>}
-      {note !== undefined && (
-        <Typography variant="caption" color="text.secondary" sx={{ px: 2 }}>
-          {note}
-        </Typography>
+      <ChatHeader
+        reachability={reachabilityOf(availability, chat.connection)}
+        context={context}
+        onClose={onClose}
+      />
+      {reason === undefined ? (
+        <ChatMessages
+          messages={chat.messages}
+          suggestions={starterQuestions(field?.label)}
+          onAsk={canAsk && !chat.isAnswering ? ask : undefined}
+        />
+      ) : (
+        <Stack
+          spacing={1}
+          alignItems="center"
+          justifyContent="center"
+          sx={{ flex: 1, p: 3, textAlign: 'center', bgcolor: 'background.default' }}
+        >
+          <CloudOffIcon color="disabled" fontSize="large" />
+          <Typography variant="body2" color="text.secondary">
+            {reason}
+          </Typography>
+        </Stack>
       )}
-      <ChatMessages messages={chat.messages} />
       <ChatComposer
         fieldLabel={field?.label}
-        canAsk={availability.isAvailable && screen !== undefined}
+        canAsk={canAsk}
         isAnswering={chat.isAnswering}
-        onAsk={(question) => {
-          if (screen !== undefined)
-            chat.ask({
-              resource: screen,
-              ...(field === undefined ? {} : { field: field.name }),
-              question,
-            });
-        }}
+        onAsk={ask}
         onStop={chat.cancel}
       />
     </Paper>
@@ -133,8 +124,10 @@ export function ChatWidget(): React.JSX.Element {
   // Tracked while closed too: the user picks a field first, then opens the chat to ask about it.
   const focusedName = useFocusedField();
   const { resource } = useResourceParams();
-  const screen = isResource(resource?.name) ? resource.name : undefined;
-  const field = screenField(screen, focusedName);
+  const screen = isResource(resource?.name)
+    ? { name: resource.name, label: labelOf(resource) }
+    : undefined;
+  const field = screenField(screen?.name, focusedName);
   const { query } = useCustom<ChatStatus>({
     url: '/chat/status',
     method: 'get',
@@ -160,6 +153,8 @@ export function ChatWidget(): React.JSX.Element {
         onClick={() => {
           setOpen(true);
           setWasOpened(true);
+          // A failed status check is retried on reopening, as the panel tells the user.
+          if (query.isError) void query.refetch();
         }}
         sx={CORNER}
       >
