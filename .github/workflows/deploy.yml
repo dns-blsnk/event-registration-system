@@ -78,13 +78,13 @@ jobs:
         run: curl --fail --silent --show-error --max-time 30 -X POST "$RENDER_DEPLOY_HOOK_URL&ref=$COMMIT" > /dev/null
 
       # The old instance keeps answering until the new one is live, so wait for this commit's
-      # version in /health, with a healthy database. The free instance builds and may be asleep.
+      # version in /health, with the database and Redis up. The free instance builds and may be asleep.
       - name: Wait for the new API build
         if: steps.settings.outputs.ready == 'true'
         run: |
           for _ in $(seq 1 60); do
             body=$(curl --silent --max-time 10 "$API_URL/api/health" || true)
-            if echo "$body" | grep -q "\"version\":\"$COMMIT\"" && echo "$body" | grep -q '"database":"up"'; then
+            if echo "$body" | grep -q "\"version\":\"$COMMIT\"" && echo "$body" | grep -q '"status":"ok"'; then
               echo "API $COMMIT is live and healthy"; exit 0
             fi
             sleep 10

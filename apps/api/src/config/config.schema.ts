@@ -7,6 +7,9 @@ const MAX_PROXY_HOPS = 5;
 /** Gemini's OpenAI-compatible endpoint; the free tier of AI Studio needs no card. */
 const DEFAULT_AI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/openai/';
 const DEFAULT_AI_MODEL = 'gemini-3.5-flash-lite';
+/** Namespaces this app's keys, so one Redis can serve several apps or isolated test runs. */
+const DEFAULT_REDIS_KEY_PREFIX = 'ers:';
+const REDIS_KEY_PREFIX_PATTERN = /^[\w:-]{1,40}$/;
 /** `default` sends no `reasoning_effort`, for providers or models that reject the parameter. */
 const AI_REASONING_EFFORTS = ['default', 'minimal', 'low', 'medium', 'high'] as const;
 
@@ -14,6 +17,7 @@ const NODE_ENVS = ['development', 'test', 'production'] as const;
 const LOG_LEVELS = ['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'] as const;
 
 const httpUrl = z.url({ protocol: /^https?$/ });
+const redisUrl = z.url({ protocol: /^rediss?$/ });
 const postgresUrl = z.url({ protocol: /^postgres(ql)?$/ });
 
 const booleanString = z
@@ -37,6 +41,8 @@ const envSchema = z.object({
   TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(MAX_PROXY_HOPS).default(0),
   ADMIN_ORIGIN: httpUrl,
   DATABASE_URL: postgresUrl,
+  REDIS_URL: redisUrl,
+  REDIS_KEY_PREFIX: z.string().regex(REDIS_KEY_PREFIX_PATTERN).default(DEFAULT_REDIS_KEY_PREFIX),
   SESSION_SECRET: z.string().min(MIN_SECRET_LENGTH),
   S3_ENDPOINT: httpUrl,
   S3_REGION: z.string().min(1),
@@ -69,6 +75,7 @@ export interface Config {
   readonly trustProxyHops: number;
   readonly adminOrigin: string;
   readonly databaseUrl: string;
+  readonly redis: { readonly url: string; readonly keyPrefix: string };
   readonly sessionSecret: string;
   readonly s3: {
     readonly endpoint: string;
@@ -133,6 +140,7 @@ export function parseConfig(env: RawEnv): Config {
     trustProxyHops: values.TRUST_PROXY_HOPS,
     adminOrigin: new URL(values.ADMIN_ORIGIN).origin,
     databaseUrl: values.DATABASE_URL,
+    redis: { url: values.REDIS_URL, keyPrefix: values.REDIS_KEY_PREFIX },
     sessionSecret: values.SESSION_SECRET,
     s3: {
       endpoint: values.S3_ENDPOINT,

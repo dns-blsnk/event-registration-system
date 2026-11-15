@@ -1,4 +1,6 @@
-import { TEST_ENV, testDatabaseUrl } from '../../api/test/helpers/test-env.ts';
+import { randomUUID } from 'node:crypto';
+
+import { TEST_ENV, testDatabaseUrl, testRedisUrl } from '../../api/test/helpers/test-env.ts';
 
 /**
  * The whole stack for browser tests. It reuses the integration-test settings (same throwaway
@@ -29,6 +31,9 @@ export const E2E_ENV: Readonly<Record<string, string>> = {
   ADMIN_ORIGIN,
   DATABASE_URL: onTestServer(E2E_DATABASE),
   S3_BUCKET: E2E_BUCKET,
+  REDIS_URL: testRedisUrl(process.env),
+  // A fresh namespace each run, like the fresh database: no counters or tickets from the last one.
+  REDIS_KEY_PREFIX: `e2e:${randomUUID()}:`,
   SEED_DEMO_PASSWORD: DEMO_PASSWORD,
   // Set explicitly, so a developer's .env (which Vite also reads) cannot point the admin elsewhere.
   VITE_CHAT_URL: '',

@@ -1,4 +1,4 @@
-# Render Blueprint: the API (Docker, free plan) and its Postgres. Secrets marked `sync: false` are
+# Render Blueprint: the API (Docker, free plan), its Postgres and its Key Value (Redis-compatible). Secrets marked `sync: false` are
 # entered in the Render dashboard when the Blueprint is first applied; nothing secret lives here.
 services:
   - type: web
@@ -26,6 +26,11 @@ services:
         fromDatabase:
           name: ers-db
           property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: ers-kv
+          property: connectionString
       - key: SESSION_SECRET
         generateValue: true
       # Cloudflare R2 (S3-compatible): endpoint https://<account>.r2.cloudflarestorage.com
@@ -49,6 +54,17 @@ services:
         sync: false
       - key: GITHUB_CLIENT_SECRET
         sync: false
+
+  # Short-lived state only: every key has a TTL, so losing it on a free-plan restart costs users at
+  # most a new chat ticket, a reset failure counter and an empty chat history.
+  - type: keyvalue
+    name: ers-kv
+    plan: free
+    # Reachable only from Render services, not from the internet.
+    ipAllowList: []
+    # Never evict: dropping a login failure counter or a rate limit would quietly lift the limit.
+    # When full, writes fail and the API answers 503 until keys expire.
+    maxmemoryPolicy: noeviction
 
 databases:
   - name: ers-db

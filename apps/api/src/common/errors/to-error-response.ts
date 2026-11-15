@@ -4,6 +4,7 @@ import { HttpException } from '@nestjs/common';
 import { DomainError } from './domain-error.js';
 import { codeForHttpStatus, ERROR_STATUS, SERVER_ERROR_MIN_STATUS } from './error-status.js';
 import { translatePrismaError } from './prisma-errors.js';
+import { translateRedisError } from './redis-errors.js';
 
 const CLIENT_ERROR_MIN_STATUS = 400;
 const INTERNAL_MESSAGE = 'Something went wrong. Please try again later.';
@@ -75,7 +76,7 @@ function build(
 
 /** Turns any thrown value into the public error body. Never exposes internals of 5xx errors. */
 export function toErrorResponse(thrown: unknown, requestId: string): ErrorResponse {
-  const exception = translatePrismaError(thrown) ?? thrown;
+  const exception = translatePrismaError(thrown) ?? translateRedisError(thrown) ?? thrown;
   if (exception instanceof DomainError) {
     const response = build(
       ERROR_STATUS[exception.code],

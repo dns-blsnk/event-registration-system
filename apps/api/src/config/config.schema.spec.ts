@@ -38,6 +38,21 @@ describe('parseConfig', () => {
       secretAccessKey: 'ers_local_only_secret',
       forcePathStyle: true,
     });
+    expect(config.redis).toEqual({ url: 'redis://localhost:6390', keyPrefix: 'ers:' });
+  });
+
+  it('accepts a TLS Redis URL and a custom key prefix', () => {
+    const config = parseConfig(
+      envWith({
+        REDIS_URL: 'rediss://user:pass@kv.example.com:6380',
+        REDIS_KEY_PREFIX: 'ers-e2e:',
+      }),
+    );
+
+    expect(config.redis).toEqual({
+      url: 'rediss://user:pass@kv.example.com:6380',
+      keyPrefix: 'ers-e2e:',
+    });
   });
 
   it('applies defaults for optional settings', () => {
@@ -109,9 +124,11 @@ describe('parseConfig', () => {
   });
 
   it('lists every missing required variable by name', () => {
-    const error = configErrorFor(envWith({ DATABASE_URL: undefined, SESSION_SECRET: undefined }));
+    const error = configErrorFor(
+      envWith({ DATABASE_URL: undefined, REDIS_URL: undefined, SESSION_SECRET: undefined }),
+    );
 
-    expect(error.variables).toEqual(['DATABASE_URL', 'SESSION_SECRET']);
+    expect(error.variables).toEqual(['DATABASE_URL', 'REDIS_URL', 'SESSION_SECRET']);
   });
 
   it('never includes variable values in the error message', () => {
@@ -135,6 +152,10 @@ describe('parseConfig', () => {
     ['AI_BASE_URL', 'ftp://ai.example.com/v1/'],
     ['AI_BASE_URL', 'not a url'],
     ['AI_REASONING_EFFORT', 'extreme'],
+    ['REDIS_URL', 'http://localhost:6379'],
+    ['REDIS_URL', 'localhost:6379'],
+    ['REDIS_KEY_PREFIX', 'has spaces'],
+    ['REDIS_KEY_PREFIX', 'x'.repeat(41)],
   ])('rejects invalid %s (%s)', (name, value) => {
     expect(configErrorFor(envWith({ [name]: value })).variables).toEqual([name]);
   });

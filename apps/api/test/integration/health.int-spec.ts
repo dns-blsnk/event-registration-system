@@ -3,8 +3,10 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { parseConfig } from '../../src/config/config.schema.js';
 import { PrismaService } from '../../src/prisma/prisma.service.js';
+import { RedisService } from '../../src/redis/redis.service.js';
 import { createTestApp } from '../helpers/create-test-app.js';
-import { DEAD_DATABASE_URL, TEST_ENV } from '../helpers/test-env.js';
+import { silentLogger } from '../helpers/silent-logger.js';
+import { DEAD_DATABASE_URL, DEAD_REDIS_URL, TEST_ENV } from '../helpers/test-env.js';
 
 import type { INestApplication } from '@nestjs/common';
 
@@ -25,7 +27,7 @@ describe('GET /api/health', () => {
 
       expect(response.body).toEqual({
         status: 'ok',
-        checks: { database: 'up' },
+        checks: { database: 'up', redis: 'up' },
         uptimeSeconds: expect.any(Number),
         version: null,
       });
@@ -58,6 +60,31 @@ describe('GET /api/health', () => {
       const response = await request(app.getHttpServer()).get('/api/health').expect(503);
 
       expect(response.body).toMatchObject({ status: 'degraded', checks: { database: 'down' } });
+    });
+  });
+
+  describe('when Redis is down', () => {
+    let app: INestApplication;
+
+    beforeAll(async () => {
+      const deadRedis = new RedisService(
+        parseConfig({ ...TEST_ENV, REDIS_URL: DEAD_REDIS_URL }),
+        silentLogger,
+      );
+      app = await createTestApp({ overrides: [{ provide: RedisService, useValue: deadRedis }] });
+    });
+
+    afterAll(async () => {
+      await app.close();
+    });
+
+    it('answers 503 so uptime checks and deploy smoke tests fail', async () => {
+      const response = await request(app.getHttpServer()).get('/api/health').expect(503);
+
+      expect(response.body).toMatchObject({
+        status: 'degraded',
+        checks: { database: 'up', redis: 'down' },
+      });
     });
   });
 });

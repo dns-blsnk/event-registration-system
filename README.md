@@ -35,6 +35,7 @@ Admin panel for events, sessions and registrations: four roles, a managed Postgr
 | API      | Nest.js 12, Prisma 7 + PostgreSQL, Socket.IO, nestjs-pino                                                         |
 | Admin    | Refine 5 + MUI 6, Vite                                                                                            |
 | Storage  | S3-compatible: SeaweedFS locally and in CI, Cloudflare R2 in production                                           |
+| Redis    | Short-lived shared state with TTLs: Redis locally and in CI, Render Key Value in production                       |
 | AI       | Gemini (Google AI Studio free tier) through the OpenAI-compatible API, streamed; any such API works               |
 | Tests    | Vitest; API integration tests against a real Postgres, React Testing Library for the admin, Playwright end to end |
 | Hosting  | API and Postgres on Render, admin on Vercel (free plans)                                                          |
@@ -46,7 +47,7 @@ Requires Node 24 (`.nvmrc`), pnpm 10 (`corepack enable`) and Docker.
 ```sh
 pnpm install                 # also generates the Prisma client and builds packages/shared
 cp .env.example .env         # then fill in SESSION_SECRET and SEED_DEMO_PASSWORD
-docker compose up -d         # postgres (5442), postgres-test (5443), S3 (8333) and its bucket
+docker compose up -d         # postgres (5442), postgres-test (5443), Redis (6389), redis-test (6390), S3 (8333) and its bucket
 pnpm db:reset                # apply migrations and load demo data (asks nothing, wipes the dev database)
 pnpm dev                     # API on http://localhost:3000, admin on http://localhost:5173
 ```
@@ -98,10 +99,10 @@ In production the socket connects to the API host directly (`VITE_CHAT_URL`), be
 
 ## Deployment
 
-CI (`.github/workflows/ci.yml`) runs lint, format check, typecheck, all tests against Postgres and S3 containers, the build and the Playwright browser tests on pushes to `main` and `dev` and on every pull request. Deploy (`.github/workflows/deploy.yml`) runs only after a green CI run of a push to `main`:
+CI (`.github/workflows/ci.yml`) runs lint, format check, typecheck, all tests against Postgres, Redis and S3 containers, the build and the Playwright browser tests on pushes to `main` and `dev` and on every pull request. Deploy (`.github/workflows/deploy.yml`) runs only after a green CI run of a push to `main`:
 
 1. It asks Render to deploy that exact commit.
-2. It waits until `/api/health` reports that commit with the database up.
+2. It waits until `/api/health` reports that commit with the database and Redis up.
 3. It deploys the admin to Vercel.
 4. It checks that the admin and its `/api` rewrite answer.
 
@@ -109,7 +110,7 @@ Until the deploy settings exist, the workflow skips itself. If only some setting
 
 ### One-time setup
 
-1. **Render.** Create a Blueprint from `render.yaml`. It creates the `ers-api` Docker service (migrations run on start) and the `ers-db` Postgres. Then fill in the values marked `sync: false`:
+1. **Render.** Create a Blueprint from `render.yaml`. It creates the `ers-api` Docker service (migrations run on start), the `ers-db` Postgres and the `ers-kv` Key Value (Redis-compatible, reachable only from Render services). Then fill in the values marked `sync: false`:
    - `ADMIN_ORIGIN`: the Vercel URL;
    - `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`: Cloudflare R2, a private bucket and an API token limited to it;
    - optionally `AI_API_KEY`, `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET`.
@@ -129,6 +130,7 @@ Until the deploy settings exist, the workflow skips itself. If only some setting
 - **Free Render plan.**
   - The Postgres database expires after about 30 days, so a lasting deployment needs a paid database.
   - An idle instance sleeps; the first request after a pause can time out at the Vercel proxy and needs a retry.
+  - The Key Value instance keeps nothing on disk and Render may restart it at any time. Every key there is short-lived, so a restart only costs a new chat ticket, reset login failure counters and rate limits, and an empty chat history.
 - **"Almost full" filter.** It runs two queries rather than one. A single query would need a generated column, and the 90% threshold would then live both in a migration and in `packages/shared`.
 - **Waitlist after a conflict.** A waitlisted customer skipped because of an overlapping booking is promoted at the next change in that session, not immediately when the conflict disappears.
 - **GitHub and existing accounts.** GitHub sign-in never links to an existing account with the same email, because sign-up does not verify emails. An existing user cannot add GitHub to their account.

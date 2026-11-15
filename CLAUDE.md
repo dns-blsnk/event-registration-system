@@ -6,6 +6,7 @@ Take-home project: admin panel for events, sessions and registrations with roles
 
 - pnpm workspaces: `apps/api` (Nest.js), `apps/admin` (Refine + MUI + Vite), `packages/shared`
 - Prisma 7 + PostgreSQL, S3-compatible storage (SeaweedFS locally and in CI, Cloudflare R2 in prod)
+- Redis for short-lived shared state (chat tickets and history, login failure counters, rate limits); every key has a TTL. Render Key Value in prod
 - Auth: server-side sessions in an HttpOnly cookie + CSRF token header; REST goes through Vercel rewrites, Socket.IO connects to the API directly with a one-time ticket
 - Logs: nestjs-pino to stdout + `AppLog` table (7 days) shown in the admin
 
@@ -13,7 +14,7 @@ Take-home project: admin panel for events, sessions and registrations with roles
 
 ```
 pnpm install
-docker compose up -d        # postgres (5442), postgres-test (5443), s3 (8333)
+docker compose up -d        # postgres (5442), postgres-test (5443), redis (6389), redis-test (6390), s3 (8333)
 pnpm db:reset               # migrate + seed
 pnpm dev                    # api + admin
 pnpm lint | lint:fix | format | typecheck | test | build
