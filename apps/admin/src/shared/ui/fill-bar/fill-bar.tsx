@@ -26,11 +26,14 @@ export function FillBar({
   rate,
   label,
   name,
+  showsLabel = true,
 }: {
   rate: number;
   label: string;
   /** What is measured, e.g. "Seats left", for screen readers. */
   name: string;
+  /** Off where the same number is already shown next to the bar; screen readers still get it. */
+  showsLabel?: boolean;
 }): React.JSX.Element {
   const value = toPercent(Math.min(Math.max(rate, 0), 1));
   return (
@@ -44,9 +47,11 @@ export function FillBar({
         sx={{ flexGrow: 1, height: 6, borderRadius: 3 }}
       />
       {/* The bar already announces it (aria-valuetext); read once, not twice. */}
-      <Typography variant="body2" aria-hidden sx={{ minWidth: 56, textAlign: 'right' }}>
-        {label}
-      </Typography>
+      {showsLabel && (
+        <Typography variant="body2" aria-hidden sx={{ minWidth: 56, textAlign: 'right' }}>
+          {label}
+        </Typography>
+      )}
     </Box>
   );
 }

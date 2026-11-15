@@ -51,7 +51,7 @@ export function EventShow(): React.JSX.Element {
             city={event.city}
             venue={event.venue}
             organizerName={event.organizer.name}
-            fillRate={event.fillRate}
+            seats={event}
           />
           <EventDescription label={EVENT_FIELDS.description.label} text={event.description}>
             <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" alignItems="center">

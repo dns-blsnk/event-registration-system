@@ -18,7 +18,17 @@ interface EventFactsProps {
   venue: string;
   organizerName: string;
   /** Shown to staff only; customers see seats per session instead. */
-  fillRate?: number;
+  seats?: { fillRate: number; confirmedCount: number; capacity: number };
+}
+
+function seatsTaken({
+  confirmedCount,
+  capacity,
+}: {
+  confirmedCount: number;
+  capacity: number;
+}): string {
+  return `${String(confirmedCount)} of ${String(capacity)} seats`;
 }
 
 /** When, where and by whom an event is held (and, for staff, how full it is), as fact cards. */
@@ -28,31 +38,30 @@ export function EventFacts({
   city,
   venue,
   organizerName,
-  fillRate,
+  seats,
 }: EventFactsProps): React.JSX.Element {
   return (
     <Stack direction="row" spacing={2} useFlexGap flexWrap="wrap">
-      <FactCard icon={<EventIcon />} label={EVENT_PAGE_LABELS.when}>
-        {formatDateTime(startsAt)}
-        <Typography variant="body2" color="text.secondary">
-          {EVENT_PAGE_LABELS.until} {formatDateTime(endsAt)}
-        </Typography>
-      </FactCard>
-      <FactCard icon={<PlaceIcon />} label={EVENT_PAGE_LABELS.where}>
-        {city}
-        <Typography variant="body2" color="text.secondary">
-          {venue}
-        </Typography>
-      </FactCard>
-      <FactCard icon={<PersonIcon />} label={EVENT_PAGE_LABELS.organizer}>
-        {organizerName}
-      </FactCard>
-      {fillRate !== undefined && (
-        <FactCard icon={<TrendingUpIcon />} label={EVENT_FIELDS.fillRate.label}>
+      <FactCard
+        icon={<EventIcon />}
+        label={EVENT_PAGE_LABELS.when}
+        value={formatDateTime(startsAt)}
+        detail={`${EVENT_PAGE_LABELS.until} ${formatDateTime(endsAt)}`}
+      />
+      <FactCard icon={<PlaceIcon />} label={EVENT_PAGE_LABELS.where} value={city} detail={venue} />
+      <FactCard icon={<PersonIcon />} label={EVENT_PAGE_LABELS.organizer} value={organizerName} />
+      {seats !== undefined && (
+        <FactCard
+          icon={<TrendingUpIcon />}
+          label={EVENT_FIELDS.fillRate.label}
+          value={formatPercent(seats.fillRate)}
+          detail={seatsTaken(seats)}
+        >
           <FillBar
-            rate={fillRate}
-            label={formatPercent(fillRate)}
+            rate={seats.fillRate}
+            label={formatPercent(seats.fillRate)}
             name={EVENT_FIELDS.fillRate.label}
+            showsLabel={false}
           />
         </FactCard>
       )}
