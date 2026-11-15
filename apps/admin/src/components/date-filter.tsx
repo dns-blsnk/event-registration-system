@@ -1,7 +1,8 @@
 import TextField from '@mui/material/TextField';
 import dayjs from 'dayjs';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
+import { ClearAdornment } from './clear-adornment';
 import { EMPTY_DATE_SX } from './date-input';
 import { filterText } from './filter-form';
 
@@ -61,6 +62,8 @@ export function DateFilter({
     setBlank(day === '');
   }
   const limitDay = limit === undefined || limit === '' ? undefined : instantToDay(limit);
+  // Clearing remounts the field (see the key); keyboard focus moves into the new one.
+  const isRefocusing = useRef(false);
   return (
     <TextField
       // Keyed by the active value, so the field follows filters changed elsewhere (Back, clearing).
@@ -74,6 +77,11 @@ export function DateFilter({
       label={description.label}
       helperText={description.help}
       defaultValue={day}
+      inputRef={(input: HTMLInputElement | null) => {
+        if (input === null || !isRefocusing.current) return;
+        isRefocusing.current = false;
+        input.focus();
+      }}
       onBlur={(event) => {
         const picked = event.target.value;
         if (picked === day || (picked !== '' && !isDay(picked))) return;
@@ -87,6 +95,18 @@ export function DateFilter({
       }}
       size="small"
       slotProps={{
+        input: {
+          endAdornment: (
+            <ClearAdornment
+              label={description.label}
+              isHidden={day === ''}
+              onClear={() => {
+                isRefocusing.current = true;
+                onChange([{ field: name, operator: 'eq', value: undefined }]);
+              }}
+            />
+          ),
+        },
         inputLabel: { shrink: true },
         htmlInput: bound === 'start' ? { max: limitDay } : { min: limitDay },
       }}

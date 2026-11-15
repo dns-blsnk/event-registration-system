@@ -44,8 +44,17 @@ function ownerLabel(user: ReferenceOption): string {
 export function EventFilters({ filters, onChange }: EventFiltersProps): React.JSX.Element {
   // Only admins see other owners' events, and listing users to pick from is theirs alone too.
   const { data: usersAccess } = useCan({ resource: Resource.USERS, action: Action.LIST });
+  const canPickOwner = usersAccess?.can === true;
   return (
     <SearchFilterForm
+      // Only filters with a control on screen; "Clear filters" never resets one the viewer cannot see.
+      otherFields={[
+        'status',
+        'tagId',
+        'startsFrom',
+        'startsTo',
+        ...(canPickOwner ? ['organizerId'] : []),
+      ]}
       textFilters={[
         { name: 'q', description: EVENT_LIST_CONTROLS.search },
         { name: 'city', description: EVENT_LIST_CONTROLS.city },
@@ -85,7 +94,7 @@ export function EventFilters({ filters, onChange }: EventFiltersProps): React.JS
         filters={filters}
         onChange={onChange}
       />
-      {usersAccess?.can === true && (
+      {canPickOwner && (
         <ReferenceFilter
           name="organizerId"
           description={EVENT_LIST_CONTROLS.organizer}

@@ -1,7 +1,9 @@
+import Button from '@mui/material/Button';
 import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import { getDefaultFilter, type CrudFilters } from '@refinedev/core';
+import { useState } from 'react';
 
 import { SELECT_LABEL_PROPS } from './forms';
 import { SearchField } from './search-field';
@@ -87,6 +89,11 @@ export interface TextFilter {
 
 interface SearchFilterFormProps {
   textFilters: readonly TextFilter[];
+  /**
+   * The URL fields of the controls passed as children, so "Clear filters" resets them too. Filters
+   * the page fixes itself (a session's own registrations) are not listed and never cleared.
+   */
+  otherFields?: readonly string[];
   filters: CrudFilters;
   onChange: (filters: CrudFilters) => void;
   /** Controls after the search boxes, such as pick-one filters. */
@@ -99,10 +106,13 @@ interface SearchFilterFormProps {
  */
 export function SearchFilterForm({
   textFilters,
+  otherFields = [],
   filters,
   onChange,
   children,
 }: SearchFilterFormProps): React.JSX.Element {
+  // Bumped by "Clear filters": the search boxes start over, dropping a search still waiting to apply.
+  const [resetCount, setResetCount] = useState(0);
   return (
     <Stack
       direction={{ xs: 'column', sm: 'row' }}
@@ -114,7 +124,7 @@ export function SearchFilterForm({
     >
       {textFilters.map((filter) => (
         <SearchField
-          key={filter.name}
+          key={`${filter.name}:${String(resetCount)}`}
           name={filter.name}
           description={filter.description}
           value={filterText(filter.name, filters)}
@@ -124,7 +134,39 @@ export function SearchFilterForm({
         />
       ))}
       {children}
+      <ClearFiltersButton
+        fields={[...textFilters.map((filter) => filter.name), ...otherFields]}
+        filters={filters}
+        onChange={(cleared) => {
+          setResetCount((count) => count + 1);
+          onChange(cleared);
+        }}
+      />
     </Stack>
+  );
+}
+
+/** Resets every filter of the form at once; shown only while at least one is set. */
+function ClearFiltersButton({
+  fields,
+  filters,
+  onChange,
+}: {
+  fields: readonly string[];
+  filters: CrudFilters;
+  onChange: (filters: CrudFilters) => void;
+}): React.JSX.Element | null {
+  if (fields.every((field) => filterText(field, filters) === '')) return null;
+  return (
+    <Button
+      onClick={() => {
+        onChange(fields.map((field) => ({ field, operator: 'eq', value: undefined })));
+      }}
+      // Level with the fields, not with their helper texts.
+      sx={{ alignSelf: { sm: 'flex-start' }, mt: { sm: 0.5 } }}
+    >
+      Clear filters
+    </Button>
   );
 }
 

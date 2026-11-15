@@ -19,6 +19,7 @@ interface SessionFiltersProps {
 export function SessionFilters({ filters, onChange }: SessionFiltersProps): React.JSX.Element {
   return (
     <SearchFilterForm
+      otherFields={[ALMOST_FULL_FILTER.field]}
       textFilters={[{ name: 'q', description: SESSION_LIST_CONTROLS.search }]}
       filters={filters}
       onChange={onChange}

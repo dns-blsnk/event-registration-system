@@ -67,6 +67,15 @@ describe('SearchField', () => {
     expect(screen.queryByRole('button', { name: 'Clear Search' })).not.toBeInTheDocument();
   });
 
+  it('keeps room for the clear button while empty, so the box does not change width', () => {
+    renderField();
+
+    // Laid out but invisible, so screen readers and the tab order skip it too.
+    const clear = document.querySelector('button[aria-label="Clear Search"]');
+    expect(clear).not.toBeNull();
+    expect(clear).not.toBeVisible();
+  });
+
   it('removes the filter when the text is deleted', async () => {
     const { onApply } = renderField('react');
 

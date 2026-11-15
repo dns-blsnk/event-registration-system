@@ -85,6 +85,7 @@ export function AppLogList(): React.JSX.Element {
   return (
     <List {...FILL_LIST_PROPS} title="Logs">
       <SearchFilterForm
+        otherFields={['category', 'level']}
         textFilters={[
           { name: 'q', description: APP_LOG_LIST_CONTROLS.search },
           { name: 'requestId', description: APP_LOG_FIELDS.requestId },

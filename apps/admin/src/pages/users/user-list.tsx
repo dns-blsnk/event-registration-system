@@ -96,6 +96,7 @@ export function UserList(): React.JSX.Element {
       }
     >
       <SearchFilterForm
+        otherFields={['role']}
         textFilters={[{ name: 'q', description: USER_LIST_CONTROLS.search }]}
         filters={filters}
         onChange={onFilters}

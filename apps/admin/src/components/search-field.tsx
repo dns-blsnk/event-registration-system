@@ -1,15 +1,13 @@
-import CloseIcon from '@mui/icons-material/Close';
-import IconButton from '@mui/material/IconButton';
-import InputAdornment from '@mui/material/InputAdornment';
 import TextField from '@mui/material/TextField';
 import { useRef, useState } from 'react';
 
+import { ClearAdornment } from './clear-adornment';
 import { useDebouncedCallback } from './use-debounced-callback';
 
 import type { FieldDescription } from '@ers/shared';
 
-/** Long enough to skip the keystrokes of one word, short enough to feel immediate. */
-export const SEARCH_DEBOUNCE_MS = 300;
+/** Long enough to skip the keystrokes of a word typed at an unhurried pace, short enough to feel prompt. */
+export const SEARCH_DEBOUNCE_MS = 500;
 
 /** A trimmed value; empty means "remove this filter". */
 function filterValue(text: string): string | undefined {
@@ -74,24 +72,18 @@ export function SearchField({
       }}
       slotProps={{
         input: {
-          endAdornment:
-            text === '' ? undefined : (
-              <InputAdornment position="end">
-                <IconButton
-                  size="small"
-                  edge="end"
-                  aria-label={`Clear ${description.label}`}
-                  onClick={() => {
-                    setText('');
-                    applyNow('');
-                    // The button disappears with the text; keyboard focus stays in the box.
-                    inputRef.current?.focus();
-                  }}
-                >
-                  <CloseIcon fontSize="small" />
-                </IconButton>
-              </InputAdornment>
-            ),
+          endAdornment: (
+            <ClearAdornment
+              label={description.label}
+              isHidden={text === ''}
+              onClear={() => {
+                setText('');
+                applyNow('');
+                // The button hides with the text; keyboard focus stays in the box.
+                inputRef.current?.focus();
+              }}
+            />
+          ),
         },
       }}
     />

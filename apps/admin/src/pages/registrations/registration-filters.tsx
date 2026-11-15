@@ -21,6 +21,7 @@ export function RegistrationFilters({
 }: RegistrationFiltersProps): React.JSX.Element {
   return (
     <SearchFilterForm
+      otherFields={['status']}
       textFilters={[{ name: 'q', description: REGISTRATION_LIST_CONTROLS.search }]}
       filters={filters}
       onChange={onChange}
