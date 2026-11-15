@@ -11,6 +11,7 @@ import { useGetIdentity } from '@refinedev/core';
 import { CreateButton, DeleteButton, EditButton, List } from '@refinedev/mui';
 import { useMemo, useState } from 'react';
 
+import { emailColumn } from '../../components/email-column';
 import {
   applyFiltersFromFirstPage,
   SearchFilterForm,
@@ -28,7 +29,7 @@ type DialogState = { kind: 'closed' } | { kind: 'create' } | { kind: 'edit'; use
 
 const BASE_COLUMNS: GridColDef<UserListItem>[] = [
   { field: 'name', headerName: USER_FIELDS.name.label, flex: 1, minWidth: 160 },
-  { field: 'email', headerName: USER_FIELDS.email.label, flex: 1, minWidth: 200 },
+  emailColumn({ field: 'email', headerName: USER_FIELDS.email.label, emailOf: (row) => row.email }),
   {
     field: 'role',
     headerName: USER_FIELDS.role.label,

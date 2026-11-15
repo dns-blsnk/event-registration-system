@@ -31,7 +31,11 @@ describe('CustomerList', () => {
     renderAdminPage({ path: '/customers', route: '/customers', element: <CustomerList /> });
 
     expect(await screen.findByText('Ann Customer')).toBeInTheDocument();
-    expect(screen.getByText('ann@demo.test')).toBeInTheDocument();
+    // The address opens the viewer's mail app.
+    expect(screen.getByRole('link', { name: 'ann@demo.test' })).toHaveAttribute(
+      'href',
+      'mailto:ann@demo.test',
+    );
     expect(screen.getByText('4')).toBeInTheDocument();
   });
 

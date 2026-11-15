@@ -71,7 +71,11 @@ describe('RegistrationList', () => {
     mockHttp([signedIn, list]);
     renderList();
 
-    expect(await screen.findByText('Ann Customer <r1@demo.test>')).toBeInTheDocument();
+    expect(await screen.findByText('Ann Customer')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'r1@demo.test' })).toHaveAttribute(
+      'href',
+      'mailto:r1@demo.test',
+    );
     expect(screen.getAllByText('Kyiv Frontend Summit')).toHaveLength(2);
     expect(screen.getAllByText('Confirmed')).toHaveLength(2);
   });
@@ -79,7 +83,7 @@ describe('RegistrationList', () => {
   it('filters by status on the server', async () => {
     const { calls } = mockHttp([signedIn, list, list]);
     renderList();
-    await screen.findByText('Ann Customer <r1@demo.test>');
+    await screen.findByText('Ann Customer');
 
     await userEvent.click(screen.getByRole('combobox', { name: 'Status' }));
     await userEvent.click(await screen.findByRole('option', { name: 'Waitlisted' }));
@@ -262,7 +266,7 @@ describe('RegistrationList', () => {
   it('offers bulk actions only with a selection', async () => {
     mockHttp([signedIn, list]);
     renderList();
-    await screen.findByText('Ann Customer <r1@demo.test>');
+    await screen.findByText('Ann Customer');
 
     expect(screen.getByRole('button', { name: 'Mark attended' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Cancel bookings' })).toBeDisabled();

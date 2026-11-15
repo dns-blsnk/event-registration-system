@@ -84,7 +84,8 @@ describe('SessionShow', () => {
   it('lists only this session’s registrations, without repeating event and session', async () => {
     const { calls } = renderShow();
 
-    expect(await screen.findByText('Ann Customer <ann@demo.test>')).toBeInTheDocument();
+    expect(await screen.findByText('Ann Customer')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'ann@demo.test' })).toBeInTheDocument();
     const request = calls.find((call) => call.url?.startsWith('/registrations'));
     expect(String(request?.url)).toContain('sessionId=s1');
     expect(screen.queryByRole('columnheader', { name: 'Session' })).not.toBeInTheDocument();

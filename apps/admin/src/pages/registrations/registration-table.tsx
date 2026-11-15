@@ -3,6 +3,7 @@ import { type GridColDef, type GridRowSelectionModel } from '@mui/x-data-grid';
 import { useCan } from '@refinedev/core';
 import { useState } from 'react';
 
+import { emailColumn } from '../../components/email-column';
 import { applyFiltersFromFirstPage } from '../../components/filter-form';
 import { formatDateTime } from '../../components/format';
 import { ListGrid, useListGrid } from '../../components/list-grid';
@@ -19,8 +20,14 @@ const columns: GridColDef<RegistrationListItem>[] = [
     flex: 1,
     minWidth: 200,
     sortable: false,
-    valueGetter: (_value, row) => `${row.customer.name} <${row.customer.email}>`,
+    valueGetter: (_value, row) => row.customer.name,
   },
+  emailColumn({
+    field: 'customerEmail',
+    headerName: REGISTRATION_FIELDS.customerEmail.label,
+    emailOf: (row) => row.customer.email,
+    isSortable: false,
+  }),
   {
     field: 'event',
     headerName: REGISTRATION_FIELDS.event.label,

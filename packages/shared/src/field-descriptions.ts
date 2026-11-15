@@ -99,6 +99,7 @@ export const EVENT_STATUS_LABELS: Readonly<Record<EventStatus, string>> = {
 
 export const REGISTRATION_FIELDS = {
   customer: { label: 'Customer', help: 'Who booked the seat.' },
+  customerEmail: { label: 'Email', help: 'The email of the customer who booked.' },
   session: { label: 'Session', help: 'The session the seat is in.' },
   event: { label: 'Event', help: 'The event the session belongs to.' },
   status: {

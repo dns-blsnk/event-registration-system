@@ -2,6 +2,7 @@ import { CUSTOMER_FIELDS, CUSTOMER_LIST_CONTROLS, type CustomerListItem } from '
 import { type GridColDef } from '@mui/x-data-grid';
 import { List } from '@refinedev/mui';
 
+import { emailColumn } from '../../components/email-column';
 import { applyFiltersFromFirstPage, SearchFilterForm } from '../../components/filter-form';
 import { formatDateTime } from '../../components/format';
 import { ListGrid, useListGrid } from '../../components/list-grid';
@@ -9,7 +10,11 @@ import { FILL_LIST_PROPS } from '../../components/page-fill';
 
 const columns: GridColDef<CustomerListItem>[] = [
   { field: 'name', headerName: CUSTOMER_FIELDS.name.label, flex: 1, minWidth: 160 },
-  { field: 'email', headerName: CUSTOMER_FIELDS.email.label, flex: 1, minWidth: 200 },
+  emailColumn({
+    field: 'email',
+    headerName: CUSTOMER_FIELDS.email.label,
+    emailOf: (row) => row.email,
+  }),
   {
     field: 'createdAt',
     headerName: CUSTOMER_FIELDS.createdAt.label,
