@@ -4,7 +4,12 @@ import type { RegistrationListItem } from '@ers/shared';
 export const REGISTRATION_INCLUDE = {
   customer: { select: { id: true, name: true, email: true } },
   session: {
-    select: { id: true, title: true, startsAt: true, event: { select: { id: true, title: true } } },
+    select: {
+      id: true,
+      title: true,
+      startsAt: true,
+      event: { select: { id: true, title: true, status: true } },
+    },
   },
 } satisfies Prisma.RegistrationInclude;
 

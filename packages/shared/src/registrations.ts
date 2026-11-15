@@ -1,4 +1,4 @@
-import { RegistrationStatus } from './domain.js';
+import { RegistrationStatus, type EventStatus } from './domain.js';
 
 import type { ErrorCode } from './errors.js';
 
@@ -22,7 +22,7 @@ export interface RegistrationListItem {
   cancelledAt: string | null;
   customer: { id: string; name: string; email: string };
   session: { id: string; title: string; startsAt: string };
-  event: { id: string; title: string };
+  event: { id: string; title: string; status: EventStatus };
 }
 
 /** Statuses staff can set in bulk: cancel bookings, or record who came. */

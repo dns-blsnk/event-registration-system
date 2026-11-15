@@ -64,7 +64,7 @@ describe('staff registrations API', () => {
           status: 'CONFIRMED',
           customer: { id: customer.id, name: 'Olena Booker', email: customer.email },
           session: expect.objectContaining({ id: session.id }),
-          event: { id: event.id, title: event.title },
+          event: { id: event.id, title: event.title, status: event.status },
         }),
       ]);
     });
