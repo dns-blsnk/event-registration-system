@@ -209,6 +209,9 @@ export default tseslint.config(
       '**/test/helpers/global-setup.ts',
       '**/*.config.ts',
       '**/prisma.config.ts',
+      // Browser tests start the whole stack and hand it its environment.
+      'apps/e2e/test/e2e-env.ts',
+      'apps/e2e/test/prepare-database.ts',
     ],
     rules: { 'no-restricted-syntax': 'off', 'no-restricted-imports': 'off' },
   },

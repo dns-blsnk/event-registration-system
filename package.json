@@ -14,6 +14,7 @@
     "typecheck": "pnpm codegen && pnpm -r --if-present typecheck",
     "test": "pnpm codegen && pnpm -r --if-present test",
     "build": "pnpm -r --if-present build",
+    "test:e2e": "pnpm --filter @ers/api build && pnpm --filter @ers/e2e test:e2e",
     "prepare": "husky && pnpm codegen",
     "db:reset": "pnpm --filter @ers/api db:reset",
     "db:seed": "pnpm --filter @ers/api db:seed",
