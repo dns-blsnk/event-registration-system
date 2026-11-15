@@ -1,5 +1,8 @@
 import { REGISTRATION_STATUS_LABELS, type RegistrationStatus } from '@ers/shared';
-import Chip from '@mui/material/Chip';
+
+import { REGISTRATION_STATUS_COLORS } from '../theme/status-colors';
+
+import { StatusChip } from './status-chip';
 
 /** The one way a registration status is shown. */
 export function RegistrationStatusChip({
@@ -11,10 +14,10 @@ export function RegistrationStatusChip({
   isOwn?: boolean;
 }): React.JSX.Element {
   return (
-    <Chip
-      size="small"
-      color={isOwn ? 'primary' : 'default'}
+    <StatusChip
       label={REGISTRATION_STATUS_LABELS[status]}
+      color={REGISTRATION_STATUS_COLORS[status]}
+      emphasis={isOwn}
     />
   );
 }

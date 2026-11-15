@@ -55,7 +55,7 @@ const columns: GridColDef<MyRegistration>[] = [
     sortable: false,
     renderCell: ({ row }) => (
       <Stack direction="row" spacing={1} alignItems="center" sx={{ height: '100%' }}>
-        <RegistrationStatusChip status={row.status} isOwn />
+        <RegistrationStatusChip status={row.status} />
         {row.waitlistPosition !== null && <span>#{String(row.waitlistPosition)}</span>}
       </Stack>
     ),
