@@ -28,6 +28,17 @@ export interface AuthResponse {
   csrfToken: string;
 }
 
+/** API paths of the sign-in providers, below the /api prefix. */
+export const AUTH_PROVIDER_PATHS = {
+  providers: '/auth/providers',
+  /** Opened as a page, not called with fetch: the API redirects the browser on to GitHub. */
+  github: '/auth/github',
+  githubCallback: '/auth/github/callback',
+} as const;
+
+/** The admin's sign-in page, where the API sends the browser back after a failed GitHub sign-in. */
+export const LOGIN_PAGE_PATH = '/login';
+
 /** What `GET /api/auth/providers` returns: which extra sign-in methods are turned on. */
 export interface AuthProviders {
   github: boolean;

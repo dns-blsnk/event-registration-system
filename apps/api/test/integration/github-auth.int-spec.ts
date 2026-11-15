@@ -1,6 +1,11 @@
 import { randomUUID } from 'node:crypto';
 
-import { ErrorCode, GITHUB_SIGN_IN_ERROR_PARAM, NAME_MAX_LENGTH } from '@ers/shared';
+import {
+  AUTH_PROVIDER_PATHS,
+  ErrorCode,
+  GITHUB_SIGN_IN_ERROR_PARAM,
+  NAME_MAX_LENGTH,
+} from '@ers/shared';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
@@ -16,7 +21,7 @@ import { createUser } from '../helpers/factories.js';
 import type { INestApplication } from '@nestjs/common';
 
 const ADMIN = 'http://localhost:5173';
-const CALLBACK = '/api/auth/github/callback';
+const CALLBACK = `/api${AUTH_PROVIDER_PATHS.githubCallback}`;
 const STATE_COOKIE = 'github_oauth';
 
 /** Stands in for GitHub: hands out whatever profile the test sets, or fails like GitHub would. */

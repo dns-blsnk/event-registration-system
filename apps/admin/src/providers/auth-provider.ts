@@ -1,3 +1,4 @@
+import { LOGIN_PAGE_PATH } from '@ers/shared';
 import { HttpStatusCode } from 'axios';
 
 import { apiErrorOf, messageOf, statusOf } from '../api/errors';
@@ -6,7 +7,7 @@ import { http, ME_PATH, onSessionRefreshed, setCsrfToken } from '../api/http';
 import type { AuthResponse, PublicUser } from '@ers/shared';
 import type { AuthProvider } from '@refinedev/core';
 
-export const LOGIN_PATH = '/login';
+export const LOGIN_PATH = LOGIN_PAGE_PATH;
 export const REGISTER_PATH = '/register';
 export const HOME_PATH = '/';
 
