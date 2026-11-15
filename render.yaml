@@ -1,0 +1,54 @@
+# Render Blueprint: the API (Docker, free plan) and its Postgres. Secrets marked `sync: false` are
+# entered in the Render dashboard when the Blueprint is first applied; nothing secret lives here.
+services:
+  - type: web
+    name: ers-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    # Deploys come from .github/workflows/deploy.yml after CI is green on main, not from every push.
+    autoDeploy: false
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: info
+      # Browser -> Vercel rewrite -> Render's proxy -> API: two proxies add X-Forwarded-For entries.
+      # A client calling the onrender.com URL directly can forge the first entry; the login lockout
+      # also counts failures per account, so that only weakens the per-IP limits.
+      - key: TRUST_PROXY_HOPS
+        value: '2'
+      - key: ADMIN_ORIGIN
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ers-db
+          property: connectionString
+      - key: SESSION_SECRET
+        generateValue: true
+      # Cloudflare R2 (S3-compatible): endpoint https://<account>.r2.cloudflarestorage.com
+      - key: S3_ENDPOINT
+        sync: false
+      - key: S3_REGION
+        value: auto
+      - key: S3_BUCKET
+        sync: false
+      - key: S3_ACCESS_KEY_ID
+        sync: false
+      - key: S3_SECRET_ACCESS_KEY
+        sync: false
+      - key: S3_FORCE_PATH_STYLE
+        value: 'true'
+      # Optional: without a key the admin works and the help chat says it is unavailable.
+      - key: ANTHROPIC_API_KEY
+        sync: false
+
+databases:
+  - name: ers-db
+    plan: free
+    databaseName: ers
+    user: ers
+    # Reachable only from Render services, not from the internet.
+    ipAllowList: []
