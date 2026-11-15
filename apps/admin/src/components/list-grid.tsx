@@ -88,6 +88,9 @@ export function normalizeColumns<R extends GridValidRowModel>(
   }));
 }
 
+// The browser flags form fields with neither a name nor an id; the page size picker gets a name.
+const PAGINATION_PROPS = { material: { slotProps: { select: { name: 'pageSize' } } } };
+
 /**
  * The data table every list uses: server paging and sorting from Refine, filters in the page's own
  * form. With no rows there is nothing to page or sort, so those controls switch off.
@@ -96,7 +99,7 @@ export function ListGrid<R extends GridValidRowModel>(
   // Look, height and filtering are the same for every list, so callers cannot set them.
   props: Omit<DataGridProps<R>, 'sx' | 'autoHeight' | 'disableColumnFilter'>,
 ): React.JSX.Element {
-  const { columns, slots, ...rest } = props;
+  const { columns, slots, slotProps, ...rest } = props;
   const visibleColumns = useMemo(() => normalizeColumns(columns), [columns]);
   const isEmpty = rest.rowCount === 0 && rest.loading !== true;
   return (
@@ -108,6 +111,10 @@ export function ListGrid<R extends GridValidRowModel>(
       hideFooter={isEmpty}
       disableColumnSorting={isEmpty}
       slots={{ noRowsOverlay: NoRowsOverlay, ...slots }}
+      slotProps={{
+        ...slotProps,
+        basePagination: { ...slotProps?.basePagination, ...PAGINATION_PROPS },
+      }}
       sx={GRID_SX}
     />
   );

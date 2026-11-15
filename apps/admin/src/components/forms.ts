@@ -32,6 +32,12 @@ export const NEW_PASSWORD_RULES = {
   maxLength: { value: PASSWORD_MAX_LENGTH, message: PASSWORD_TOO_LONG_MESSAGE },
 };
 
+/**
+ * Label props for a select TextField. MUI points the label's `for` at the select's div, which the
+ * browser flags as a label with no field; the select is already named through `aria-labelledby`.
+ */
+export const SELECT_LABEL_PROPS = { htmlFor: undefined };
+
 /** Helper text: the error when there is one, otherwise the shared description of the field. */
 export function fieldHelp(error: { message?: string } | undefined, description: string): string {
   return error?.message ?? description;

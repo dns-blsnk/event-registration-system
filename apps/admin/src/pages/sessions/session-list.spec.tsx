@@ -94,6 +94,16 @@ describe('SessionList', () => {
     });
   });
 
+  it('names the almost full switch, so the browser flags no anonymous form field', async () => {
+    mockHttp([signedIn, sessionsRoute()]);
+    renderAdminPage({ path: '/sessions', route: '/sessions', element: <SessionList /> });
+
+    expect(await screen.findByRole('checkbox', { name: 'Almost full' })).toHaveAttribute(
+      'name',
+      'almostFull',
+    );
+  });
+
   it('searches by title, speaker or room', async () => {
     const { calls } = mockHttp([signedIn, sessionsRoute(), sessionsRoute([])]);
     renderAdminPage({ path: '/sessions', route: '/sessions', element: <SessionList /> });

@@ -102,6 +102,17 @@ describe('UserList', () => {
     });
   });
 
+  it('keeps the role label off the select box, so the browser flags no orphan label', async () => {
+    mockHttp([signedIn, users]);
+    renderList();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Add user' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Add user' });
+
+    expect(within(dialog).getByRole('combobox', { name: 'Role' })).toBeInTheDocument();
+    expect(within(dialog).getByText('Role', { selector: 'label' })).not.toHaveAttribute('for');
+  });
+
   it('refuses a short password before sending', async () => {
     const { calls } = mockHttp([signedIn, users]);
     renderList();

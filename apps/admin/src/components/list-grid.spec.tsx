@@ -35,6 +35,23 @@ describe('ListGrid', () => {
     expect(screen.queryByText(/Rows per page/)).not.toBeInTheDocument();
   });
 
+  it('names its page size picker and row checkboxes, so the browser flags no anonymous field', () => {
+    const { container } = render(
+      <ListGrid
+        rows={[{ id: '1', title: 'Keynote', seats: 4 }]}
+        rowCount={30}
+        columns={COLUMNS}
+        paginationMode="server"
+        checkboxSelection
+      />,
+    );
+
+    expect(container.querySelector('input[name="pageSize"]')).not.toBeNull();
+    for (const checkbox of screen.getAllByRole('checkbox')) {
+      expect(checkbox).toHaveAttribute('name');
+    }
+  });
+
   it('pages as usual when there are rows', () => {
     render(
       <ListGrid

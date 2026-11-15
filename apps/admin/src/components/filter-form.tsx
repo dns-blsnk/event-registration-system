@@ -3,6 +3,7 @@ import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import { getDefaultFilter, type CrudFilters } from '@refinedev/core';
 
+import { SELECT_LABEL_PROPS } from './forms';
 import { SearchField } from './search-field';
 
 import type { FieldDescription } from '@ers/shared';
@@ -40,7 +41,9 @@ export function SelectFilterField<TValue extends string>({
   return (
     <TextField
       select
+      name={name}
       label={description.label}
+      slotProps={{ inputLabel: SELECT_LABEL_PROPS }}
       value={selectedValue(name, filters, values)}
       onChange={(event) => {
         const value = event.target.value;

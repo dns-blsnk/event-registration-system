@@ -27,6 +27,7 @@ export function SessionFilters({ filters, onChange }: SessionFiltersProps): Reac
         <FormControlLabel
           control={
             <Switch
+              name={ALMOST_FULL_FILTER.field}
               color="error"
               checked={filterText(ALMOST_FULL_FILTER.field, filters) === ALMOST_FULL_FILTER.value}
               onChange={(_event, checked) => {

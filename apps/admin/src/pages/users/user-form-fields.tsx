@@ -11,7 +11,13 @@ import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import { Controller, type Control, type FieldErrors, type UseFormRegister } from 'react-hook-form';
 
-import { EMAIL_RULES, fieldHelp, NEW_PASSWORD_RULES, REQUIRED_TEXT } from '../../components/forms';
+import {
+  EMAIL_RULES,
+  fieldHelp,
+  NEW_PASSWORD_RULES,
+  REQUIRED_TEXT,
+  SELECT_LABEL_PROPS,
+} from '../../components/forms';
 
 import type { UserFormValues } from './user-form-values';
 
@@ -61,6 +67,7 @@ export function UserFormFields({
             {...field}
             select
             label={USER_FIELDS.role.label}
+            slotProps={{ inputLabel: SELECT_LABEL_PROPS }}
             helperText={fieldHelp(
               errors.role,
               isRoleLocked ? OWN_ROLE_LOCKED_HELP : USER_FIELDS.role.help,
