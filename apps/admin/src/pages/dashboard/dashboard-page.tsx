@@ -9,8 +9,9 @@ import { StaffDashboard } from './staff-dashboard';
 
 /** The home page: a dashboard for the signed-in role, so each role starts where its work is. */
 export function DashboardPage(): React.JSX.Element | null {
-  const { data: user } = useGetIdentity<PublicUser>();
-  if (user === undefined) return null;
+  // null right after sign-out or before the identity reloads after sign-in.
+  const { data: user } = useGetIdentity<PublicUser | null>();
+  if (user === undefined || user === null) return null;
   return (
     <Card sx={{ p: 3 }}>
       <Stack spacing={3}>

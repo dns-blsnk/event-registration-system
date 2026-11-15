@@ -15,7 +15,7 @@ const tags: MockRoute = { method: 'get', url: '/tags', status: 200, body: [ai] }
 function signedIn(role: Role): MockRoute {
   return {
     method: 'get',
-    url: '/auth/me',
+    url: '/auth/session',
     status: 200,
     body: { user: { id: 'u', email: 'u@demo.test', name: 'U', role }, csrfToken: 't' },
   };

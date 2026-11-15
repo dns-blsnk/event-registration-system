@@ -11,7 +11,7 @@ async function signInAs(role: Role): Promise<void> {
   mockHttp([
     {
       method: 'get',
-      url: '/auth/me',
+      url: '/auth/session',
       status: 200,
       body: { user: { id: 'u', email: 'u@demo.test', name: 'U', role }, csrfToken: 't' },
     },
@@ -32,7 +32,9 @@ describe('accessControlProvider', () => {
   });
 
   it('allows nothing before sign-in', async () => {
-    mockHttp([{ method: 'get', url: '/auth/me', status: 401 }]);
+    mockHttp([
+      { method: 'get', url: '/auth/session', status: 200, body: { user: null, csrfToken: null } },
+    ]);
 
     expect(await allowed('events', 'list')).toBe(false);
   });

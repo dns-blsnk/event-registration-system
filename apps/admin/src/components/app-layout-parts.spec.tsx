@@ -13,7 +13,7 @@ describe('admin layout', () => {
     mockHttp([
       {
         method: 'get',
-        url: '/auth/me',
+        url: '/auth/session',
         status: 200,
         body: {
           user: { id: 'a1', email: 'a@demo.test', name: 'Ada', role: 'ADMIN' },

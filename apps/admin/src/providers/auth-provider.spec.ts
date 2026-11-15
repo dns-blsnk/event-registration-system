@@ -56,19 +56,23 @@ describe('authProvider', () => {
       success: false,
       error: { name: 'Sign-in failed', message: 'Invalid email or password' },
     });
-    mockHttp([{ method: 'get', url: '/auth/me', status: 401 }]);
+    mockHttp([
+      { method: 'get', url: '/auth/session', status: 200, body: { user: null, csrfToken: null } },
+    ]);
     expect(await loadUser()).toBeUndefined();
   });
 
   it('restores the session from the cookie after a reload', async () => {
-    mockHttp([{ method: 'get', url: '/auth/me', status: 200, body: session }]);
+    mockHttp([{ method: 'get', url: '/auth/session', status: 200, body: session }]);
 
     expect(await authProvider.check({})).toEqual({ authenticated: true });
     expect(await authProvider.getPermissions?.({})).toBe('ADMIN');
   });
 
   it('sends a visitor without a session to the login page', async () => {
-    mockHttp([{ method: 'get', url: '/auth/me', status: 401 }]);
+    mockHttp([
+      { method: 'get', url: '/auth/session', status: 200, body: { user: null, csrfToken: null } },
+    ]);
 
     expect(await authProvider.check({})).toEqual({
       authenticated: false,
@@ -78,7 +82,9 @@ describe('authProvider', () => {
   });
 
   it('asks the API only once while the user is known', async () => {
-    const { calls } = mockHttp([{ method: 'get', url: '/auth/me', status: 200, body: session }]);
+    const { calls } = mockHttp([
+      { method: 'get', url: '/auth/session', status: 200, body: session },
+    ]);
 
     await authProvider.check({});
     await authProvider.check({});
@@ -105,13 +111,15 @@ describe('authProvider', () => {
   });
 
   it('forgets the user and goes to login when the API answers 401', async () => {
-    mockHttp([{ method: 'get', url: '/auth/me', status: 200, body: session }]);
+    mockHttp([{ method: 'get', url: '/auth/session', status: 200, body: session }]);
     await authProvider.check({});
 
     const result = await authProvider.onError({ response: { status: 401 }, isAxiosError: true });
 
     expect(result).toEqual({ logout: true, redirectTo: '/login' });
-    const { calls } = mockHttp([{ method: 'get', url: '/auth/me', status: 401 }]);
+    const { calls } = mockHttp([
+      { method: 'get', url: '/auth/session', status: 200, body: { user: null, csrfToken: null } },
+    ]);
     expect(await loadUser()).toBeUndefined();
     expect(calls).toHaveLength(1);
   });
@@ -123,7 +131,7 @@ describe('authProvider', () => {
   });
 
   it('stays signed in and reports the failure when logout does not reach the server', async () => {
-    mockHttp([{ method: 'get', url: '/auth/me', status: 200, body: session }]);
+    mockHttp([{ method: 'get', url: '/auth/session', status: 200, body: session }]);
     await authProvider.check({});
     mockHttp([
       {
@@ -147,7 +155,9 @@ describe('authProvider', () => {
   });
 
   it('asks the API once when several parts of the page need the user at the same time', async () => {
-    const { calls } = mockHttp([{ method: 'get', url: '/auth/me', status: 200, body: session }]);
+    const { calls } = mockHttp([
+      { method: 'get', url: '/auth/session', status: 200, body: session },
+    ]);
 
     await Promise.all([
       authProvider.check({}),
@@ -159,7 +169,7 @@ describe('authProvider', () => {
   });
 
   it('follows the user when a stale-token refresh reveals a different session', async () => {
-    mockHttp([{ method: 'get', url: '/auth/me', status: 200, body: session }]);
+    mockHttp([{ method: 'get', url: '/auth/session', status: 200, body: session }]);
     await authProvider.check({});
     const organizer: AuthResponse = {
       user: { ...session.user, id: 'u2', role: 'ORGANIZER' },

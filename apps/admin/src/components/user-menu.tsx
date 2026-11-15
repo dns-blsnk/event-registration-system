@@ -46,10 +46,11 @@ function useSafeLogout(): () => void {
  * sign-out, which used to sit at the bottom of the side menu.
  */
 export function UserMenu(): React.JSX.Element | null {
-  const { data: user, isLoading } = useGetIdentity<PublicUser>();
+  // null right after sign-out or before the identity reloads after sign-in.
+  const { data: user, isLoading } = useGetIdentity<PublicUser | null>();
   const signOut = useSafeLogout();
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
-  if (user === undefined) {
+  if (user === undefined || user === null) {
     // Without the user (it failed to load) there is still a way out.
     return isLoading ? null : (
       <IconButton color="inherit" aria-label="Logout" onClick={signOut}>

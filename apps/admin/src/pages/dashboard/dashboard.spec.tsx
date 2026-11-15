@@ -31,7 +31,7 @@ const IN_A_WEEK = new Date(Date.now() + 7 * 86_400_000).toISOString();
 function signedInAs(role: Role): MockRoute {
   return {
     method: 'get',
-    url: '/auth/me',
+    url: '/auth/session',
     status: 200,
     body: { user: { id: 'u1', email: 'u@demo.test', name: 'Una', role }, csrfToken: 't' },
   };
@@ -110,8 +110,6 @@ describe('DashboardPage', () => {
   it('unpins an event from its card', async () => {
     const { calls } = mockHttp([
       ...staffRoutes('ORGANIZER', [pinned]),
-      // The card's own pin button reads the pins again when it mounts.
-      list('/pinned-events', [pinned]),
       { method: 'delete', url: '/pinned-events/e1', status: 204 },
       list('/pinned-events', []),
     ]);

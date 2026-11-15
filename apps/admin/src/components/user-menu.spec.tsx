@@ -12,7 +12,7 @@ import type { Role } from '@ers/shared';
 function signedInAs(role: Role): MockRoute {
   return {
     method: 'get',
-    url: '/auth/me',
+    url: '/auth/session',
     status: 200,
     body: {
       user: { id: 'u1', email: 'ada@demo.test', name: 'Ada Lovelace', role },
@@ -48,7 +48,7 @@ describe('UserMenu', () => {
   });
 
   it('still offers sign-out when the user cannot be loaded', async () => {
-    mockHttp([{ method: 'get', url: '/auth/me', status: 500, body: { message: 'Down' } }]);
+    mockHttp([{ method: 'get', url: '/auth/session', status: 500, body: { message: 'Down' } }]);
     renderAdminPage({ path: '/', route: '/', element: <UserMenu /> });
 
     expect(await screen.findByRole('button', { name: 'Logout' })).toBeInTheDocument();

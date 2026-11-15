@@ -12,7 +12,7 @@ import type { AppLogDetail } from '@ers/shared';
 
 const signedIn: MockRoute = {
   method: 'get',
-  url: '/auth/me',
+  url: '/auth/session',
   status: 200,
   body: {
     user: { id: 'a1', email: 'admin@demo.test', name: 'Ada', role: 'ADMIN' },

@@ -1,58 +1,58 @@
 import CssBaseline from '@mui/material/CssBaseline';
 import GlobalStyles from '@mui/material/GlobalStyles';
 import { ThemeProvider } from '@mui/material/styles';
-import { Authenticated, CanAccess, Refine } from '@refinedev/core';
-import {
-  ErrorComponent,
-  RefineSnackbarProvider,
-  ThemedLayout,
-  useNotificationProvider,
-} from '@refinedev/mui';
-import routerProvider, {
-  CatchAllNavigate,
-  DocumentTitleHandler,
-  NavigateToResource,
-  UnsavedChangesNotifier,
-} from '@refinedev/react-router';
-import { BrowserRouter, Outlet, Route, Routes, useLocation } from 'react-router';
+import { CanAccess, Refine } from '@refinedev/core';
+import { ErrorComponent, RefineSnackbarProvider, useNotificationProvider } from '@refinedev/mui';
+import routerProvider, { CatchAllNavigate, DocumentTitleHandler } from '@refinedev/react-router';
+import { Suspense } from 'react';
+import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router';
 
-import { ChatWidget } from './chat/chat-widget';
-import { AppHeader, AppSider } from './components/app-layout-parts';
-import { AppTitle } from './components/app-title';
+import { AuthGate } from './components/auth-gate';
 import { documentTitle } from './components/brand';
 import { ErrorBoundary } from './components/error-boundary';
-import { AppLogList } from './pages/app-logs/app-log-list';
-import { AppLogShow } from './pages/app-logs/app-log-show';
 import { LoginPage } from './pages/auth/login-page';
 import { SignupPage } from './pages/auth/signup-page';
-import { CatalogList } from './pages/catalog/catalog-list';
-import { CatalogShow } from './pages/catalog/catalog-show';
-import { CustomerList } from './pages/customers/customer-list';
-import { DashboardPage } from './pages/dashboard/dashboard-page';
-import { ForbiddenPage } from './pages/errors/forbidden-page';
-import { EventCreate } from './pages/events/event-create';
-import { EventEdit } from './pages/events/event-edit';
-import { EventList } from './pages/events/event-list';
-import { EventShow } from './pages/events/event-show';
-import { MyRegistrationList } from './pages/my-registrations/my-registration-list';
-import { RegistrationList } from './pages/registrations/registration-list';
-import { SessionList } from './pages/sessions/session-list';
-import { SessionShow } from './pages/sessions/session-show';
-import { TagList } from './pages/tags/tag-list';
-import { UserList } from './pages/users/user-list';
 import { accessControlProvider } from './providers/access-control-provider';
-import { authProvider, HOME_PATH, LOGIN_PATH, REGISTER_PATH } from './providers/auth-provider';
+import {
+  authProvider,
+  hasSignedOutByChoice,
+  HOME_PATH,
+  LOGIN_PATH,
+  REGISTER_PATH,
+} from './providers/auth-provider';
 import { dataProvider } from './providers/data-provider';
 import { resources } from './resources';
+import {
+  AppLogList,
+  AppLogShow,
+  CatalogList,
+  CatalogShow,
+  CustomerList,
+  DashboardPage,
+  EventCreate,
+  EventEdit,
+  EventList,
+  EventShow,
+  ForbiddenPage,
+  MyRegistrationList,
+  RegistrationList,
+  SessionList,
+  SessionShow,
+  SignedInLayout,
+  TagList,
+  UserList,
+} from './signed-in-pages';
 import { theme } from './theme/theme';
 
-/** A page that crashes shows the error screen inside the layout; any navigation clears it. */
-function PageErrorBoundary(): React.JSX.Element {
-  const { key } = useLocation();
-  return (
-    <ErrorBoundary resetKey={key}>
-      <Outlet />
-    </ErrorBoundary>
+/**
+ * Where a visitor without a session goes. An expired session keeps the address to return to
+ * after signing in again; a sign-out by choice does not (see hasSignedOutByChoice).
+ */
+function ToSignIn(): React.JSX.Element {
+  return hasSignedOutByChoice() ? (
+    <Navigate to={LOGIN_PATH} replace />
+  ) : (
+    <CatchAllNavigate to={LOGIN_PATH} />
   );
 }
 
@@ -78,25 +78,11 @@ export function App(): React.JSX.Element {
               <Routes>
                 <Route
                   element={
-                    <Authenticated key="protected" fallback={<CatchAllNavigate to={LOGIN_PATH} />}>
-                      <ThemedLayout
-                        Title={AppTitle}
-                        Header={AppHeader}
-                        Sider={AppSider}
-                        // The page card fills the window, however few rows it shows.
-                        containerBoxProps={{ sx: { minHeight: '100dvh' } }}
-                        childrenBoxProps={{
-                          sx: {
-                            display: 'flex',
-                            flexDirection: 'column',
-                            '& > .MuiPaper-root': { flexGrow: 1 },
-                          },
-                        }}
-                      >
-                        <PageErrorBoundary />
-                        <ChatWidget />
-                      </ThemedLayout>
-                    </Authenticated>
+                    <AuthGate fallback={<ToSignIn />}>
+                      <Suspense fallback={null}>
+                        <SignedInLayout />
+                      </Suspense>
+                    </AuthGate>
                   }
                 >
                   <Route index element={<DashboardPage />} />
@@ -129,9 +115,10 @@ export function App(): React.JSX.Element {
                 </Route>
                 <Route
                   element={
-                    <Authenticated key="public" fallback={<Outlet />}>
-                      <NavigateToResource fallbackTo={HOME_PATH} />
-                    </Authenticated>
+                    <AuthGate fallback={<Outlet />} keepsFallbackWhileChecking>
+                      {/* Signed in already: every role starts on its dashboard. */}
+                      <Navigate to={HOME_PATH} replace />
+                    </AuthGate>
                   }
                 >
                   <Route path={LOGIN_PATH} element={<LoginPage />} />
@@ -139,7 +126,6 @@ export function App(): React.JSX.Element {
                 </Route>
               </Routes>
             </ErrorBoundary>
-            <UnsavedChangesNotifier />
             <DocumentTitleHandler
               handler={({ autoGeneratedTitle }) => documentTitle(autoGeneratedTitle)}
             />

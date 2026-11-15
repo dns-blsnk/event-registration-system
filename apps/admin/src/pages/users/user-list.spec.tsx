@@ -26,7 +26,7 @@ const ann: UserListItem = {
 
 const signedIn: MockRoute = {
   method: 'get',
-  url: '/auth/me',
+  url: '/auth/session',
   status: 200,
   body: { user: { id: me.id, email: me.email, name: me.name, role: me.role }, csrfToken: 't' },
 };
@@ -153,7 +153,7 @@ describe('UserList', () => {
     await userEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
 
     await waitFor(() => {
-      expect(calls.filter((call) => call.url === '/auth/me')).toHaveLength(2);
+      expect(calls.filter((call) => call.url === '/auth/session')).toHaveLength(2);
     });
     expect(bodyOf(calls.find((call) => call.method === 'patch'))).toEqual({ name: 'Ada Lovelace' });
   });

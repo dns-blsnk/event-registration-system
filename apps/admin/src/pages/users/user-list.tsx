@@ -44,7 +44,7 @@ const BASE_COLUMNS: GridColDef<UserListItem>[] = [
 
 /** Users for admins: search, role filter, create, rename, change role and delete. */
 export function UserList(): React.JSX.Element {
-  const { data: me } = useGetIdentity<PublicUser>();
+  const { data: me } = useGetIdentity<PublicUser | null>();
   const [dialog, setDialog] = useState<DialogState>({ kind: 'closed' });
   const { dataGridProps, filters, setFilters, setCurrentPage } = useListGrid<UserListItem>({
     sorters: { initial: [{ field: 'createdAt', order: 'desc' }] },
@@ -71,7 +71,7 @@ export function UserList(): React.JSX.Element {
               }}
             />
             {/* The API refuses deleting one's own account; not offered, nor while identity loads. */}
-            {me !== undefined && row.id !== me.id && (
+            {me !== undefined && me !== null && row.id !== me.id && (
               <DeleteButton hideText recordItemId={row.id} aria-label={`Delete ${row.name}`} />
             )}
           </>
@@ -110,7 +110,9 @@ export function UserList(): React.JSX.Element {
       {dialog.kind !== 'closed' && (
         <UserFormDialog
           user={dialog.kind === 'edit' ? dialog.user : undefined}
-          isSelf={dialog.kind === 'edit' && (me === undefined || dialog.user.id === me.id)}
+          isSelf={
+            dialog.kind === 'edit' && (me === undefined || me === null || dialog.user.id === me.id)
+          }
           onClose={() => {
             setDialog({ kind: 'closed' });
           }}

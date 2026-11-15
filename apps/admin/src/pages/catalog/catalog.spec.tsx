@@ -17,7 +17,7 @@ import type {
 
 const signedIn: MockRoute = {
   method: 'get',
-  url: '/auth/me',
+  url: '/auth/session',
   status: 200,
   body: { user: { id: 'c1', email: 'c@demo.test', name: 'C', role: 'CUSTOMER' }, csrfToken: 't' },
 };

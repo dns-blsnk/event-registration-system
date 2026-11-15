@@ -10,9 +10,9 @@ import { GITHUB_SIGN_IN_URL, LoginPage } from './login-page';
 
 const signedOut: MockRoute = {
   method: 'get',
-  url: '/auth/me',
-  status: 401,
-  body: { message: 'Sign in' },
+  url: '/auth/session',
+  status: 200,
+  body: { user: null, csrfToken: null },
 };
 
 function providers(github: boolean): MockRoute {

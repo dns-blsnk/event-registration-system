@@ -63,7 +63,7 @@ vi.mock('./chat-socket', () => ({
 
 const signedIn: MockRoute = {
   method: 'get',
-  url: '/auth/me',
+  url: '/auth/session',
   status: 200,
   body: { user: { id: 'o1', email: 'o@demo.test', name: 'O', role: 'ORGANIZER' }, csrfToken: 't' },
 };

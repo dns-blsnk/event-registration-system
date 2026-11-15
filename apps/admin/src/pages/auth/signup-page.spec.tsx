@@ -9,9 +9,9 @@ import { SignupPage } from './signup-page';
 
 const signedOut: MockRoute = {
   method: 'get',
-  url: '/auth/me',
-  status: 401,
-  body: { message: 'Sign in' },
+  url: '/auth/session',
+  status: 200,
+  body: { user: null, csrfToken: null },
 };
 
 function bodyOf(call: { data?: unknown } | undefined): Record<string, unknown> {

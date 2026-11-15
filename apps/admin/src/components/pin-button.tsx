@@ -5,6 +5,8 @@ import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
 import { useCustomMutation, useInvalidate, useList } from '@refinedev/core';
 
+const PINS_FRESH_MS = 30_000;
+
 /** The signed-in staff member's pinned events; one cached request shared by every pin button. */
 export function usePinnedEvents(): {
   events: EventListItem[];
@@ -15,6 +17,9 @@ export function usePinnedEvents(): {
     resource: PINNED_EVENTS_PATH,
     pagination: { mode: 'off' },
     errorNotification: false,
+    // Every pin button reads this list; a short freshness keeps them from refetching on mount.
+    // Pinning and unpinning invalidate it, so it never shows a stale pin of this user's own.
+    queryOptions: { staleTime: PINS_FRESH_MS },
   });
   return { events: result.data, isLoading: query.isLoading, isFailed: query.isError };
 }

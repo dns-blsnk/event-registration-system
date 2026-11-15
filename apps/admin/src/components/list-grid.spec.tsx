@@ -22,7 +22,7 @@ const COLUMNS: GridColDef<Row>[] = [
 
 const signedIn: MockRoute = {
   method: 'get',
-  url: '/auth/me',
+  url: '/auth/session',
   status: 200,
   body: { user: { id: 'a1', email: 'a@demo.test', name: 'A', role: 'ADMIN' }, csrfToken: 't' },
 };
