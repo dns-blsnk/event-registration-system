@@ -47,6 +47,17 @@ export const theme = createTheme({
     },
     MuiButton: { defaultProps: { disableElevation: true } },
     MuiChip: { styleOverrides: { root: { fontWeight: 600 } } },
+    // Refine's breadcrumb renders plain links with the resource icon: without the icon (it read as
+    // a stray glyph) and coloured like every other link, never the browser's purple "visited".
+    MuiBreadcrumbs: {
+      styleOverrides: {
+        root: {
+          '& svg': { display: 'none' },
+          '& a, & a:visited': { color: BRAND.blue, textDecoration: 'none' },
+          '& a:hover': { textDecoration: 'underline' },
+        },
+      },
+    },
     MuiListItemButton: {
       styleOverrides: {
         root: {
