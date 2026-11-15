@@ -28,6 +28,15 @@ export interface AuthResponse {
   csrfToken: string;
 }
 
+/**
+ * Returned by `GET /api/auth/session`: the signed-in user, or no one. Always 200, so a visitor
+ * without a session causes no error (and no browser console noise) on the sign-in page.
+ */
+export type SessionResponse = AuthResponse | { user: null; csrfToken: null };
+
+/** API path of the session check, below /api. */
+export const SESSION_PATH = '/auth/session';
+
 /** API paths of the sign-in providers, below the /api prefix. */
 export const AUTH_PROVIDER_PATHS = {
   providers: '/auth/providers',

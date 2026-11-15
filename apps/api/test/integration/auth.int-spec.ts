@@ -190,6 +190,35 @@ describe('auth API', () => {
     });
   });
 
+  describe('GET /api/auth/session', () => {
+    it('returns the signed-in user and the CSRF token', async () => {
+      const { agent, csrfToken, userId } = await signedInAgent(app, 'ORGANIZER');
+
+      const response = await agent.get('/api/auth/session').expect(200);
+
+      expect(response.body).toEqual({
+        user: expect.objectContaining({ id: userId, role: 'ORGANIZER' }),
+        csrfToken,
+      });
+      expect(response.body.user).not.toHaveProperty('passwordHash');
+    });
+
+    it('answers 200 with no one for a visitor, so the sign-in page sees no error', async () => {
+      const response = await request(app.getHttpServer()).get('/api/auth/session').expect(200);
+
+      expect(response.body).toEqual({ user: null, csrfToken: null });
+    });
+
+    it('answers no one for an expired session', async () => {
+      const { agent, userId } = await signedInAgent(app);
+      await prisma.authSession.updateMany({ where: { userId }, data: { expiresAt: new Date(0) } });
+
+      const response = await agent.get('/api/auth/session').expect(200);
+
+      expect(response.body).toEqual({ user: null, csrfToken: null });
+    });
+  });
+
   describe('GET /api/auth/me', () => {
     it('returns the signed-in user and the CSRF token', async () => {
       const { agent, csrfToken, userId } = await signedInAgent(app, 'ORGANIZER');

@@ -21,7 +21,7 @@ import {
 import type { AuthContext } from '../../common/auth/auth-context.js';
 import type { Config } from '../../config/config.schema.js';
 import type { SessionMeta } from './session.service.js';
-import type { AuthResponse } from '@ers/shared';
+import type { AuthResponse, SessionResponse } from '@ers/shared';
 import type { Request, Response } from 'express';
 
 const SIGNUPS_PER_MINUTE = 10;
@@ -30,6 +30,11 @@ const LOGINS_PER_MINUTE = 30;
 
 function metaOf(request: Request): SessionMeta {
   return { ip: request.ip, userAgent: request.get('user-agent') };
+}
+
+/** The one shape of "who is signed in", for /auth/me and /auth/session alike. */
+function toAuthResponse(auth: AuthContext): AuthResponse {
+  return { user: toPublicUser(auth.user), csrfToken: auth.session.csrfToken };
 }
 
 @Controller('auth')
@@ -85,10 +90,18 @@ export class AuthController {
     response.clearCookie(sessionCookieName(this.config), clearSessionCookieOptions(this.config));
   }
 
+  /** Who is signed in, or no one; public, so the admin can ask before anyone signs in. */
+  @Public()
+  @Get('session')
+  session(@Req() request: Request): SessionResponse {
+    const { auth } = request;
+    return auth === undefined ? { user: null, csrfToken: null } : toAuthResponse(auth);
+  }
+
   @SignedIn()
   @Get('me')
   me(@CurrentAuth() auth: AuthContext): AuthResponse {
-    return { user: toPublicUser(auth.user), csrfToken: auth.session.csrfToken };
+    return toAuthResponse(auth);
   }
 
   private startSession({ user, session }: SignInResult, response: Response): AuthResponse {
