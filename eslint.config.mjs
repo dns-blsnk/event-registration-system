@@ -160,6 +160,12 @@ export default tseslint.config(
     },
   },
   {
+    // Hooks live in .ts files too; the hook rules must check them as well as components.
+    files: ['**/use-*.ts'],
+    plugins: { 'react-hooks': reactHooks },
+    rules: reactHooks.configs.recommended.rules,
+  },
+  {
     files: ['**/*.tsx'],
     plugins: {
       react,

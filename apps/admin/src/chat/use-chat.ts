@@ -123,7 +123,6 @@ export function useChat(enabled: boolean): {
 
   useEffect(() => {
     if (!enabled) return undefined;
-    setConnection('connecting');
     const socket = openChatSocket();
     socketRef.current = socket;
     const stopRetrying = listen(socket, setMessages, setConnection);
@@ -131,6 +130,8 @@ export function useChat(enabled: boolean): {
       stopRetrying();
       socket.disconnect();
       socketRef.current = undefined;
+      // The next opening starts by connecting again.
+      setConnection('connecting');
     };
   }, [enabled]);
 
