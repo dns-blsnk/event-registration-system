@@ -57,8 +57,24 @@ describe('SessionList', () => {
     );
     expect(screen.getByText('Ann Speaker')).toBeInTheDocument();
     const row = screen.getByRole('row', { name: /State of React/ });
-    expect(within(row).getByRole('gridcell', { name: '4' })).toBeInTheDocument();
+    // Seats left as a bar: 92% taken, so red, and labelled with what is left.
+    const seats = within(row).getByRole('progressbar', { name: 'Seats left' });
+    expect(seats).toHaveAttribute('aria-valuenow', '92');
+    expect(seats).toHaveAttribute('aria-valuetext', '4 left');
     expect(within(row).getByRole('gridcell', { name: '3' })).toBeInTheDocument();
+  });
+
+  it('labels a session with no seats left as full', async () => {
+    mockHttp([
+      signedIn,
+      sessionsRoute([{ ...session, seatsLeft: 0, confirmedCount: 50, fillRate: 1 }]),
+    ]);
+    renderAdminPage({ path: '/sessions', route: '/sessions', element: <SessionList /> });
+
+    expect(await screen.findByRole('progressbar', { name: 'Seats left' })).toHaveAttribute(
+      'aria-valuetext',
+      'Full',
+    );
   });
 
   it('asks the server for almost full sessions only when the switch is on', async () => {

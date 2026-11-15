@@ -1,5 +1,6 @@
-import { SESSION_FIELDS, type SessionListItem } from '@ers/shared';
+import { seatsLeftLabel, SESSION_FIELDS, type SessionListItem } from '@ers/shared';
 
+import { FillBar } from '../../components/fill-bar';
 import { formatDateTime } from '../../components/format';
 import { RowLink } from '../../components/row-link';
 
@@ -35,6 +36,15 @@ export const SESSION_COLUMNS: GridColDef<SessionListItem>[] = [
     headerName: SESSION_FIELDS.seatsLeft.label,
     type: 'number',
     sortable: false,
+    minWidth: 170,
+    // The value stays the number (copy, export); the bar shows how close the session is to full.
+    renderCell: ({ row }) => (
+      <FillBar
+        rate={row.fillRate}
+        label={seatsLeftLabel(row.seatsLeft)}
+        name={SESSION_FIELDS.seatsLeft.label}
+      />
+    ),
   },
   {
     field: 'waitlistCount',

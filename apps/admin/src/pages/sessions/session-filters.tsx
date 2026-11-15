@@ -1,13 +1,15 @@
 import { SESSION_LIST_CONTROLS } from '@ers/shared';
+import FormControl from '@mui/material/FormControl';
 import FormControlLabel from '@mui/material/FormControlLabel';
+import FormHelperText from '@mui/material/FormHelperText';
 import Switch from '@mui/material/Switch';
-import Tooltip from '@mui/material/Tooltip';
 
 import { filterText, SearchFilterForm } from '../../components/filter-form';
 
 import type { CrudFilters } from '@refinedev/core';
 
 const ALMOST_FULL = 'true';
+const ALMOST_FULL_HELP_ID = 'almost-full-help';
 
 interface SessionFiltersProps {
   filters: CrudFilters;
@@ -22,22 +24,27 @@ export function SessionFilters({ filters, onChange }: SessionFiltersProps): Reac
       filters={filters}
       onChange={onChange}
     >
-      {/* describeChild keeps "Almost full" as the switch's name and the help as its description. */}
-      <Tooltip title={SESSION_LIST_CONTROLS.almostFull.help} describeChild>
+      <FormControl>
         <FormControlLabel
           control={
             <Switch
+              color="error"
               checked={filterText('almostFull', filters) === ALMOST_FULL}
               onChange={(_event, checked) => {
                 onChange([
                   { field: 'almostFull', operator: 'eq', value: checked ? ALMOST_FULL : undefined },
                 ]);
               }}
+              slotProps={{ input: { 'aria-describedby': ALMOST_FULL_HELP_ID } }}
             />
           }
           label={SESSION_LIST_CONTROLS.almostFull.label}
         />
-      </Tooltip>
+        {/* Shown, not hidden in a tooltip: it says the switch keeps the red rows. */}
+        <FormHelperText id={ALMOST_FULL_HELP_ID} sx={{ mt: 0 }}>
+          {SESSION_LIST_CONTROLS.almostFull.help}
+        </FormHelperText>
+      </FormControl>
     </SearchFilterForm>
   );
 }

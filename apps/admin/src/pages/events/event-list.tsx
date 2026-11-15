@@ -3,6 +3,7 @@ import { type GridColDef } from '@mui/x-data-grid';
 import { List, ShowButton } from '@refinedev/mui';
 
 import { EventStatusChip } from '../../components/event-status-chip';
+import { FillBar } from '../../components/fill-bar';
 import { applyFiltersFromFirstPage } from '../../components/filter-form';
 import { formatDateTime } from '../../components/format';
 import { ACTIONS_COLUMN_HEADER } from '../../components/grid';
@@ -51,7 +52,14 @@ const columns: GridColDef<EventListItem>[] = [
     headerName: EVENT_FIELDS.fillRate.label,
     type: 'number',
     sortable: false,
-    valueFormatter: (value: number) => formatPercent(value),
+    minWidth: 160,
+    renderCell: ({ row }) => (
+      <FillBar
+        rate={row.fillRate}
+        label={formatPercent(row.fillRate)}
+        name={EVENT_FIELDS.fillRate.label}
+      />
+    ),
   },
   {
     field: 'actions',
