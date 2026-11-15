@@ -10,6 +10,7 @@ import { EditButton, Show } from '@refinedev/mui';
 import { EventDescription, EventFacts } from '../../components/event-facts';
 import { EventHero } from '../../components/event-hero';
 import { EventStatusChip } from '../../components/event-status-chip';
+import { PinButton } from '../../components/pin-button';
 
 import { EventActions } from './event-actions';
 import { EventSessions } from './event-sessions';
@@ -26,6 +27,7 @@ export function EventShow(): React.JSX.Element {
           []
         ) : (
           <>
+            <PinButton eventId={event.id} title={event.title} />
             {!isEventLocked(event.status) && <EditButton recordItemId={event.id} />}
             <EventActions event={event} />
           </>

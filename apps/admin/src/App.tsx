@@ -1,7 +1,6 @@
 import CssBaseline from '@mui/material/CssBaseline';
 import GlobalStyles from '@mui/material/GlobalStyles';
 import { ThemeProvider } from '@mui/material/styles';
-import Typography from '@mui/material/Typography';
 import { Authenticated, CanAccess, Refine } from '@refinedev/core';
 import {
   ErrorComponent,
@@ -29,6 +28,7 @@ import { SignupPage } from './pages/auth/signup-page';
 import { CatalogList } from './pages/catalog/catalog-list';
 import { CatalogShow } from './pages/catalog/catalog-show';
 import { CustomerList } from './pages/customers/customer-list';
+import { DashboardPage } from './pages/dashboard/dashboard-page';
 import { ForbiddenPage } from './pages/errors/forbidden-page';
 import { EventCreate } from './pages/events/event-create';
 import { EventEdit } from './pages/events/event-edit';
@@ -45,14 +45,6 @@ import { authProvider, HOME_PATH, LOGIN_PATH, REGISTER_PATH } from './providers/
 import { dataProvider } from './providers/data-provider';
 import { resources } from './resources';
 import { theme } from './theme/theme';
-
-function HomePage(): React.JSX.Element {
-  return (
-    <Typography variant="h4" component="h1">
-      Event Registration Admin
-    </Typography>
-  );
-}
 
 /** A page that crashes shows the error screen inside the layout; any navigation clears it. */
 function PageErrorBoundary(): React.JSX.Element {
@@ -107,7 +99,7 @@ export function App(): React.JSX.Element {
                     </Authenticated>
                   }
                 >
-                  <Route index element={<HomePage />} />
+                  <Route index element={<DashboardPage />} />
                   {/* Resource pages: the shared matrix decides; pages outside a resource need only a session. */}
                   <Route
                     element={

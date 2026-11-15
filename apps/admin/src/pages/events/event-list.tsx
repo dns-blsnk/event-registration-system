@@ -8,6 +8,7 @@ import { applyFiltersFromFirstPage } from '../../components/filter-form';
 import { formatDateTime } from '../../components/format';
 import { ACTIONS_COLUMN_HEADER } from '../../components/grid';
 import { ListGrid, useListGrid } from '../../components/list-grid';
+import { PinButton } from '../../components/pin-button';
 import { RowLink } from '../../components/row-link';
 
 import { EventFilters } from './event-filters';
@@ -67,8 +68,13 @@ const columns: GridColDef<EventListItem>[] = [
     sortable: false,
     hideable: false,
     disableColumnMenu: true,
-    minWidth: 90,
-    renderCell: ({ row }) => <ShowButton hideText recordItemId={row.id} />,
+    minWidth: 110,
+    renderCell: ({ row }) => (
+      <>
+        <ShowButton hideText recordItemId={row.id} />
+        <PinButton eventId={row.id} title={row.title} />
+      </>
+    ),
   },
 ];
 

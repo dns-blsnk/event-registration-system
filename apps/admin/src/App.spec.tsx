@@ -41,14 +41,14 @@ describe('App', () => {
     expect(
       await screen.findByRole(
         'heading',
-        { name: 'Event Registration Admin' },
+        { name: 'Welcome, N' },
         { timeout: SIGN_UP_FLOW_TIMEOUT_MS },
       ),
     ).toBeInTheDocument();
     expect(window.location.pathname).toBe('/');
   });
 
-  it('shows the admin to a signed-in user', async () => {
+  it('opens on the dashboard for a signed-in user', async () => {
     mockHttp([
       {
         method: 'get',
@@ -61,9 +61,8 @@ describe('App', () => {
 
     render(<App />);
 
-    expect(
-      await screen.findByRole('heading', { name: 'Event Registration Admin' }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Welcome, A' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Pinned events' })).toBeInTheDocument();
   });
   it.each(['/events', '/sessions', '/registrations', '/users', '/logs', '/tags', '/customers'])(
     'shows "No access" to a customer on %s',
