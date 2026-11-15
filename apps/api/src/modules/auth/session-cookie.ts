@@ -11,9 +11,10 @@ export function sessionCookieName(config: Config): string {
 
 /** HttpOnly (no JS access, not stealable via XSS), SameSite=Lax (not sent on cross-site POSTs). */
 export function sessionCookieOptions(config: Config, expires: Date): CookieOptions {
-  return { httpOnly: true, secure: config.isProduction, sameSite: 'lax', path: '/', expires };
+  return { ...clearSessionCookieOptions(config), expires };
 }
 
+/** The attributes every auth cookie shares; also what clearing one must repeat. */
 export function clearSessionCookieOptions(config: Config): CookieOptions {
   return { httpOnly: true, secure: config.isProduction, sameSite: 'lax', path: '/' };
 }
