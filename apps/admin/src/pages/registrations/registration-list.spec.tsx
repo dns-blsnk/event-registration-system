@@ -204,7 +204,8 @@ describe('RegistrationList', () => {
   it('sends only the rows an action applies to and reports the others as skipped', async () => {
     const mixed = [
       registration('r1', 'Ann Customer', { startsAt: STARTED }),
-      registration('r2', 'Bob Customer', { status: 'CANCELLED', startsAt: STARTED }),
+      // Can still be cancelled, but not marked attended before its session starts.
+      registration('r2', 'Bob Customer', { startsAt: UPCOMING }),
     ];
     const { calls } = mockHttp([
       signedIn,
@@ -230,7 +231,9 @@ describe('RegistrationList', () => {
       status: 'ATTENDED',
     });
     expect(
-      await screen.findByText('1 registration(s) updated. Skipped: 1 × already cancelled'),
+      await screen.findByText(
+        '1 registration(s) updated. Skipped: 1 × the session has not started yet',
+      ),
     ).toBeInTheDocument();
     // The skipped row stays selected for a second look.
     expect(await screen.findByText('1 selected')).toBeInTheDocument();
@@ -239,17 +242,44 @@ describe('RegistrationList', () => {
   it('switches an action off, with the reason, when it applies to none of the selection', async () => {
     mockHttp([
       signedIn,
-      { ...list, body: [registration('r1', 'Ann Customer', { status: 'CANCELLED' })] },
+      { ...list, body: [registration('r1', 'Ann Customer', { startsAt: UPCOMING })] },
     ]);
     renderList();
     await selectRow('Ann Customer');
 
     expect(screen.getByRole('button', { name: 'Mark attended' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Cancel bookings' })).toBeDisabled();
-    // Both actions explain themselves: neither applies to a cancelled booking.
     expect(
-      screen.getAllByLabelText('Not possible for the selection: 1 × already cancelled'),
-    ).toHaveLength(2);
+      screen.getByLabelText('Not possible for the selection: 1 × the session has not started yet'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Cancel bookings (1)' })).toBeEnabled();
+  });
+
+  it('does not let a row be ticked when no action applies to it', async () => {
+    mockHttp([
+      signedIn,
+      {
+        ...list,
+        body: [
+          registration('r1', 'Ann Customer', { startsAt: UPCOMING }),
+          registration('r2', 'Bob Customer', { status: 'CANCELLED' }),
+        ],
+      },
+    ]);
+    renderList();
+
+    const bob = await screen.findByRole('row', { name: /Bob Customer/ });
+    expect(within(bob).getByRole('checkbox')).toBeDisabled();
+  });
+
+  it('offers no selection at all on a page where no action applies to any row', async () => {
+    mockHttp([
+      signedIn,
+      { ...list, body: [registration('r1', 'Ann Customer', { status: 'ATTENDED' })] },
+    ]);
+    renderList();
+
+    expect(await screen.findByText('Ann Customer')).toBeInTheDocument();
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
   });
 
   it('clears the selection when the order changes', async () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { bulkSelection, offReason } from './bulk-selection';
+import { bulkSelection, hasBulkAction, offReason } from './bulk-selection';
 
 import type { RegistrationListItem } from '@ers/shared';
 
@@ -48,5 +48,25 @@ describe('offReason', () => {
     const rows = Array.from({ length: 101 }, (_, index) => row(String(index)));
 
     expect(offReason(bulkSelection(rows, 'ATTENDED', NOW))).toBe('At most 100 at a time');
+  });
+});
+
+describe('hasBulkAction', () => {
+  it('is true while a seat can still be marked attended or cancelled', () => {
+    expect(hasBulkAction(row('a'), NOW)).toBe(true);
+    expect(
+      hasBulkAction(
+        row('b', { session: { id: 's1', title: 'Talk', startsAt: '2026-11-16T09:00:00Z' } }),
+        NOW,
+      ),
+    ).toBe(true);
+  });
+
+  it('is false once nothing applies: a final status, or a cancelled event after its start', () => {
+    expect(hasBulkAction(row('a', { status: 'CANCELLED' }), NOW)).toBe(false);
+    expect(hasBulkAction(row('b', { status: 'ATTENDED' }), NOW)).toBe(false);
+    expect(
+      hasBulkAction(row('c', { event: { id: 'e1', title: 'Summit', status: 'CANCELLED' } }), NOW),
+    ).toBe(false);
   });
 });

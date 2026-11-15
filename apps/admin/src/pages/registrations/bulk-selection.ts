@@ -1,5 +1,6 @@
 import {
   BULK_STATUS_MAX_IDS,
+  BULK_TARGET_STATUSES,
   staffActionRefusal,
   type BulkStatusResponse,
   type BulkTargetStatus,
@@ -14,6 +15,27 @@ export interface BulkSelection {
   skipped: ReadonlyMap<string, number>;
 }
 
+function refusalFor(
+  row: RegistrationListItem,
+  target: BulkTargetStatus,
+  now: Date,
+): string | undefined {
+  return staffActionRefusal(
+    {
+      status: row.status,
+      sessionStartsAt: new Date(row.session.startsAt),
+      eventStatus: row.event.status,
+    },
+    target,
+    now,
+  );
+}
+
+/** Whether any bulk action can still change the row; one nothing applies to is not worth ticking. */
+export function hasBulkAction(row: RegistrationListItem, now: Date): boolean {
+  return BULK_TARGET_STATUSES.some((target) => refusalFor(row, target, now) === undefined);
+}
+
 /** Splits the selection by the shared staff rules, so rows the API would refuse are not sent. */
 export function bulkSelection(
   rows: readonly RegistrationListItem[],
@@ -24,15 +46,7 @@ export function bulkSelection(
   const skippedIds: string[] = [];
   const skipped = new Map<string, number>();
   for (const row of rows) {
-    const reason = staffActionRefusal(
-      {
-        status: row.status,
-        sessionStartsAt: new Date(row.session.startsAt),
-        eventStatus: row.event.status,
-      },
-      target,
-      now,
-    );
+    const reason = refusalFor(row, target, now);
     if (reason === undefined) {
       eligibleIds.push(row.id);
     } else {

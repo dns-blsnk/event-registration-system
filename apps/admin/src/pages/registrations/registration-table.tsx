@@ -10,6 +10,7 @@ import { ListGrid, useListGrid } from '../../components/list-grid';
 import { RegistrationStatusChip } from '../../components/registration-status-chip';
 import { RowLink } from '../../components/row-link';
 
+import { hasBulkAction } from './bulk-selection';
 import { RegistrationBulkActions } from './registration-bulk-actions';
 import { RegistrationFilters } from './registration-filters';
 
@@ -69,12 +70,18 @@ const EMBEDDED_INITIAL_STATE = {
 
 const NO_SELECTION: GridRowSelectionModel = { type: 'include', ids: new Set() };
 
-/** The selected ids on the current page; "exclude" is what the header checkbox produces. */
+/**
+ * The selected rows on the current page that can still be ticked. A row the server refused may come
+ * back from a reload with nothing left to apply, so it drops out of the selection here.
+ */
 function selectedRowsOf(
   model: GridRowSelectionModel,
   rows: readonly RegistrationListItem[],
+  isSelectable: (row: RegistrationListItem) => boolean,
 ): RegistrationListItem[] {
-  return rows.filter((row) => (model.type === 'include') === model.ids.has(row.id));
+  return rows.filter(
+    (row) => isSelectable(row) && (model.type === 'include') === model.ids.has(row.id),
+  );
 }
 
 interface RegistrationTableProps {
@@ -99,10 +106,15 @@ export function RegistrationTable({ sessionId }: RegistrationTableProps): React.
     resource: Resource.REGISTRATIONS,
     action: Action.BULK_STATUS,
   });
+  const now = new Date();
+  const isSelectable = (row: RegistrationListItem): boolean => hasBulkAction(row, now);
   const canBulk = bulkAccess?.can === true;
+  // Rows nothing applies to (cancelled, attended, an event that did not run) cannot be ticked, and a
+  // loaded page of only such rows shows no checkboxes at all.
+  const hasRowsToTick = result.data.length === 0 || result.data.some(isSelectable);
   const [selection, setSelection] = useState<GridRowSelectionModel>(NO_SELECTION);
   const applyFilters = applyFiltersFromFirstPage({ setCurrentPage, setFilters });
-  const selectedRows = selectedRowsOf(selection, result.data);
+  const selectedRows = selectedRowsOf(selection, result.data, isSelectable);
   return (
     <>
       <RegistrationFilters
@@ -124,7 +136,8 @@ export function RegistrationTable({ sessionId }: RegistrationTableProps): React.
         {...dataGridProps}
         columns={columns}
         fillsWindow={sessionId === undefined}
-        checkboxSelection={canBulk}
+        checkboxSelection={canBulk && hasRowsToTick}
+        isRowSelectable={({ row }: { row: RegistrationListItem }) => isSelectable(row)}
         // The bulk bar above already says how many rows are selected.
         hideFooterSelectedRowCount={canBulk}
         // A selection is of the rows on screen; another page or order starts with none.
@@ -136,7 +149,7 @@ export function RegistrationTable({ sessionId }: RegistrationTableProps): React.
           setSelection(NO_SELECTION);
           dataGridProps.onSortModelChange(model, details);
         }}
-        rowSelectionModel={selection}
+        rowSelectionModel={{ type: 'include', ids: new Set(selectedRows.map((row) => row.id)) }}
         onRowSelectionModelChange={setSelection}
         {...(sessionId === undefined ? {} : { initialState: EMBEDDED_INITIAL_STATE })}
       />
