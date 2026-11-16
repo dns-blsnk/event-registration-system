@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import OpenAI from 'openai';
 
 import { APP_CONFIG } from '../../config/config.module.js';
+import { CatalogModule } from '../catalog/catalog.module.js';
 import { CustomersModule } from '../customers/customers.module.js';
 import { EventsModule } from '../events/events.module.js';
 import { IdentityModule } from '../identity/identity.module.js';
@@ -42,6 +43,7 @@ const ANSWER_MAX_RETRIES = 0;
     RegistrationsModule,
     CustomersModule,
     TagsModule,
+    CatalogModule,
   ],
   controllers: [ChatController],
   providers: [

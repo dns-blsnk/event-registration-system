@@ -9,5 +9,6 @@ import { CatalogService } from './catalog.service.js';
   imports: [EventsModule],
   controllers: [CatalogController],
   providers: [CatalogService],
+  exports: [CatalogService],
 })
 export class CatalogModule {}

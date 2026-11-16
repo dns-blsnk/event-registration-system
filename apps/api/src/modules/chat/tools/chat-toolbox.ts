@@ -5,6 +5,7 @@ import { z } from 'zod';
 
 import { DomainError } from '../../../common/errors/domain-error.js';
 
+import { SearchCatalogTool, SearchMyRegistrationsTool } from './customer-tools.js';
 import { GetEventTool, SearchEventsTool } from './event-tools.js';
 import {
   ListTagsTool,
@@ -25,6 +26,8 @@ export const TOOL_CLASSES: readonly Type<AssistantTool>[] = [
   SearchRegistrationsTool,
   SearchCustomersTool,
   ListTagsTool,
+  SearchCatalogTool,
+  SearchMyRegistrationsTool,
 ];
 
 /** What a tool run gives back to the model: its data, or why it could not run. */

@@ -23,3 +23,5 @@ export interface AssistantTool<TSchema extends z.ZodType = z.ZodType> {
 
 /** Results are capped: enough for an answer, small enough to keep the model's context short. */
 export const TOOL_PAGE_SIZE = 20;
+/** Said in every search tool's description, so the model knows a list may be cut. */
+export const UP_TO_A_PAGE = `Returns at most ${String(TOOL_PAGE_SIZE)} and the total count.`;

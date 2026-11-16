@@ -25,7 +25,7 @@ export async function createUser(
 }
 
 const HOUR_MS = 3_600_000;
-const DAY_MS = 24 * HOUR_MS;
+export const DAY_MS = 24 * HOUR_MS;
 
 /** An event a week from now, lasting two days, owned by a fresh organizer unless one is given. */
 export async function createEvent(

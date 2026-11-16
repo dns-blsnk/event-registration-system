@@ -10,6 +10,7 @@ import {
   createRegistration,
   createSession,
   createUser,
+  DAY_MS,
 } from '../helpers/factories.js';
 
 import type { User } from '../../src/generated/prisma/client.js';
@@ -51,8 +52,19 @@ describe('assistant tools', () => {
       expect(definitions[0]?.function.parameters).not.toHaveProperty('$schema');
     });
 
-    it('gives a customer none of the staff tools', () => {
-      expect(toolbox.definitionsFor('CUSTOMER')).toEqual([]);
+    it('gives a customer only the catalog and their own bookings', () => {
+      expect(toolbox.definitionsFor('CUSTOMER').map((tool) => tool.function.name)).toEqual([
+        'search_catalog',
+        'search_my_registrations',
+      ]);
+    });
+
+    it('refuses a customer tool staff call anyway', async () => {
+      const admin = await createUser(prisma, { role: 'ADMIN' });
+
+      expect(await toolbox.run('search_my_registrations', {}, context(admin))).toEqual({
+        error: 'There is no tool called search_my_registrations.',
+      });
     });
 
     it('refuses a staff tool a customer calls anyway', async () => {
@@ -240,11 +252,11 @@ describe('assistant tools', () => {
       const event = await createEvent(prisma);
       const upcoming = await createSession(prisma, event, {
         title,
-        startsAt: new Date(Date.now() + 86_400_000).toISOString(),
+        startsAt: new Date(Date.now() + DAY_MS).toISOString(),
       });
       await createSession(prisma, event, {
         title,
-        startsAt: new Date(Date.now() - 86_400_000).toISOString(),
+        startsAt: new Date(Date.now() - DAY_MS).toISOString(),
       });
 
       const outcome = await toolbox.run('search_sessions', { q: title }, context(admin));
@@ -289,6 +301,98 @@ describe('assistant tools', () => {
       const outcome = await toolbox.run('list_tags', { q: name }, context(admin));
 
       expect(outcome).toEqual({ data: { total: 1, tags: [{ id: tag.id, name }] } });
+    });
+  });
+
+  describe('customer searches', () => {
+    it('finds published events in the catalog, never drafts', async () => {
+      const customer = await createUser(prisma);
+      const city = `City-${randomUUID()}`;
+      const published = await createEvent(prisma, { city, status: 'PUBLISHED' });
+      await createEvent(prisma, { city, status: 'DRAFT' });
+
+      const outcome = await toolbox.run('search_catalog', { city }, context(customer));
+
+      expect(outcome).toMatchObject({ data: { total: 1, events: [{ id: published.id }] } });
+    });
+
+    it('finds an event that has started and is still on, as the catalog shows it', async () => {
+      const customer = await createUser(prisma);
+      const city = `City-${randomUUID()}`;
+      const ongoing = await createEvent(prisma, {
+        city,
+        status: 'PUBLISHED',
+        startsAt: new Date(Date.now() - DAY_MS).toISOString(),
+      });
+
+      const outcome = await toolbox.run('search_catalog', { city }, context(customer));
+
+      expect(outcome).toMatchObject({ data: { total: 1, events: [{ id: ongoing.id }] } });
+    });
+
+    it('lists only the customer’s own bookings, even with no search text', async () => {
+      const customer = await createUser(prisma);
+      const event = await createEvent(prisma);
+      const mine = await createRegistration(prisma, await createSession(prisma, event), {
+        customerId: customer.id,
+      });
+      await createRegistration(prisma, await createSession(prisma, event));
+
+      const outcome = await toolbox.run('search_my_registrations', {}, context(customer));
+
+      expect(outcome).toMatchObject({ data: { total: 1, registrations: [{ id: mine.id }] } });
+    });
+
+    it('filters the customer’s bookings by status', async () => {
+      const customer = await createUser(prisma);
+      const event = await createEvent(prisma);
+      await createRegistration(prisma, await createSession(prisma, event), {
+        customerId: customer.id,
+      });
+      const cancelled = await createRegistration(prisma, await createSession(prisma, event), {
+        customerId: customer.id,
+        status: 'CANCELLED',
+      });
+
+      const outcome = await toolbox.run(
+        'search_my_registrations',
+        { status: 'CANCELLED' },
+        context(customer),
+      );
+
+      expect(outcome).toMatchObject({ data: { total: 1, registrations: [{ id: cancelled.id }] } });
+    });
+
+    it.each(['search_catalog', 'search_my_registrations'])(
+      'tells the model when %s gets a range that ends before it begins',
+      async (name) => {
+        const customer = await createUser(prisma);
+
+        const outcome = await toolbox.run(
+          name,
+          { startsFrom: '2031-12-10', startsTo: '2031-12-01' },
+          context(customer),
+        );
+
+        expect(outcome).toEqual({ error: expect.stringContaining('startsTo must not be before') });
+      },
+    );
+
+    it('finds the customer’s own bookings by title, past ones included', async () => {
+      const customer = await createUser(prisma);
+      const title = `React ${randomUUID()}`;
+      const event = await createEvent(prisma, {
+        title,
+        startsAt: new Date(Date.now() - 7 * DAY_MS).toISOString(),
+      });
+      const mine = await createRegistration(prisma, await createSession(prisma, event), {
+        customerId: customer.id,
+      });
+      await createRegistration(prisma, await createSession(prisma, event));
+
+      const outcome = await toolbox.run('search_my_registrations', { q: title }, context(customer));
+
+      expect(outcome).toMatchObject({ data: { total: 1, registrations: [{ id: mine.id }] } });
     });
   });
 

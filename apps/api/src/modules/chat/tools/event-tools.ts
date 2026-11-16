@@ -4,15 +4,13 @@ import { z } from 'zod';
 
 import { EventsService, toEventListItem, type EventWithRelations } from '../../events/index.js';
 
-import { TOOL_PAGE_SIZE, type AssistantTool, type ToolContext } from './assistant-tool.js';
 import {
-  dayArg,
-  idArg,
-  START_RANGE_MESSAGE,
-  startRangeIsOrdered,
-  textArg,
-  zonedRange,
-} from './tool-filters.js';
+  TOOL_PAGE_SIZE,
+  UP_TO_A_PAGE,
+  type AssistantTool,
+  type ToolContext,
+} from './assistant-tool.js';
+import { idArg, searchWithDaysArgs, textArg, zonedRange } from './tool-filters.js';
 
 /** The longest event description the model gets; the start says what it is about. */
 const DESCRIPTION_MAX_LENGTH = 500;
@@ -34,8 +32,8 @@ function eventSummary(event: EventWithRelations) {
   };
 }
 
-const searchEventsArgs = z
-  .object({
+const searchEventsArgs = searchWithDaysArgs(
+  {
     q: textArg('Words from the title or venue.').optional(),
     city: textArg('Part of the city name, in English spelling, e.g. "Tallinn".').optional(),
     status: z
@@ -43,16 +41,14 @@ const searchEventsArgs = z
       .describe('Only events in this status.')
       .optional(),
     tagId: idArg('Only events with this tag, an id from list_tags.').optional(),
-    startsFrom: dayArg('First day the event may start on.').optional(),
-    startsTo: dayArg('Last day the event may start on.').optional(),
-  })
-  .strict()
-  .refine(startRangeIsOrdered, START_RANGE_MESSAGE);
+  },
+  'event',
+);
 
 @Injectable()
 export class SearchEventsTool implements AssistantTool<typeof searchEventsArgs> {
   readonly name = 'search_events';
-  readonly description = `Search the events the user may see. All filters are optional and combined. Without days, only upcoming events; give days to look back. Returns at most ${String(TOOL_PAGE_SIZE)}, soonest first, and the total count.`;
+  readonly description = `Search the events the user may see. All filters are optional and combined. Without days, only upcoming events; give days to look back. Soonest first. ${UP_TO_A_PAGE}`;
   readonly parameters = searchEventsArgs;
   readonly permission = { resource: Resource.EVENTS, action: Action.LIST };
 
@@ -70,7 +66,7 @@ export class SearchEventsTool implements AssistantTool<typeof searchEventsArgs> 
         status: args.status,
         city: args.city,
         tagId: args.tagId,
-        startsAt: zonedRange(args.startsFrom, args.startsTo, timeZone),
+        startsAt: zonedRange(args, timeZone, 'upcoming'),
       },
       user,
     );
