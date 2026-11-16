@@ -131,6 +131,7 @@ Until the deploy settings exist, the workflow skips itself. If only some setting
   - The Postgres database expires after about 30 days, so a lasting deployment needs a paid database.
   - An idle instance sleeps; the first request after a pause can time out at the Vercel proxy and needs a retry.
   - The Key Value instance keeps nothing on disk and Render may restart it at any time. Every key there is short-lived, so a restart only costs a new chat ticket, reset login failure counters and rate limits, and an empty chat history.
+- **Sign-in needs Redis.** Every attempt is counted in Redis before the password is checked, so parallel guesses cannot slip past the lockout. If Redis is down, sign-in answers 503 rather than checking passwords without the lockout.
 - **"Almost full" filter.** It runs two queries rather than one. A single query would need a generated column, and the 90% threshold would then live both in a migration and in `packages/shared`.
 - **Waitlist after a conflict.** A waitlisted customer skipped because of an overlapping booking is promoted at the next change in that session, not immediately when the conflict disappears.
 - **GitHub and existing accounts.** GitHub sign-in never links to an existing account with the same email, because sign-up does not verify emails. An existing user cannot add GitHub to their account.

@@ -25,16 +25,15 @@ export class CredentialsService {
   async verify(rawEmail: string, password: string, clientIp: string | undefined): Promise<User> {
     const email = normalizeEmail(rawEmail);
     const ip = clientIp ?? 'unknown';
-    if (this.limiter.isBlocked(ip, email)) {
+    if (!(await this.limiter.allowAttempt(ip, email))) {
       throw new DomainError(ErrorCode.RATE_LIMITED, 'Too many failed attempts. Try again later.');
     }
     const user = await this.prisma.user.findUnique({ where: { email } });
     const isValid = await this.passwords.verify(user?.passwordHash, password);
     if (user === null || !isValid) {
-      this.limiter.recordFailure(ip, email);
       throw new DomainError(ErrorCode.UNAUTHENTICATED, INVALID_CREDENTIALS);
     }
-    this.limiter.recordSuccess(ip, email);
+    await this.limiter.recordSuccess(ip, email);
     return user;
   }
 }
