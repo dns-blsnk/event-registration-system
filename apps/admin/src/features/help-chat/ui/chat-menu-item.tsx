@@ -1,4 +1,4 @@
-import ChatIcon from '@mui/icons-material/Chat';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
@@ -7,7 +7,7 @@ import { useThemedLayoutContext } from '@refinedev/mui';
 
 import { CHAT_TRIGGER_ATTRIBUTE, useHelpChat } from '../model/help-chat-context';
 
-const LABEL = 'Help';
+const LABEL = 'AI assistant';
 /** Refine's own menu entries, so this one lines up with them (spacing in theme units). */
 const ENTRY = {
   paddingLeft: 2,
@@ -31,7 +31,7 @@ export function ChatMenuItem({ isCollapsed }: { isCollapsed: boolean }): React.J
         {...{ [CHAT_TRIGGER_ATTRIBUTE]: true }}
         selected={isOpen}
         aria-expanded={isOpen}
-        aria-label="Help chat"
+        aria-label={LABEL}
         onClick={() => {
           // On a phone the menu is a drawer over the page; it gives way to the chat.
           setMobileSiderOpen(false);
@@ -47,7 +47,7 @@ export function ChatMenuItem({ isCollapsed }: { isCollapsed: boolean }): React.J
             color: 'currentColor',
           }}
         >
-          <ChatIcon />
+          <AutoAwesomeIcon />
         </ListItemIcon>
         <ListItemText
           primary={LABEL}

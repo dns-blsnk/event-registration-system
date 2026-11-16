@@ -35,7 +35,7 @@ describe('admin layout', () => {
     });
     expect(await screen.findAllByRole('link', { name: 'Events' })).not.toHaveLength(0);
     // The help chat opens from the side menu, not from a button floating over the page.
-    expect(screen.getAllByRole('button', { name: 'Help chat' })).not.toHaveLength(0);
+    expect(screen.getAllByRole('button', { name: 'AI assistant' })).not.toHaveLength(0);
     expect(screen.queryByText('Logout')).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: 'Account menu for Ada' }));

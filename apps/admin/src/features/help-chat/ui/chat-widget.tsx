@@ -113,7 +113,7 @@ function ChatPanel({
     <Paper
       elevation={8}
       role="dialog"
-      aria-label="Help chat"
+      aria-label="AI assistant"
       sx={{
         ...panelPlace(isSiderCollapsed),
         ...PANEL_SIZE,
