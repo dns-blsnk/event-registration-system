@@ -1,3 +1,6 @@
+import { readdirSync } from 'node:fs';
+import { join } from 'node:path';
+
 import js from '@eslint/js';
 import prettier from 'eslint-config-prettier';
 import { createTypeScriptImportResolver } from 'eslint-import-resolver-typescript';
@@ -17,6 +20,49 @@ const MAX_COMPONENT_LINES = 120;
 const MAX_FILE_LINES = 300;
 
 const envMessage = 'Read configuration through the typed config service.';
+const envRestrictions = [
+  {
+    selector: "MemberExpression[property.name='env'][object.name='process']",
+    message: envMessage,
+  },
+  {
+    selector: "MemberExpression[property.name='env'][object.property.name='process']",
+    message: envMessage,
+  },
+  {
+    selector: "VariableDeclarator[init.name='process'] > ObjectPattern > Property[key.name='env']",
+    message: envMessage,
+  },
+];
+
+/**
+ * API modules talk to each other only through their index.ts, plus their *.module.ts for Nest
+ * `imports`; every other file of a module is internal to it. One zone per module, built from the
+ * folder list, closes a module's files to the rest of the API source, co-located specs included.
+ * Integration tests (apps/api/test) and the seed may reach internals. The list is read when the
+ * config loads, so an editor's ESLint server needs a restart to see a new module; CI always sees it.
+ */
+const API_SRC = 'apps/api/src';
+const apiModules = readdirSync(join(import.meta.dirname, API_SRC, 'modules'), {
+  withFileTypes: true,
+})
+  .filter((entry) => entry.isDirectory())
+  .map((entry) => entry.name);
+const apiTopLevel = readdirSync(join(import.meta.dirname, API_SRC), { withFileTypes: true })
+  .filter((entry) => entry.isDirectory() || entry.name.endsWith('.ts'))
+  .map((entry) => entry.name)
+  .filter((name) => name !== 'modules' && name !== 'generated');
+const moduleBoundaryZones = apiModules.map((name) => ({
+  target: [
+    ...apiTopLevel.map((entry) => `${API_SRC}/${entry}`),
+    ...apiModules.filter((other) => other !== name).map((other) => `${API_SRC}/modules/${other}`),
+    // A loose file next to the module folders must not become a back door either.
+    `${API_SRC}/modules/*.ts`,
+  ],
+  from: `${API_SRC}/modules/${name}`,
+  except: ['./index.ts', `./${name}.module.ts`],
+  message: `Import it from modules/${name}/index.ts (or ${name}.module.ts in Nest imports).`,
+}));
 
 const sizeLimitedFiles = ['**/*.ts', '**/*.tsx'];
 const exemptFromLimits = [
@@ -86,6 +132,15 @@ export default tseslint.config(
     },
   },
   {
+    files: [`${API_SRC}/**/*.ts`],
+    rules: {
+      'import-x/no-restricted-paths': [
+        'error',
+        { basePath: import.meta.dirname, zones: moduleBoundaryZones },
+      ],
+    },
+  },
+  {
     files: sizeLimitedFiles,
     rules: {
       eqeqeq: ['error', 'always'],
@@ -117,22 +172,7 @@ export default tseslint.config(
           enforceConst: true,
         },
       ],
-      'no-restricted-syntax': [
-        'error',
-        {
-          selector: "MemberExpression[property.name='env'][object.name='process']",
-          message: envMessage,
-        },
-        {
-          selector: "MemberExpression[property.name='env'][object.property.name='process']",
-          message: envMessage,
-        },
-        {
-          selector:
-            "VariableDeclarator[init.name='process'] > ObjectPattern > Property[key.name='env']",
-          message: envMessage,
-        },
-      ],
+      'no-restricted-syntax': ['error', ...envRestrictions],
       '@typescript-eslint/consistent-type-imports': 'error',
       // Nest modules are empty classes configured through decorators.
       '@typescript-eslint/no-extraneous-class': ['error', { allowWithDecorator: true }],
@@ -191,6 +231,21 @@ export default tseslint.config(
       'max-lines-per-function': [
         'error',
         { max: MAX_COMPONENT_LINES, skipBlankLines: true, skipComments: true },
+      ],
+    },
+  },
+  {
+    // After the general rules, which set no-restricted-syntax for every file.
+    // A module file is open to other modules, so it exports the Nest module class and nothing else.
+    files: [`${API_SRC}/modules/**/*.module.ts`],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        ...envRestrictions,
+        {
+          selector: 'ExportNamedDeclaration:not(:has(> ClassDeclaration))',
+          message: 'A *.module.ts exports only its Nest module class; put helpers in index.ts.',
+        },
       ],
     },
   },

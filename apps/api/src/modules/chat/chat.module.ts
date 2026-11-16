@@ -56,7 +56,5 @@ const ANSWER_MAX_RETRIES = 0;
       useFactory: (config: Config) => config.ai.reasoningEffort,
     },
   ],
-  // One ticket store per app: the socket gateway must see the tickets this controller issues.
-  exports: [ChatTicketStore, ChatAnswerService],
 })
 export class ChatModule {}

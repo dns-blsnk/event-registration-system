@@ -92,6 +92,8 @@ Tests, migrations and seed are exempt from size limits and `no-magic-numbers`.
 ### Backend (Nest.js)
 
 - Feature modules under `src/modules/<feature>/` with controller, service, DTOs and specs together; cross-cutting code in `src/common/`
+- Modular monolith with layers inside each module: controller → service (Prisma, transactions) → pure functions in `src/domain/`. No repository or adapter layers on top of Prisma
+- Modules talk to each other only through `src/modules/<module>/index.ts` (what neighbours may use) and `<module>.module.ts` (for Nest `imports`); every other file of a module is internal, co-located specs included; integration tests and the seed may reach internals **[lint]**. A `*.module.ts` exports only its module class **[lint]**. Nest module classes stay out of `index.ts`, and a module's Nest `exports` list only what neighbours inject. Big modules group files by sub-feature in folders (`auth/local`, `auth/github`, `events/banner`, `registrations/my`)
 - Controllers are thin: validate the DTO, read the current user, call one service method, return. No Prisma and no business rules in controllers
 - Business rules live in `src/domain/` as pure functions (no Nest, no Prisma) and in services that orchestrate them in transactions
 - Only services use Prisma. Multi-step writes run in `prisma.$transaction`. Capacity checks use a conditional `UPDATE`, never read-then-write
