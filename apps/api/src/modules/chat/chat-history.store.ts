@@ -14,10 +14,12 @@ import type { ChatCompletionMessageParam } from 'openai/resources/chat/completio
 
 const CHAT_TTL_MS = CHAT_HISTORY_TTL_MINUTES * MINUTE_MS;
 /**
- * Entries kept per chat: questions, answers, tool calls and their results. About ten questions
- * with a search each; older turns are dropped whole, so a tool call never loses its result.
+ * Entries kept per chat: questions, answers, tool calls and their results. About fifteen questions
+ * with a search each; older turns are dropped whole, so a tool call never loses its result. A
+ * search keeps at most TOOL_PAGE_SIZE rows, and the model gets older results without their data,
+ * so a longer chat costs little in Redis or in tokens.
  */
-export const CHAT_HISTORY_MAX_ENTRIES = 40;
+export const CHAT_HISTORY_MAX_ENTRIES = 60;
 /** Live chats per user; starting another drops the one used longest ago. */
 export const CHATS_PER_USER = 20;
 
