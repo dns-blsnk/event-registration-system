@@ -28,6 +28,7 @@ export class SearchCatalogTool implements AssistantTool<typeof searchCatalogArgs
   readonly description = `Search the events open for booking, soonest first, with seats left in their upcoming sessions. ${UP_TO_A_PAGE}`;
   readonly parameters = searchCatalogArgs;
   readonly permission = { resource: Resource.CATALOG, action: Action.LIST };
+  readonly listView = { withoutDays: 'everything' } as const;
 
   constructor(private readonly catalog: CatalogService) {}
 
@@ -40,7 +41,7 @@ export class SearchCatalogTool implements AssistantTool<typeof searchCatalogArgs
         search: args.q,
       },
       // The catalog already shows only events that have not ended, ongoing ones included.
-      { city: args.city, startsAt: zonedRange(args, timeZone, 'everything') },
+      { city: args.city, startsAt: zonedRange(args, timeZone, this.listView.withoutDays) },
     );
     return {
       total: result.total,
@@ -67,6 +68,7 @@ export class SearchMyRegistrationsTool implements AssistantTool<typeof searchMyR
   readonly description = `Search the user's own bookings, newest first, with their place on the waitlist. ${UP_TO_A_PAGE}`;
   readonly parameters = searchMyRegistrationsArgs;
   readonly permission = { resource: Resource.MY_REGISTRATIONS, action: Action.LIST };
+  readonly listView = { withoutDays: 'everything' } as const;
 
   constructor(private readonly registrations: MyRegistrationsService) {}
 
@@ -81,7 +83,7 @@ export class SearchMyRegistrationsTool implements AssistantTool<typeof searchMyR
       },
       {
         status: args.status,
-        startsAt: zonedRange(args, timeZone, 'everything'),
+        startsAt: zonedRange(args, timeZone, this.listView.withoutDays),
       },
     );
     return { total: result.total, registrations: result.items };

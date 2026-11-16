@@ -51,6 +51,7 @@ export class SearchEventsTool implements AssistantTool<typeof searchEventsArgs> 
   readonly description = `Search the events the user may see. All filters are optional and combined. Without days, only upcoming events; give days to look back. Soonest first. ${UP_TO_A_PAGE}`;
   readonly parameters = searchEventsArgs;
   readonly permission = { resource: Resource.EVENTS, action: Action.LIST };
+  readonly listView = { withoutDays: 'upcoming' } as const;
 
   constructor(private readonly events: EventsService) {}
 
@@ -66,7 +67,7 @@ export class SearchEventsTool implements AssistantTool<typeof searchEventsArgs> 
         status: args.status,
         city: args.city,
         tagId: args.tagId,
-        startsAt: zonedRange(args, timeZone, 'upcoming'),
+        startsAt: zonedRange(args, timeZone, this.listView.withoutDays),
       },
       user,
     );

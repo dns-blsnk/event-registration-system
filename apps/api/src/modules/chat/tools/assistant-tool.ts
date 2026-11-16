@@ -1,4 +1,5 @@
 import type { User } from '../../../generated/prisma/client.js';
+import type { WithoutDays } from './tool-filters.js';
 import type { Action, Resource } from '@ers/shared';
 import type { z } from 'zod';
 
@@ -18,6 +19,12 @@ export interface AssistantTool<TSchema extends z.ZodType = z.ZodType> {
   readonly description: string;
   readonly parameters: TSchema;
   readonly permission: { resource: Resource; action: Action };
+  /**
+   * Set on a search that can open its list (the permission's resource) with its own filters when
+   * the model passes `show: true`. `withoutDays` is what the search covers when no day is given,
+   * so the opened list covers the same.
+   */
+  readonly listView?: { readonly withoutDays: WithoutDays };
   run(args: z.infer<TSchema>, context: ToolContext): Promise<unknown>;
 }
 

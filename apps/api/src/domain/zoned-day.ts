@@ -11,7 +11,7 @@ const INTO_NEXT_DAY_MS = MAX_ZONE_OFFSET_MS + MAX_ZONE_OFFSET_MS;
 const HALVES = 2;
 
 /** The calendar day an instant falls on in a zone, as YYYY-MM-DD (comparable as text). */
-function dayIn(instant: number, timeZone: string): string {
+export function dayIn(instant: number, timeZone: string): string {
   const parts = new Intl.DateTimeFormat('en', {
     timeZone,
     year: 'numeric',

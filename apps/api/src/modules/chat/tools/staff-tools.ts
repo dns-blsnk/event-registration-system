@@ -25,6 +25,7 @@ import {
   idArg,
   registrationStatusArg,
   searchWithDaysArgs,
+  showArg,
   textArg,
   zonedRange,
 } from './tool-filters.js';
@@ -60,6 +61,7 @@ export class SearchSessionsTool implements AssistantTool<typeof searchSessionsAr
   readonly description = `Search the sessions (talks, workshops) the user may see, soonest first. Without days, only upcoming sessions; give days to look back. ${UP_TO_A_PAGE}`;
   readonly parameters = searchSessionsArgs;
   readonly permission = { resource: Resource.SESSIONS, action: Action.LIST };
+  readonly listView = { withoutDays: 'upcoming' } as const;
 
   constructor(private readonly sessions: SessionsService) {}
 
@@ -74,7 +76,7 @@ export class SearchSessionsTool implements AssistantTool<typeof searchSessionsAr
       {
         eventId: args.eventId,
         almostFull: args.almostFull,
-        startsAt: zonedRange(args, timeZone, 'upcoming'),
+        startsAt: zonedRange(args, timeZone, this.listView.withoutDays),
       },
       user,
     );
@@ -98,6 +100,7 @@ const searchRegistrationsArgs = z
     eventId: idArg('Only bookings for this event.').optional(),
     sessionId: idArg('Only bookings for this session.').optional(),
     customerId: idArg('Only bookings of this customer, an id from search_customers.').optional(),
+    show: showArg,
   })
   .strict();
 
@@ -107,6 +110,7 @@ export class SearchRegistrationsTool implements AssistantTool<typeof searchRegis
   readonly description = `Search bookings of sessions the user may see, newest first. ${UP_TO_A_PAGE}`;
   readonly parameters = searchRegistrationsArgs;
   readonly permission = { resource: Resource.REGISTRATIONS, action: Action.LIST };
+  readonly listView = { withoutDays: 'everything' } as const;
 
   constructor(private readonly registrations: RegistrationsService) {}
 
@@ -131,7 +135,7 @@ export class SearchRegistrationsTool implements AssistantTool<typeof searchRegis
 }
 
 const searchCustomersArgs = z
-  .object({ q: textArg("Part of the customer's name or email.").optional() })
+  .object({ q: textArg("Part of the customer's name or email.").optional(), show: showArg })
   .strict();
 
 @Injectable()
@@ -140,6 +144,7 @@ export class SearchCustomersTool implements AssistantTool<typeof searchCustomers
   readonly description = `Search the customers the user may see, by name or email; returns names, not emails. ${UP_TO_A_PAGE}`;
   readonly parameters = searchCustomersArgs;
   readonly permission = { resource: Resource.CUSTOMERS, action: Action.LIST };
+  readonly listView = { withoutDays: 'everything' } as const;
 
   constructor(private readonly customers: CustomersService) {}
 

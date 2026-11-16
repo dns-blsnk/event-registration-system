@@ -396,6 +396,110 @@ describe('assistant tools', () => {
     });
   });
 
+  describe('showing results as a list', () => {
+    it('opens the events list with the filters of the search', async () => {
+      const admin = await createUser(prisma, { role: 'ADMIN' });
+      const args = {
+        city: 'Tallinn',
+        startsFrom: '2031-11-16',
+        startsTo: '2031-11-30',
+        show: true,
+      };
+
+      const outcome = await toolbox.run('search_events', args, context(admin));
+
+      expect(outcome).toMatchObject({
+        listToOpen: {
+          resource: 'events',
+          filters: { city: 'Tallinn', startsFrom: '2031-11-16', startsTo: '2031-11-30' },
+        },
+      });
+    });
+
+    it.each([{ city: 'Tallinn' }, { city: 'Tallinn', show: false }])(
+      'opens no list unless the model asks to show it (%o)',
+      async (args) => {
+        const admin = await createUser(prisma, { role: 'ADMIN' });
+
+        const outcome = await toolbox.run('search_events', args, context(admin));
+
+        expect(outcome).not.toHaveProperty('listToOpen');
+      },
+    );
+
+    it('opens a search of what is to come from today, as the answer covered', async () => {
+      const admin = await createUser(prisma, { role: 'ADMIN' });
+
+      const outcome = await toolbox.run(
+        'search_events',
+        { city: 'Tallinn', show: true },
+        context(admin),
+      );
+
+      expect(outcome).toMatchObject({
+        listToOpen: {
+          resource: 'events',
+          filters: { city: 'Tallinn', startsFrom: new Date().toISOString().slice(0, 10) },
+        },
+      });
+    });
+
+    it.each([
+      ['search_registrations', 'ADMIN', { status: 'WAITLISTED', show: true }, 'registrations'],
+      ['search_customers', 'ADMIN', { q: 'ann', show: true }, 'customers'],
+      [
+        'search_my_registrations',
+        'CUSTOMER',
+        { status: 'CONFIRMED', show: true },
+        'my-registrations',
+      ],
+    ] as const)('opens the list %s searched', async (name, role, args, resource) => {
+      const user = await createUser(prisma, { role });
+
+      const outcome = await toolbox.run(name, args, context(user));
+
+      const filters = Object.fromEntries(Object.entries(args).filter(([key]) => key !== 'show'));
+      expect(outcome).toMatchObject({ listToOpen: { resource, filters } });
+    });
+
+    it('opens almost full sessions with the flag the list URL uses', async () => {
+      const admin = await createUser(prisma, { role: 'ADMIN' });
+
+      const outcome = await toolbox.run(
+        'search_sessions',
+        { almostFull: true, show: true },
+        context(admin),
+      );
+
+      expect(outcome).toMatchObject({
+        listToOpen: { resource: 'sessions', filters: { almostFull: 'true' } },
+      });
+    });
+
+    it('opens the catalog for a customer', async () => {
+      const customer = await createUser(prisma);
+
+      const outcome = await toolbox.run(
+        'search_catalog',
+        { q: 'summit', show: true },
+        context(customer),
+      );
+
+      expect(outcome).toMatchObject({
+        listToOpen: { resource: 'catalog', filters: { q: 'summit' } },
+      });
+    });
+
+    it('lets get_event take no show flag, since it opens no list', async () => {
+      const admin = await createUser(prisma, { role: 'ADMIN' });
+      const event = await createEvent(prisma);
+
+      expect(await toolbox.run('get_event', { id: event.id, show: true }, context(admin))).toEqual({
+        error: expect.stringContaining('Invalid arguments'),
+      });
+    });
+  });
+
   it('tells the model when it calls a tool that does not exist', async () => {
     const admin = await createUser(prisma, { role: 'ADMIN' });
 

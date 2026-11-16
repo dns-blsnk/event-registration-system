@@ -40,6 +40,12 @@ export const registrationStatusArg = (description: string) =>
     .enum(REGISTRATION_STATUSES as [RegistrationStatus, ...RegistrationStatus[]])
     .describe(description);
 
+/** Lets the model open the matching list in the panel, with the filters of this search. */
+export const showArg = z
+  .boolean()
+  .describe('True to open the list in the panel with the same filters, for the user to look at.')
+  .optional();
+
 /**
  * The arguments of a search over things that start on a day (`what`: "event", "session"): the
  * given fields plus a start-day range, strict, with the range in order.
@@ -50,6 +56,7 @@ export function searchWithDaysArgs<TShape extends z.ZodRawShape>(shape: TShape, 
       ...shape,
       startsFrom: dayArg(`First day the ${what} may start on.`).optional(),
       startsTo: dayArg(`Last day the ${what} may start on.`).optional(),
+      show: showArg,
     })
     .strict()
     .refine(startRangeIsOrdered, 'startsTo must not be before startsFrom.');
