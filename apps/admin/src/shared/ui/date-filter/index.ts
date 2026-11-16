@@ -1,1 +1,1 @@
-export { DateFilter } from './date-filter';
+export { DateFilter, dayToInstant, type DayBound } from './date-filter';

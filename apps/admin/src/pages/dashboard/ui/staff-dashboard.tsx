@@ -19,8 +19,7 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
 import { usePinnedEvents } from '@/features/pin-event';
-
-import { listUrl } from '../lib/list-url';
+import { listUrl } from '@/shared/lib/list-url';
 
 import { PinnedEventCard } from './pinned-event-card';
 import { StatTile } from './stat-tile';

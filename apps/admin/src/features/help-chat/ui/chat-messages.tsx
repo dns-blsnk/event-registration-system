@@ -1,10 +1,12 @@
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
+import Link from '@mui/material/Link';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
 import { AssistantAvatar } from './assistant-avatar';
 
+import type { ListToOpen } from '../model/list-to-open';
 import type { ChatMessage } from '../model/use-chat';
 
 /** Read by screen readers, not shown: the standard visually-hidden pattern. */
@@ -54,7 +56,45 @@ function ProgressLine({ text }: { text: string }): React.JSX.Element {
   );
 }
 
-function Bubble({ message }: { message: ChatMessage }): React.JSX.Element {
+/** How the chat names an opened list and opens it again; absent where lists cannot be opened. */
+export interface ListLinks {
+  describe: (list: ListToOpen) => string;
+  open: (list: ListToOpen) => void;
+}
+
+/**
+ * The list the assistant opened for an answer, as a link back to that result; or, when unsaved
+ * changes held it back, a link to open it.
+ */
+function OpenedList({
+  list,
+  links,
+}: {
+  list: NonNullable<ChatMessage['list']>;
+  links: ListLinks;
+}): React.JSX.Element {
+  return (
+    <Link
+      component="button"
+      type="button"
+      variant="caption"
+      sx={{ display: 'block', textAlign: 'left', mt: 0.5 }}
+      onClick={() => {
+        links.open(list.target);
+      }}
+    >
+      {`${list.isOpened ? 'Opened' : 'Open'} ${links.describe(list.target)}`}
+    </Link>
+  );
+}
+
+function Bubble({
+  message,
+  links,
+}: {
+  message: ChatMessage;
+  links: ListLinks | undefined;
+}): React.JSX.Element {
   const isUser = message.role === 'user';
   const text = bubbleText(message);
   return (
@@ -76,6 +116,9 @@ function Bubble({ message }: { message: ChatMessage }): React.JSX.Element {
           </Typography>
         )}
         {message.progress !== undefined && <ProgressLine text={message.progress} />}
+        {message.list !== undefined && links !== undefined && (
+          <OpenedList list={message.list} links={links} />
+        )}
         {message.state === 'cancelled' && (
           <Typography variant="caption" color="text.secondary">
             Stopped.
@@ -99,8 +142,8 @@ function Welcome({
       <Stack direction="row" spacing={1} alignItems="center">
         <AssistantAvatar />
         <Typography variant="body2">
-          Ask in any language. I can explain how things work and find the events, sessions and
-          bookings you can see.
+          Ask in any language. I can explain how things work, find the events, sessions and bookings
+          you can see, and open the list for you.
         </Typography>
       </Stack>
       {onAsk !== undefined &&
@@ -127,9 +170,11 @@ export function ChatMessages({
   messages,
   suggestions,
   onAsk,
+  links,
 }: {
   messages: readonly ChatMessage[];
   suggestions: readonly string[];
+  links?: ListLinks;
   /** Undefined while the user cannot ask (offline, unavailable): the suggestions are hidden. */
   onAsk: ((question: string) => void) | undefined;
 }): React.JSX.Element {
@@ -148,7 +193,7 @@ export function ChatMessages({
         </Box>
       ) : (
         messages.map((message) => (
-          <Bubble key={`${message.role}:${message.id}`} message={message} />
+          <Bubble key={`${message.role}:${message.id}`} message={message} links={links} />
         ))
       )}
     </Stack>

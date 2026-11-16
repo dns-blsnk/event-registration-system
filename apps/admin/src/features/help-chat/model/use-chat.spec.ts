@@ -1,8 +1,10 @@
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { keepChatId, readChatId } from './chat-id';
 import { CHAT_RETRY_MS, useChat } from './use-chat';
+
+import type { OpenList } from './list-to-open';
 
 type Handler = (payload?: unknown) => void;
 
@@ -162,6 +164,99 @@ describe('useChat', () => {
     socket.serve('chat_error', { id, code: 'SERVICE_UNAVAILABLE', message: 'Try later.' });
 
     expect(result.current.messages.at(-1)).not.toHaveProperty('progress');
+  });
+
+  it('opens the list the assistant asks for and keeps it on the answer', async () => {
+    const onNavigate = vi.fn<OpenList>(() => Promise.resolve('opened'));
+    const { result } = renderHook(() => useChat(true, onNavigate));
+    const socket = currentSocket();
+    connectWith(socket, { chatId: CHAT, messages: [] });
+    act(() => {
+      result.current.ask({ question: 'Events in Tallinn?' });
+    });
+    const id = askedId(socket);
+
+    socket.serve('navigate', { id, resource: 'events', filters: { city: 'Tallinn' } });
+
+    const target = { resource: 'events', filters: { city: 'Tallinn' } };
+    expect(onNavigate).toHaveBeenCalledExactlyOnceWith(target, {
+      automatic: true,
+      isWanted: expect.any(Function),
+    });
+    await waitFor(() => {
+      expect(result.current.messages.at(-1)?.list).toEqual({ target, isOpened: true });
+    });
+  });
+
+  it('leaves no link on the answer when the list did not open', async () => {
+    const onNavigate = vi.fn<OpenList>(() => Promise.resolve('skipped'));
+    const { result } = renderHook(() => useChat(true, onNavigate));
+    const socket = currentSocket();
+    connectWith(socket, { chatId: CHAT, messages: [] });
+    act(() => {
+      result.current.ask({ question: 'Users?' });
+    });
+
+    socket.serve('navigate', { id: askedId(socket), resource: 'events', filters: {} });
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(result.current.messages.at(-1)).not.toHaveProperty('list');
+  });
+
+  it('keeps a held-back list on the answer as a link to open', async () => {
+    const onNavigate = vi.fn<OpenList>(() => Promise.resolve('held'));
+    const { result } = renderHook(() => useChat(true, onNavigate));
+    const socket = currentSocket();
+    connectWith(socket, { chatId: CHAT, messages: [] });
+    act(() => {
+      result.current.ask({ question: 'Events?' });
+    });
+
+    socket.serve('navigate', { id: askedId(socket), resource: 'events', filters: {} });
+
+    await waitFor(() => {
+      expect(result.current.messages.at(-1)?.list).toMatchObject({ isOpened: false });
+    });
+  });
+
+  it('no longer wants a list once the user stopped the answer, even mid-check', () => {
+    const onNavigate = vi.fn<OpenList>(() => Promise.resolve('opened'));
+    const { result } = renderHook(() => useChat(true, onNavigate));
+    const socket = currentSocket();
+    connectWith(socket, { chatId: CHAT, messages: [] });
+    act(() => {
+      result.current.ask({ question: 'Events?' });
+    });
+    socket.serve('navigate', { id: askedId(socket), resource: 'events', filters: {} });
+    const { isWanted } = onNavigate.mock.calls[0]?.[1] ?? { isWanted: () => true };
+    expect(isWanted()).toBe(true);
+
+    act(() => {
+      result.current.cancel();
+    });
+
+    expect(isWanted()).toBe(false);
+  });
+
+  it('opens no list for an answer that is no longer awaited in this chat', () => {
+    const onNavigate = vi.fn<OpenList>(() => Promise.resolve('opened'));
+    const { result } = renderHook(() => useChat(true, onNavigate));
+    const socket = currentSocket();
+    connectWith(socket, { chatId: CHAT, messages: [] });
+    act(() => {
+      result.current.ask({ question: 'Events?' });
+    });
+    const id = askedId(socket);
+    act(() => {
+      result.current.reset();
+    });
+
+    socket.serve('navigate', { id, resource: 'events', filters: {} });
+    socket.serve('navigate', { id: 'never-asked', resource: 'events', filters: {} });
+
+    expect(onNavigate).not.toHaveBeenCalled();
   });
 
   it('cancels the answer being streamed', () => {

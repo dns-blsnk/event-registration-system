@@ -1,5 +1,8 @@
+import { useWarnAboutChange } from '@refinedev/core';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useEffect } from 'react';
+import { useLocation } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { mockHttp, type MockRoute } from '@/test/http-mock';
@@ -93,6 +96,21 @@ const signedIn = signedInAs('ORGANIZER');
 
 function status(isAvailable: boolean): MockRoute {
   return { method: 'get', url: '/chat/status', status: 200, body: { isAvailable } };
+}
+
+/** Where the router is, decoded, so a test can see which list opened with which filters. */
+function CurrentUrl(): React.JSX.Element {
+  const { pathname, search } = useLocation();
+  return <output aria-label="Current URL">{decodeURIComponent(pathname + search)}</output>;
+}
+
+/** A form with unsaved changes, as Refine's forms report them. */
+function UnsavedChanges(): null {
+  const { setWarnWhen } = useWarnAboutChange();
+  useEffect(() => {
+    setWarnWhen(true);
+  }, [setWarnWhen]);
+  return null;
 }
 
 /** The chat's menu entry and its panel, as the layout puts them together. */
@@ -243,6 +261,82 @@ describe('ChatWidget', () => {
     firstSocket().serve('progress', { id: firstAsk(firstSocket()).id, text: 'Searching events…' });
 
     expect(within(dialog).getByText('Searching events…')).toBeInTheDocument();
+  });
+
+  it.each([
+    ['ADMIN', true],
+    ['CUSTOMER', false],
+  ] as const)(
+    'opens the list the assistant asks for when %s may see it (%s)',
+    async (role, opens) => {
+      mockHttp([signedInAs(role), status(true)]);
+      renderAdminPage({
+        path: '/',
+        route: '*',
+        element: (
+          <>
+            <HelpChat />
+            <CurrentUrl />
+          </>
+        ),
+      });
+      const dialog = await openChat();
+      await userEvent.type(
+        await within(dialog).findByRole('textbox', { name: 'Your question' }),
+        'Events in Tallinn?{Enter}',
+      );
+      const { id } = firstAsk(firstSocket());
+
+      firstSocket().serve('navigate', { id, resource: 'events', filters: { city: 'Tallinn' } });
+
+      if (opens) {
+        await waitFor(() => {
+          expect(screen.getByLabelText('Current URL')).toHaveTextContent(
+            '/events?filters[0][field]=city&filters[0][operator]=eq&filters[0][value]=Tallinn',
+          );
+        });
+      } else {
+        // The access check is asynchronous; give it the time a navigation would take.
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        expect(screen.getByLabelText('Current URL')).toHaveTextContent(/^\/$/);
+      }
+      const opened = within(dialog).queryByRole('button', {
+        name: 'Opened Events: City: Tallinn',
+      });
+      if (opens) expect(opened).toBeInTheDocument();
+      else expect(opened).not.toBeInTheDocument();
+    },
+  );
+
+  it('never leaves a page with unsaved changes by itself, and offers the list as a link', async () => {
+    mockHttp([signedInAs('ADMIN'), status(true)]);
+    renderAdminPage({
+      path: '/events/e1/edit',
+      route: '*',
+      element: (
+        <>
+          <UnsavedChanges />
+          <HelpChat />
+          <CurrentUrl />
+        </>
+      ),
+    });
+    const dialog = await openChat();
+    await userEvent.type(
+      await within(dialog).findByRole('textbox', { name: 'Your question' }),
+      'Events in Tallinn?{Enter}',
+    );
+
+    firstSocket().serve('navigate', {
+      id: firstAsk(firstSocket()).id,
+      resource: 'events',
+      filters: { city: 'Tallinn' },
+    });
+
+    expect(
+      await within(dialog).findByRole('button', { name: 'Open Events: City: Tallinn' }),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText('Current URL')).toHaveTextContent(/^\/events\/e1\/edit$/);
   });
 
   it('says the assistant is unavailable without a model, and opens no socket', async () => {

@@ -5,6 +5,7 @@ import {
   type ChatDone,
   type ChatError,
   type ChatHistory,
+  type ChatNavigation,
   type ChatProgress,
   type ChatQuestion,
   type ChatResume,
@@ -15,6 +16,7 @@ import { openChatSocket } from '../api/chat-socket';
 
 import { forgetChatId, keepChatId, readChatId } from './chat-id';
 
+import type { ListToOpen, OpenList } from './list-to-open';
 import type { Socket } from 'socket.io-client';
 
 export type ChatMessageState = 'streaming' | 'done' | 'cancelled' | 'failed';
@@ -26,6 +28,8 @@ export interface ChatMessage {
   state: ChatMessageState;
   /** What the assistant is doing while it streams, e.g. "Searching events…"; gone once it writes. */
   progress?: string;
+  /** The list the assistant opened (or held back) for this answer, to open from the chat. */
+  list?: { target: ListToOpen; isOpened: boolean };
 }
 
 export type ChatConnection = 'connecting' | 'online' | 'offline';
@@ -206,6 +210,30 @@ function listenToAnswers(
 }
 
 /**
+ * Follows the lists the assistant opens. Only for a question still waiting in this chat, asked
+ * again after the access check: after "new chat" or Stop no page moves. A list that opened, or was
+ * held back by unsaved changes, stays on the answer as a link; one not opened leaves none.
+ */
+function listenToNavigation(
+  socket: Socket,
+  setMessages: SetMessages,
+  askedHere: Set<string>,
+  navigateTo: { current: OpenList | undefined },
+): void {
+  socket.on(ChatEvent.NAVIGATE, ({ id, resource, filters }: ChatNavigation) => {
+    if (!askedHere.has(id)) return;
+    const target: ListToOpen = { resource, filters };
+    const isWanted = (): boolean => askedHere.has(id);
+    // Not awaited: the socket handler returns at once; opening never rejects (see useOpenList).
+    void navigateTo.current?.(target, { automatic: true, isWanted }).then((opening) => {
+      if (opening === 'skipped') return;
+      const list = { target, isOpened: opening === 'opened' };
+      setMessages((current) => update(current, id, (message) => ({ ...message, list })));
+    });
+  });
+}
+
+/**
  * Starts a new chat. The tab forgets the old id at once, so even if the server cannot start the
  * new one, the next question opens a fresh chat rather than going on in the old. Connected, the
  * server forgets the old chat and sends the new id in HISTORY; until then nothing may be asked.
@@ -223,11 +251,7 @@ function startNewChat(
   socket.emit(ChatEvent.NEW_CHAT, previous);
 }
 
-/**
- * The help chat's conversation and connection. The socket is opened only while `enabled` (the
- * widget is open and a model is configured) and closed again after, so idle tabs hold no socket.
- */
-export function useChat(enabled: boolean): {
+export interface ChatControls {
   messages: ChatMessage[];
   connection: ChatConnection;
   isAnswering: boolean;
@@ -235,12 +259,33 @@ export function useChat(enabled: boolean): {
   cancel: () => void;
   /** Starts a new conversation; an answer still streaming is stopped first. */
   reset: () => void;
-} {
+}
+
+/** The latest value, for a socket handler to read without subscribing again on every change. */
+function useLatest<T>(value: T): { current: T } {
+  const latest = useRef(value);
+  useEffect(() => {
+    latest.current = value;
+  }, [value]);
+  return latest;
+}
+
+/**
+ * The help chat's conversation and connection. The socket is opened only while `enabled` (the
+ * widget is open and a model is configured) and closed again after, so idle tabs hold no socket.
+ */
+export function useChat(
+  enabled: boolean,
+  /** Opens a list the assistant asked for; it runs once per list, as it arrives. */
+  onNavigate?: OpenList,
+): ChatControls {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [connection, setConnection] = useState<ChatConnection>('connecting');
   const socketRef = useRef<Socket | undefined>(undefined);
   // One set for the hook's lifetime, filled and cleared by the socket handlers, never rendered.
   const [askedHere] = useState(() => new Set<string>());
+
+  const navigateTo = useLatest(onNavigate);
 
   useEffect(() => {
     if (!enabled) return undefined;
@@ -248,6 +293,7 @@ export function useChat(enabled: boolean): {
     socketRef.current = socket;
     const stopRetrying = listenToConnection(socket, setMessages, setConnection);
     listenToAnswers(socket, setMessages, setConnection, askedHere);
+    listenToNavigation(socket, setMessages, askedHere, navigateTo);
     return () => {
       stopRetrying();
       socket.disconnect();
@@ -255,7 +301,7 @@ export function useChat(enabled: boolean): {
       // The next opening starts by connecting again.
       setConnection('connecting');
     };
-  }, [enabled, askedHere]);
+  }, [enabled, askedHere, navigateTo]);
 
   const ask = (question: Omit<ChatQuestion, 'id'>): void => {
     const id = crypto.randomUUID();
@@ -276,6 +322,8 @@ export function useChat(enabled: boolean): {
   };
 
   const cancel = (): void => {
+    // A stopped answer opens no list, even one already on its way.
+    askedHere.clear();
     if (socketRef.current?.connected === true) socketRef.current.emit(ChatEvent.CANCEL);
   };
 

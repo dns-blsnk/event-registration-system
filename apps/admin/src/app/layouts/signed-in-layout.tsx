@@ -3,7 +3,7 @@ import { UnsavedChangesNotifier } from '@refinedev/react-router';
 import { Suspense } from 'react';
 import { Outlet, useLocation } from 'react-router';
 
-import { ChatWidget, HelpChatProvider } from '@/features/help-chat';
+import { ChatWidget, HelpChatProvider, useAssistantPageKey } from '@/features/help-chat';
 import { ErrorBoundary } from '@/shared/ui/error-boundary';
 
 import { AppHeader, AppSider } from './app-layout-parts';
@@ -12,10 +12,12 @@ import { AppTitle } from './app-title';
 /** A page that crashes shows the error screen inside the layout; any navigation clears it. */
 function PageErrorBoundary(): React.JSX.Element {
   const { key } = useLocation();
+  // A list the assistant opened is mounted anew, so it reads the filters it was opened with.
+  const pageKey = useAssistantPageKey();
   return (
     <ErrorBoundary resetKey={key}>
       {/* Each page is its own chunk, loaded on first visit. */}
-      <Suspense fallback={null}>
+      <Suspense key={pageKey} fallback={null}>
         <Outlet />
       </Suspense>
     </ErrorBoundary>

@@ -20,12 +20,14 @@ import {
   type ChatAvailability,
 } from '../model/chat-state';
 import { useHelpChat } from '../model/help-chat-context';
-import { useChat } from '../model/use-chat';
+import { describeList, type ListToOpen } from '../model/list-to-open';
+import { useChat, type ChatControls } from '../model/use-chat';
 import { useFocusedField } from '../model/use-focused-field';
+import { useOpenList } from '../model/use-open-list';
 
 import { ChatComposer } from './chat-composer';
 import { ChatHeader } from './chat-header';
-import { ChatMessages } from './chat-messages';
+import { ChatMessages, type ListLinks } from './chat-messages';
 
 import type { SxProps, Theme } from '@mui/material/styles';
 
@@ -74,11 +76,12 @@ function contextOf(
 }
 
 interface ChatPanelProps {
-  chat: ReturnType<typeof useChat>;
+  chat: ChatControls;
   availability: ChatAvailability;
   screen: { name: Resource; label: string } | undefined;
   field: { name: string; label: string } | undefined;
   suggestions: readonly string[];
+  links: ListLinks;
   isSiderCollapsed: boolean;
   onClose: () => void;
 }
@@ -90,6 +93,7 @@ function ChatPanel({
   screen,
   field,
   suggestions,
+  links,
   isSiderCollapsed,
   onClose,
 }: ChatPanelProps): React.JSX.Element {
@@ -128,6 +132,7 @@ function ChatPanel({
         <ChatMessages
           messages={chat.messages}
           suggestions={suggestions}
+          links={links}
           onAsk={canAsk && !chat.isAnswering ? ask : undefined}
         />
       ) : (
@@ -165,7 +170,18 @@ export function ChatWidget(): React.JSX.Element | null {
   const wasOpened = openCount > 0;
   // Tracked while closed too: the user picks a field first, then opens the chat to ask about it.
   const focusedName = useFocusedField();
-  const { resource } = useResourceParams();
+  const { resource, resources } = useResourceParams();
+  const openList = useOpenList();
+  const links: ListLinks = {
+    describe: (list: ListToOpen) => {
+      const item = resources.find((candidate) => candidate.name === list.resource);
+      return describeList(list, item === undefined ? list.resource : labelOf(item));
+    },
+    open: (list: ListToOpen) => {
+      // Not awaited: opening never rejects, and a click needs no answer back.
+      void openList(list, { automatic: false, isWanted: () => true });
+    },
+  };
   const screen = isResource(resource?.name)
     ? { name: resource.name, label: labelOf(resource) }
     : undefined;
@@ -182,7 +198,7 @@ export function ChatWidget(): React.JSX.Element | null {
     isFailed: query.isError,
     isAvailable: query.data?.data.isAvailable === true,
   };
-  const chat = useChat(availability.isAvailable && wasOpened);
+  const chat = useChat(availability.isAvailable && wasOpened, openList);
   // A failed status check is retried on reopening, as the panel tells the user.
   const retriedFor = useRef(openCount);
   useEffect(() => {
@@ -202,6 +218,7 @@ export function ChatWidget(): React.JSX.Element | null {
       screen={screen}
       field={field}
       suggestions={starterQuestions(user?.role, field?.label)}
+      links={links}
       isSiderCollapsed={siderCollapsed}
       onClose={close}
     />
