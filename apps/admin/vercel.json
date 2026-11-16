@@ -1,10 +1,10 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "installCommand": "pnpm install --frozen-lockfile",
-  "buildCommand": "VITE_CHAT_URL=https://ers-api.onrender.com pnpm --filter @ers/admin build",
+  "buildCommand": "VITE_CHAT_URL=https://ers-api-9j21.onrender.com pnpm --filter @ers/admin build",
   "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/api/:path*", "destination": "https://ers-api.onrender.com/api/:path*" },
+    { "source": "/api/:path*", "destination": "https://ers-api-9j21.onrender.com/api/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [
@@ -13,7 +13,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.r2.cloudflarestorage.com; font-src 'self' data:; connect-src 'self' https://ers-api.onrender.com wss://ers-api.onrender.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.r2.cloudflarestorage.com; font-src 'self' data:; connect-src 'self' https://ers-api-9j21.onrender.com wss://ers-api-9j21.onrender.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
         },
         { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains" },
         { "key": "X-Content-Type-Options", "value": "nosniff" },
