@@ -99,7 +99,7 @@ In production the socket connects to the API host directly (`VITE_CHAT_URL`), be
 
 ## Deployment
 
-CI (`.github/workflows/ci.yml`) runs lint, format check, typecheck, all tests against Postgres, Redis and S3 containers, the build and the Playwright browser tests on pushes to `main` and `dev` and on every pull request. Deploy (`.github/workflows/deploy.yml`) runs only after a green CI run of a push to `main`:
+CI (`.github/workflows/ci.yml`) runs lint, format check, typecheck, all tests against Postgres, Redis and S3 containers and the build on pushes to `main` and `dev` and on every pull request. The Playwright browser tests run there only when the repository variable `RUN_E2E` is `true` (off for now while they are made stable in CI); locally, `pnpm test:e2e` runs them. Deploy (`.github/workflows/deploy.yml`) runs only after a green CI run of a push to `main`:
 
 1. It asks Render to deploy that exact commit.
 2. It waits until `/api/health` reports that commit with the database and Redis up.
