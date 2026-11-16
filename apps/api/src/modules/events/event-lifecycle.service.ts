@@ -5,7 +5,7 @@ import { DomainError } from '../../common/errors/domain-error.js';
 import { assertEventTransition } from '../../domain/status-transitions.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 
-import { EventBannerService } from './event-banner.service.js';
+import { EventBannerService } from './banner/event-banner.service.js';
 import { lockEventSessions, lockScopedEvent } from './event-lock.js';
 import { EVENT_INCLUDE, type EventWithRelations } from './event-view.js';
 

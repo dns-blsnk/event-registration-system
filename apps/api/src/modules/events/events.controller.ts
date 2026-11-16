@@ -31,9 +31,9 @@ import {
 } from '../../common/pagination/list-query.js';
 import { sendList } from '../../common/pagination/list-result.js';
 
+import { EventBannerService } from './banner/event-banner.service.js';
 import { CreateEventDto } from './dto/create-event.dto.js';
 import { UpdateEventDto } from './dto/update-event.dto.js';
-import { EventBannerService } from './event-banner.service.js';
 import { EventLifecycleService } from './event-lifecycle.service.js';
 import { toEventDetail, toEventListItem, type EventWithRelations } from './event-view.js';
 import { EventsService, type EventFilters, type EventSortField } from './events.service.js';

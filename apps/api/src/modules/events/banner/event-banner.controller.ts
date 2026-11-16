@@ -12,13 +12,13 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 
-import { RequirePermission } from '../../common/auth/access.decorator.js';
-import { CurrentAuth } from '../../common/auth/current-user.decorator.js';
-import { fieldError } from '../../common/errors/field-error.js';
+import { RequirePermission } from '../../../common/auth/access.decorator.js';
+import { CurrentAuth } from '../../../common/auth/current-user.decorator.js';
+import { fieldError } from '../../../common/errors/field-error.js';
 
 import { EventBannerService } from './event-banner.service.js';
 
-import type { AuthContext } from '../../common/auth/auth-context.js';
+import type { AuthContext } from '../../../common/auth/auth-context.js';
 
 const FILE_FIELD = 'file';
 

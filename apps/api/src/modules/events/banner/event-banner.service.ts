@@ -4,15 +4,14 @@ import { ErrorCode } from '@ers/shared';
 import { Injectable } from '@nestjs/common';
 import { PinoLogger } from 'nestjs-pino';
 
-import { DomainError } from '../../common/errors/domain-error.js';
-import { assertEventEditable } from '../../domain/status-transitions.js';
-import { PrismaService } from '../../prisma/prisma.service.js';
-import { StorageService } from '../storage/storage.service.js';
+import { DomainError } from '../../../common/errors/domain-error.js';
+import { assertEventEditable } from '../../../domain/status-transitions.js';
+import { PrismaService } from '../../../prisma/prisma.service.js';
+import { StorageService } from '../../storage/storage.service.js';
+import { EVENT_NOT_FOUND_MESSAGE, lockScopedEvent } from '../event-lock.js';
+import { eventScope } from '../event-scope.js';
 
-import { EVENT_NOT_FOUND_MESSAGE, lockScopedEvent } from './event-lock.js';
-import { eventScope } from './event-scope.js';
-
-import type { User } from '../../generated/prisma/client.js';
+import type { User } from '../../../generated/prisma/client.js';
 
 /**
  * Event banners. The image is stored under a fresh key on every upload, so a cached presigned link
