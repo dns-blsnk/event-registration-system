@@ -45,9 +45,6 @@ export function EventHero({
         aspectRatio: HERO_ASPECT_RATIO,
         width: '100%',
         maxWidth: HERO_MAX_WIDTH,
-        // A Stack parent resets child margins, so alignSelf centres it there and mx elsewhere.
-        mx: 'auto',
-        alignSelf: 'center',
         // Lets a long title on a narrow screen make the box taller instead of being cut off.
         minHeight: 'min-content',
         display: 'flex',
