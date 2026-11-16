@@ -5,6 +5,7 @@ import {
   type ChatDone,
   type ChatError,
   type ChatHistory,
+  type ChatProgress,
   type ChatQuestion,
   type ChatResume,
 } from '@ers/shared';
@@ -23,6 +24,8 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   text: string;
   state: ChatMessageState;
+  /** What the assistant is doing while it streams, e.g. "Searching events…"; gone once it writes. */
+  progress?: string;
 }
 
 export type ChatConnection = 'connecting' | 'online' | 'offline';
@@ -44,6 +47,13 @@ function update(
   );
 }
 
+/** The message once the assistant writes or ends: what it was doing no longer applies. */
+function withoutProgress(message: ChatMessage): ChatMessage {
+  const copy = { ...message };
+  delete copy.progress;
+  return copy;
+}
+
 /** Keeps the part of an answer that already arrived, with the error after it. */
 function withError(answered: string, error: string): string {
   return answered === '' ? error : `${answered}\n\n${error}`;
@@ -53,9 +63,20 @@ function withError(answered: string, error: string): string {
 function failStreaming(messages: ChatMessage[], error: string): ChatMessage[] {
   return messages.map((message) =>
     message.state === 'streaming'
-      ? { ...message, state: 'failed', text: withError(message.text, error) }
+      ? { ...withoutProgress(message), state: 'failed', text: withError(message.text, error) }
       : message,
   );
+}
+
+/** The browser's time zone, so "next week" means the user's week; the server checks it. */
+function browserTimeZone(): Pick<ChatQuestion, 'timeZone'> {
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  return timeZone === '' ? {} : { timeZone };
+}
+
+/** A question with what the server needs beside it: this tab's chat and the user's time zone. */
+function withContext(question: ChatQuestion): ChatQuestion {
+  return { ...question, ...currentChat(), ...browserTimeZone() };
 }
 
 /** The chat as the server kept it; each question and its answer share an id, as when asked. */
@@ -137,7 +158,17 @@ function listenToAnswers(
 ) {
   socket.on(ChatEvent.CHUNK, ({ id, text }: ChatChunk) => {
     setMessages((current) =>
-      update(current, id, (message) => ({ ...message, text: message.text + text })),
+      update(current, id, (message) => ({
+        ...withoutProgress(message),
+        text: message.text + text,
+      })),
+    );
+  });
+  socket.on(ChatEvent.PROGRESS, ({ id, text }: ChatProgress) => {
+    setMessages((current) =>
+      update(current, id, (message) =>
+        message.state === 'streaming' ? { ...message, progress: text } : message,
+      ),
     );
   });
   socket.on(ChatEvent.DONE, ({ id, cancelled, chatId }: ChatDone) => {
@@ -145,7 +176,10 @@ function listenToAnswers(
     if (chatId !== undefined && askedHere.has(id)) keepChatId(chatId);
     askedHere.delete(id);
     setMessages((current) =>
-      update(current, id, (message) => ({ ...message, state: cancelled ? 'cancelled' : 'done' })),
+      update(current, id, (message) => ({
+        ...withoutProgress(message),
+        state: cancelled ? 'cancelled' : 'done',
+      })),
     );
   });
   socket.on(ChatEvent.ERROR, ({ id, message: error }: ChatError) => {
@@ -163,7 +197,7 @@ function listenToAnswers(
       id === ''
         ? failStreaming(current, error)
         : update(current, id, (message) => ({
-            ...message,
+            ...withoutProgress(message),
             state: 'failed',
             text: withError(message.text, error),
           })),
@@ -238,7 +272,7 @@ export function useChat(enabled: boolean): {
     ]);
     if (!isConnected) return;
     askedHere.add(id);
-    socket.emit(ChatEvent.ASK, { id, ...question, ...currentChat() } satisfies ChatQuestion);
+    socket.emit(ChatEvent.ASK, withContext({ id, ...question }));
   };
 
   const cancel = (): void => {

@@ -36,12 +36,27 @@ const ASSISTANT_BUBBLE = {
   borderBottomLeftRadius: TAIL_RADIUS,
 } as const;
 
-function bubbleText(message: ChatMessage): string {
-  return message.text === '' && message.state === 'streaming' ? 'Thinking…' : message.text;
+/**
+ * The bubble's text: what was written so far, "Thinking…" before anything arrives, or nothing
+ * while the progress line already says what the assistant is doing.
+ */
+function bubbleText(message: ChatMessage): string | undefined {
+  if (message.text !== '' || message.state !== 'streaming') return message.text;
+  return message.progress === undefined ? 'Thinking…' : undefined;
+}
+
+/** What the assistant is doing while it answers, under the text it has written so far. */
+function ProgressLine({ text }: { text: string }): React.JSX.Element {
+  return (
+    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+      {text}
+    </Typography>
+  );
 }
 
 function Bubble({ message }: { message: ChatMessage }): React.JSX.Element {
   const isUser = message.role === 'user';
+  const text = bubbleText(message);
   return (
     <Stack
       direction="row"
@@ -51,13 +66,16 @@ function Bubble({ message }: { message: ChatMessage }): React.JSX.Element {
     >
       {!isUser && <AssistantAvatar />}
       <Box sx={{ px: 1.5, py: 1, borderRadius: 3, ...(isUser ? USER_BUBBLE : ASSISTANT_BUBBLE) }}>
-        <Typography
-          variant="body2"
-          sx={{ whiteSpace: 'pre-wrap' }}
-          color={message.state === 'failed' ? 'error' : 'inherit'}
-        >
-          {bubbleText(message)}
-        </Typography>
+        {text !== undefined && (
+          <Typography
+            variant="body2"
+            sx={{ whiteSpace: 'pre-wrap' }}
+            color={message.state === 'failed' ? 'error' : 'inherit'}
+          >
+            {text}
+          </Typography>
+        )}
+        {message.progress !== undefined && <ProgressLine text={message.progress} />}
         {message.state === 'cancelled' && (
           <Typography variant="caption" color="text.secondary">
             Stopped.
@@ -81,8 +99,8 @@ function Welcome({
       <Stack direction="row" spacing={1} alignItems="center">
         <AssistantAvatar />
         <Typography variant="body2">
-          Ask what a field means or how to fill it in. I answer from this screen’s own field
-          descriptions.
+          Ask in any language. I can explain how things work and find the events, sessions and
+          bookings you can see.
         </Typography>
       </Stack>
       {onAsk !== undefined &&

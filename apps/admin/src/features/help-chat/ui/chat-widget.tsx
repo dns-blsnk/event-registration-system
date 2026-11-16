@@ -1,9 +1,15 @@
-import { CHAT_FORM_FIELDS, isResource, type ChatStatus, type Resource } from '@ers/shared';
+import {
+  CHAT_FORM_FIELDS,
+  isResource,
+  type ChatStatus,
+  type PublicUser,
+  type Resource,
+} from '@ers/shared';
 import CloudOffIcon from '@mui/icons-material/CloudOff';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import { useCustom, useResourceParams } from '@refinedev/core';
+import { useCustom, useGetIdentity, useResourceParams } from '@refinedev/core';
 import { useThemedLayoutContext } from '@refinedev/mui';
 import { useEffect, useRef } from 'react';
 
@@ -72,6 +78,7 @@ interface ChatPanelProps {
   availability: ChatAvailability;
   screen: { name: Resource; label: string } | undefined;
   field: { name: string; label: string } | undefined;
+  suggestions: readonly string[];
   isSiderCollapsed: boolean;
   onClose: () => void;
 }
@@ -82,16 +89,17 @@ function ChatPanel({
   availability,
   screen,
   field,
+  suggestions,
   isSiderCollapsed,
   onClose,
 }: ChatPanelProps): React.JSX.Element {
-  const reason = blocker(availability, screen !== undefined);
+  const reason = blocker(availability);
   // One rule for both ways to ask (typing and the starter questions): only while connected.
-  const canAsk = availability.isAvailable && screen !== undefined && chat.connection === 'online';
+  const canAsk = availability.isAvailable && chat.connection === 'online';
+  // The screen and field are a hint for the assistant; questions are about anything the role sees.
   const ask = (question: string): void => {
-    if (screen === undefined) return;
     chat.ask({
-      resource: screen.name,
+      ...(screen === undefined ? {} : { resource: screen.name }),
       ...(field === undefined ? {} : { field: field.name }),
       question,
     });
@@ -119,7 +127,7 @@ function ChatPanel({
       {reason === undefined ? (
         <ChatMessages
           messages={chat.messages}
-          suggestions={starterQuestions(field?.label)}
+          suggestions={suggestions}
           onAsk={canAsk && !chat.isAnswering ? ask : undefined}
         />
       ) : (
@@ -147,9 +155,9 @@ function ChatPanel({
 }
 
 /**
- * The help chat's panel, opened from its entry in the side menu. It answers questions about the
- * screen that is open, and about the field the user was last in. Nothing connects until it is first
- * opened; the conversation, and an answer still streaming, survive closing the panel.
+ * The assistant's panel, opened from its entry in the side menu, on any page. The open screen and
+ * the field the user was last in go with each question as a hint. Nothing connects until it is
+ * first opened; the conversation, and an answer still streaming, survive closing the panel.
  */
 export function ChatWidget(): React.JSX.Element | null {
   const { isOpen, openCount, close, focusTrigger } = useHelpChat();
@@ -162,6 +170,7 @@ export function ChatWidget(): React.JSX.Element | null {
     ? { name: resource.name, label: labelOf(resource) }
     : undefined;
   const field = screenField(screen?.name, focusedName);
+  const { data: user } = useGetIdentity<PublicUser | null>();
   const { query } = useCustom<ChatStatus>({
     url: '/chat/status',
     method: 'get',
@@ -192,6 +201,7 @@ export function ChatWidget(): React.JSX.Element | null {
       availability={availability}
       screen={screen}
       field={field}
+      suggestions={starterQuestions(user?.role, field?.label)}
       isSiderCollapsed={siderCollapsed}
       onClose={close}
     />

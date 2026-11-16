@@ -118,6 +118,7 @@ describe('useChat', () => {
       field: 'capacity',
       question: 'What is this?',
       chatId: CHAT,
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     });
     expect(result.current.isAnswering).toBe(true);
 
@@ -130,6 +131,37 @@ describe('useChat', () => {
       { id, role: 'assistant', text: 'Seats available.', state: 'done' },
     ]);
     expect(result.current.isAnswering).toBe(false);
+  });
+
+  it('shows what the assistant is doing until the answer goes on', () => {
+    const { result } = renderHook(() => useChat(true));
+    const socket = currentSocket();
+    connectWith(socket, { chatId: CHAT, messages: [] });
+    act(() => {
+      result.current.ask({ question: 'Events in Tallinn?' });
+    });
+    const id = askedId(socket);
+
+    socket.serve('progress', { id, text: 'Searching events…' });
+    expect(result.current.messages.at(-1)?.progress).toBe('Searching events…');
+    socket.serve('chunk', { id, text: 'Two.' });
+
+    expect(result.current.messages.at(-1)).not.toHaveProperty('progress');
+  });
+
+  it('drops what the assistant was doing when the answer fails', () => {
+    const { result } = renderHook(() => useChat(true));
+    const socket = currentSocket();
+    connectWith(socket, { chatId: CHAT, messages: [] });
+    act(() => {
+      result.current.ask({ question: 'Events?' });
+    });
+    const id = askedId(socket);
+    socket.serve('progress', { id, text: 'Searching events…' });
+
+    socket.serve('chat_error', { id, code: 'SERVICE_UNAVAILABLE', message: 'Try later.' });
+
+    expect(result.current.messages.at(-1)).not.toHaveProperty('progress');
   });
 
   it('cancels the answer being streamed', () => {

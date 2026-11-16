@@ -29,20 +29,31 @@ describe('reachabilityOf', () => {
 });
 
 describe('blocker', () => {
-  it('explains a failed check, a missing model and a missing screen', () => {
-    expect(blocker(FAILED, true)).toMatch(/Could not reach/);
-    expect(blocker(OFF, true)).toBe('The assistant is not available right now.');
-    expect(blocker(ON, false)).toBe('Open a screen to ask about its fields.');
+  it('explains a failed check and a missing model', () => {
+    expect(blocker(FAILED)).toMatch(/Could not reach/);
+    expect(blocker(OFF)).toBe('The assistant is not available right now.');
   });
 
-  it('lets the user ask on a screen with the model available', () => {
-    expect(blocker(ON, true)).toBeUndefined();
+  it('lets the user ask on any page once the model is available, or while the check runs', () => {
+    expect(blocker(ON)).toBeUndefined();
+    expect(blocker(LOADING)).toBeUndefined();
   });
 });
 
 describe('starterQuestions', () => {
-  it('asks about the focused field, or about the screen without one', () => {
-    expect(starterQuestions('Capacity')[0]).toBe('What does “Capacity” mean?');
-    expect(starterQuestions(undefined)[0]).toBe('What can I do on this screen?');
+  it('asks about the focused field when there is one', () => {
+    expect(starterQuestions('ADMIN', 'Capacity')[0]).toBe('What does “Capacity” mean?');
+  });
+
+  it('offers searches the role can run, and nothing before the role is known', () => {
+    expect(starterQuestions('CUSTOMER', undefined)).toContain('Show my upcoming bookings');
+    expect(starterQuestions('ORGANIZER', undefined)).toContain(
+      'Which of my sessions are almost full?',
+    );
+    expect(starterQuestions('ADMIN', undefined)).toContain('Which sessions are almost full?');
+    expect(starterQuestions('SUPER_ADMIN', undefined)).toEqual(
+      starterQuestions('ADMIN', undefined),
+    );
+    expect(starterQuestions(undefined, undefined)).toEqual([]);
   });
 });

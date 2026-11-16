@@ -10,6 +10,8 @@ import { HelpChatProvider } from '../model/help-chat-context';
 import { ChatMenuItem } from './chat-menu-item';
 import { ChatWidget } from './chat-widget';
 
+import type { Role } from '@ers/shared';
+
 type Handler = (payload?: unknown) => void;
 
 /** A stand-in socket that connects at once, answers like the server and records what is sent. */
@@ -77,12 +79,17 @@ vi.mock('../api/chat-socket', () => ({
   },
 }));
 
-const signedIn: MockRoute = {
-  method: 'get',
-  url: '/auth/session',
-  status: 200,
-  body: { user: { id: 'o1', email: 'o@demo.test', name: 'O', role: 'ORGANIZER' }, csrfToken: 't' },
-};
+function signedInAs(role: Role): MockRoute {
+  return {
+    method: 'get',
+    url: '/auth/session',
+    status: 200,
+    body: { user: { id: 'u1', email: 'u@demo.test', name: 'U', role }, csrfToken: 't' },
+  };
+}
+
+/** Most tests do not depend on the role; an organizer can open the sessions screen they use. */
+const signedIn = signedInAs('ORGANIZER');
 
 function status(isAvailable: boolean): MockRoute {
   return { method: 'get', url: '/chat/status', status: 200, body: { isAvailable } };
@@ -164,6 +171,7 @@ describe('ChatWidget', () => {
       question: 'Can I lower it?',
       // The chat the fake server started on connect.
       chatId: expect.stringMatching(/^[0-9a-f-]{36}$/),
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     });
     expect(within(dialog).getByText('Can I lower it?')).toBeInTheDocument();
     // Once in the bubble, once in the hidden region that announces finished answers.
@@ -204,6 +212,37 @@ describe('ChatWidget', () => {
     await userEvent.click(within(dialog).getByRole('button', { name: 'Stop' }));
 
     expect(firstSocket().emitted.map((entry) => entry.event)).toEqual(['resume', 'ask', 'cancel']);
+  });
+
+  it.each([
+    ['ORGANIZER', 'Which of my sessions are almost full?'],
+    ['CUSTOMER', 'Show my upcoming bookings'],
+  ] as const)(
+    'asks from a page that is no list or form, with %s starters',
+    async (role, starter) => {
+      mockHttp([signedInAs(role), status(true)]);
+      renderAdminPage({ path: '/', route: '/', element: <HelpChat /> });
+      const dialog = await openChat();
+
+      await userEvent.click(await within(dialog).findByRole('button', { name: starter }));
+
+      expect(firstAsk(firstSocket())).toMatchObject({ question: starter });
+      expect(firstAsk(firstSocket())).not.toHaveProperty('resource');
+    },
+  );
+
+  it('shows what the assistant is doing while it searches', async () => {
+    mockHttp([signedIn, status(true)]);
+    renderOnSessions();
+    const dialog = await openChat();
+    await userEvent.type(
+      await within(dialog).findByRole('textbox', { name: 'Your question' }),
+      'Events?{Enter}',
+    );
+
+    firstSocket().serve('progress', { id: firstAsk(firstSocket()).id, text: 'Searching events…' });
+
+    expect(within(dialog).getByText('Searching events…')).toBeInTheDocument();
   });
 
   it('says the assistant is unavailable without a model, and opens no socket', async () => {

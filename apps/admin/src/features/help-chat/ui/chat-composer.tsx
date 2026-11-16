@@ -52,9 +52,7 @@ export function ChatComposer({
         onChange={(event) => {
           setDraft(event.target.value);
         }}
-        placeholder={
-          fieldLabel === undefined ? 'Ask about this screen' : `Ask about “${fieldLabel}”`
-        }
+        placeholder={fieldLabel === undefined ? 'Ask in any language' : `Ask about “${fieldLabel}”`}
         size="small"
         fullWidth
         inputRef={inputRef}
