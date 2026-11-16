@@ -8,7 +8,7 @@ import { mockHttp } from '@/test/http-mock';
 import { forgetPersonalStateOnSignOut } from './session-cleanup';
 
 describe('forgetPersonalStateOnSignOut', () => {
-  it('forgets cached answers and column widths when the user signs out', async () => {
+  it('forgets cached answers, column widths and the chat when the user signs out', async () => {
     const queryClient = new QueryClient();
     forgetPersonalStateOnSignOut(queryClient);
     queryClient.setQueryData(['identity'], { name: 'Previous user' });
@@ -27,10 +27,13 @@ describe('forgetPersonalStateOnSignOut', () => {
     await authProvider.login({ email: 'a@demo.test', password: 'long-enough-pass' });
     const table = tableKeyOf([{ field: 'title' }], true);
     rememberWidth(table, 'title', 300);
+    // The tab's chat, as the help chat keeps it; a renamed key would leave this behind and fail.
+    sessionStorage.setItem('ers.chatId', 'a-chat');
 
     await authProvider.logout({});
 
     expect(savedWidthsOf(table).size).toBe(0);
+    expect(sessionStorage).toHaveLength(0);
     expect(queryClient.getQueryData(['identity'])).toBeUndefined();
   });
 });

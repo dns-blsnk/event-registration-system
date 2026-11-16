@@ -1,6 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { keepChatId, readChatId } from './chat-id';
 import { CHAT_RETRY_MS, useChat } from './use-chat';
 
 type Handler = (payload?: unknown) => void;
@@ -69,9 +70,19 @@ function askedId(socket: FakeSocket): string {
   return (ask?.payload as { id: string }).id;
 }
 
+const CHAT = '11111111-1111-4111-8111-111111111111';
+const NEXT_CHAT = '22222222-2222-4222-8222-222222222222';
+
+/** Connects the socket and plays the server's answer to RESUME. */
+function connectWith(socket: FakeSocket, history: { chatId: string; messages: unknown[] }) {
+  socket.serve('connect');
+  socket.serve('history', history);
+}
+
 describe('useChat', () => {
   beforeEach(() => {
     sockets.length = 0;
+    sessionStorage.clear();
   });
 
   it('opens no socket while disabled', () => {
@@ -94,18 +105,19 @@ describe('useChat', () => {
   it('asks with the screen and field, then shows the answer as it streams', () => {
     const { result } = renderHook(() => useChat(true));
     const socket = currentSocket();
-    socket.serve('connect');
+    connectWith(socket, { chatId: CHAT, messages: [] });
     expect(result.current.connection).toBe('online');
 
     act(() => {
       result.current.ask({ resource: 'sessions', field: 'capacity', question: 'What is this?' });
     });
     const id = askedId(socket);
-    expect(socket.emitted[0]?.payload).toEqual({
+    expect(socket.emitted.at(-1)?.payload).toEqual({
       id,
       resource: 'sessions',
       field: 'capacity',
       question: 'What is this?',
+      chatId: CHAT,
     });
     expect(result.current.isAnswering).toBe(true);
 
@@ -123,6 +135,7 @@ describe('useChat', () => {
   it('cancels the answer being streamed', () => {
     const { result } = renderHook(() => useChat(true));
     const socket = currentSocket();
+    connectWith(socket, { chatId: CHAT, messages: [] });
     act(() => {
       result.current.ask({ resource: 'events', question: 'Publishing?' });
     });
@@ -133,13 +146,14 @@ describe('useChat', () => {
     });
     socket.serve('done', { id, cancelled: true });
 
-    expect(socket.emitted.map((entry) => entry.event)).toEqual(['ask', 'cancel']);
+    expect(socket.emitted.map((entry) => entry.event)).toEqual(['resume', 'ask', 'cancel']);
     expect(result.current.messages.at(-1)?.state).toBe('cancelled');
   });
 
   it('keeps the part of an answer that arrived before an error, with the error after it', () => {
     const { result } = renderHook(() => useChat(true));
     const socket = currentSocket();
+    connectWith(socket, { chatId: CHAT, messages: [] });
     act(() => {
       result.current.ask({ resource: 'events', question: 'Explain' });
     });
@@ -203,6 +217,7 @@ describe('useChat', () => {
   it('shows the server’s error for a question', () => {
     const { result } = renderHook(() => useChat(true));
     const socket = currentSocket();
+    connectWith(socket, { chatId: CHAT, messages: [] });
     act(() => {
       result.current.ask({ resource: 'users', question: 'Roles?' });
     });
@@ -222,6 +237,7 @@ describe('useChat', () => {
   it('ends an answer cut off by a dropped connection, keeping what arrived', () => {
     const { result } = renderHook(() => useChat(true));
     const socket = currentSocket();
+    connectWith(socket, { chatId: CHAT, messages: [] });
     act(() => {
       result.current.ask({ resource: 'events', question: 'Explain' });
     });
@@ -234,6 +250,175 @@ describe('useChat', () => {
       state: 'failed',
       text: 'Partly\n\nThe connection dropped. Ask again once it is back.',
     });
+  });
+
+  it('asks to resume no chat in a fresh tab, and keeps the one the server starts', () => {
+    const { result } = renderHook(() => useChat(true));
+    const socket = currentSocket();
+
+    socket.serve('connect');
+    expect(socket.emitted).toEqual([{ event: 'resume', payload: {} }]);
+    expect(result.current.connection).toBe('connecting');
+    socket.serve('history', { chatId: CHAT, messages: [] });
+
+    expect(result.current.connection).toBe('online');
+    expect(readChatId()).toBe(CHAT);
+  });
+
+  it('resumes the tab’s chat after a reload and shows what was said', () => {
+    keepChatId(CHAT);
+    const { result } = renderHook(() => useChat(true));
+    const socket = currentSocket();
+
+    connectWith(socket, {
+      chatId: CHAT,
+      messages: [
+        { role: 'user', text: 'Events in Tallinn?' },
+        { role: 'assistant', text: 'Two.' },
+      ],
+    });
+
+    expect(socket.emitted[0]).toEqual({ event: 'resume', payload: { chatId: CHAT } });
+    expect(result.current.messages).toEqual([
+      { id: 'history-0', role: 'user', text: 'Events in Tallinn?', state: 'done' },
+      { id: 'history-0', role: 'assistant', text: 'Two.', state: 'done' },
+    ]);
+  });
+
+  it('starts a new chat on the server, waiting for it before anything can be asked', () => {
+    const { result } = renderHook(() => useChat(true));
+    const socket = currentSocket();
+    connectWith(socket, { chatId: CHAT, messages: [{ role: 'user', text: 'Hi' }] });
+
+    act(() => {
+      result.current.reset();
+    });
+    expect(result.current.messages).toEqual([]);
+    expect(result.current.connection).toBe('connecting');
+    expect(socket.emitted.at(-1)).toEqual({ event: 'new_chat', payload: { chatId: CHAT } });
+    socket.serve('history', { chatId: NEXT_CHAT, messages: [] });
+
+    expect(result.current.connection).toBe('online');
+    expect(readChatId()).toBe(NEXT_CHAT);
+  });
+
+  it('opens a fresh chat with the next question when the server could not start a new one', () => {
+    const { result } = renderHook(() => useChat(true));
+    const socket = currentSocket();
+    connectWith(socket, { chatId: CHAT, messages: [] });
+    act(() => {
+      result.current.reset();
+    });
+    socket.serve('chat_error', { id: 'history', code: 'RATE_LIMITED', message: 'Slow down.' });
+
+    act(() => {
+      result.current.ask({ question: 'Hi?' });
+    });
+
+    expect(result.current.connection).toBe('online');
+    expect(socket.emitted.at(-1)?.payload).not.toHaveProperty('chatId');
+  });
+
+  it('never moves back to the old chat for an answer that ends after "new chat"', () => {
+    const { result } = renderHook(() => useChat(true));
+    const socket = currentSocket();
+    connectWith(socket, { chatId: CHAT, messages: [] });
+    act(() => {
+      result.current.ask({ question: 'Hi?' });
+    });
+    const id = askedId(socket);
+    act(() => {
+      result.current.reset();
+    });
+    socket.serve('history', { chatId: NEXT_CHAT, messages: [] });
+
+    socket.serve('done', { id, cancelled: false, chatId: CHAT });
+
+    expect(readChatId()).toBe(NEXT_CHAT);
+  });
+
+  it('fails a question asked before the chat is loaded instead of naming a stale chat', () => {
+    const { result } = renderHook(() => useChat(true));
+    const socket = currentSocket();
+    socket.serve('connect');
+
+    act(() => {
+      result.current.ask({ question: 'Hi?' });
+    });
+
+    expect(socket.emitted.map((entry) => entry.event)).toEqual(['resume']);
+    expect(result.current.messages.at(-1)?.state).toBe('failed');
+  });
+
+  it('keeps what the screen shows when it reconnects to the same chat, the cut-off question too', () => {
+    keepChatId(CHAT);
+    const { result } = renderHook(() => useChat(true));
+    const socket = currentSocket();
+    connectWith(socket, { chatId: CHAT, messages: [] });
+    act(() => {
+      result.current.ask({ question: 'Hi?' });
+    });
+    socket.serve('disconnect');
+
+    connectWith(socket, { chatId: CHAT, messages: [] });
+
+    expect(result.current.messages.map((message) => message.text)).toEqual([
+      'Hi?',
+      'The connection dropped. Ask again once it is back.',
+    ]);
+  });
+
+  it('forgets the chat when starting a new one offline, so the next connection does not resume it', () => {
+    keepChatId(CHAT);
+    const { result } = renderHook(() => useChat(true));
+    currentSocket().connected = false;
+
+    act(() => {
+      result.current.reset();
+    });
+
+    expect(readChatId()).toBeUndefined();
+  });
+
+  it('keeps the new chat the server moved an answer to when the old one had expired', () => {
+    const { result } = renderHook(() => useChat(true));
+    const socket = currentSocket();
+    connectWith(socket, { chatId: CHAT, messages: [] });
+    act(() => {
+      result.current.ask({ question: 'Hi?' });
+    });
+
+    socket.serve('done', { id: askedId(socket), cancelled: false, chatId: NEXT_CHAT });
+
+    expect(readChatId()).toBe(NEXT_CHAT);
+  });
+
+  it('shows a chat that could not be loaded as an error, and still lets the user ask', () => {
+    const { result } = renderHook(() => useChat(true));
+    const socket = currentSocket();
+    socket.serve('connect');
+
+    socket.serve('chat_error', {
+      id: 'history',
+      code: 'SERVICE_UNAVAILABLE',
+      message: 'Try later.',
+    });
+
+    expect(result.current.connection).toBe('online');
+    expect(result.current.messages).toEqual([
+      { id: 'history', role: 'assistant', text: 'Try later.', state: 'failed' },
+    ]);
+  });
+
+  it('shows only the latest failure to load the chat', () => {
+    const { result } = renderHook(() => useChat(true));
+    const socket = currentSocket();
+    socket.serve('connect');
+
+    socket.serve('chat_error', { id: 'history', code: 'SERVICE_UNAVAILABLE', message: 'First.' });
+    socket.serve('chat_error', { id: 'history', code: 'SERVICE_UNAVAILABLE', message: 'Second.' });
+
+    expect(result.current.messages.map((message) => message.text)).toEqual(['Second.']);
   });
 
   it('marks the connection offline when the handshake is refused', () => {

@@ -12,7 +12,7 @@ import { ChatWidget } from './chat-widget';
 
 type Handler = (payload?: unknown) => void;
 
-/** A stand-in socket that is connected at once and records what the widget sends. */
+/** A stand-in socket that connects at once, answers like the server and records what is sent. */
 class FakeSocket {
   readonly emitted: { event: string; payload: unknown }[] = [];
   connected = true;
@@ -27,6 +27,12 @@ class FakeSocket {
 
   emit(event: string, payload?: unknown): this {
     this.emitted.push({ event, payload });
+    // Like the server: resuming or starting a chat is answered with its (here empty) history.
+    if (event === 'resume' || event === 'new_chat') {
+      queueMicrotask(() => {
+        this.serve('history', { chatId: crypto.randomUUID(), messages: [] });
+      });
+    }
     return this;
   }
 
@@ -46,6 +52,13 @@ class FakeSocket {
 }
 
 const sockets: FakeSocket[] = [];
+
+/** What the widget sent with a question, the first one. */
+function firstAsk(socket: FakeSocket): { id: string } & Record<string, unknown> {
+  const ask = socket.emitted.find((sent) => sent.event === 'ask');
+  if (ask === undefined) throw new Error('nothing was asked');
+  return ask.payload as { id: string } & Record<string, unknown>;
+}
 
 function firstSocket(): FakeSocket {
   const socket = sockets[0];
@@ -110,6 +123,7 @@ async function openChat(): Promise<HTMLElement> {
 describe('ChatWidget', () => {
   beforeEach(() => {
     sockets.length = 0;
+    sessionStorage.clear();
   });
 
   afterEach(() => {
@@ -139,18 +153,17 @@ describe('ChatWidget', () => {
     });
     await userEvent.type(question, 'Can I lower it?{Enter}');
     const socket = firstSocket();
-    const asked = socket.emitted[0]?.payload as { id: string };
+    const asked = firstAsk(socket);
     socket.serve('chunk', { id: asked.id, text: 'Not below the confirmed seats.' });
     socket.serve('done', { id: asked.id, cancelled: false });
 
-    expect(socket.emitted[0]).toEqual({
-      event: 'ask',
-      payload: {
-        id: asked.id,
-        resource: 'sessions',
-        field: 'capacity',
-        question: 'Can I lower it?',
-      },
+    expect(asked).toEqual({
+      id: asked.id,
+      resource: 'sessions',
+      field: 'capacity',
+      question: 'Can I lower it?',
+      // The chat the fake server started on connect.
+      chatId: expect.stringMatching(/^[0-9a-f-]{36}$/),
     });
     expect(within(dialog).getByText('Can I lower it?')).toBeInTheDocument();
     // Once in the bubble, once in the hidden region that announces finished answers.
@@ -170,7 +183,12 @@ describe('ChatWidget', () => {
     await userEvent.click(within(dialog).getByRole('button', { name: 'New chat' }));
 
     expect(within(dialog).queryByText('Explain')).not.toBeInTheDocument();
-    expect(firstSocket().emitted.map((sent) => sent.event)).toEqual(['ask', 'cancel']);
+    expect(firstSocket().emitted.map((sent) => sent.event)).toEqual([
+      'resume',
+      'ask',
+      'cancel',
+      'new_chat',
+    ]);
     expect(within(dialog).queryByRole('button', { name: 'New chat' })).not.toBeInTheDocument();
   });
 
@@ -185,7 +203,7 @@ describe('ChatWidget', () => {
 
     await userEvent.click(within(dialog).getByRole('button', { name: 'Stop' }));
 
-    expect(firstSocket().emitted.map((entry) => entry.event)).toEqual(['ask', 'cancel']);
+    expect(firstSocket().emitted.map((entry) => entry.event)).toEqual(['resume', 'ask', 'cancel']);
   });
 
   it('says the assistant is unavailable without a model, and opens no socket', async () => {
@@ -243,7 +261,7 @@ describe('ChatWidget', () => {
       'Hi?{Enter}',
     );
 
-    expect(firstSocket().emitted[0]?.payload).not.toHaveProperty('field');
+    expect(firstAsk(firstSocket())).not.toHaveProperty('field');
   });
 
   it('says so when the assistant cannot be reached', async () => {
