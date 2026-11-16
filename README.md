@@ -91,7 +91,7 @@ Expected failures are `DomainError`s with a code from `packages/shared`. A singl
 
 ### Help chat
 
-The widget connects to the API over Socket.IO with a one-time ticket from `POST /api/chat/ticket` (60 seconds, bound to the user and session, stored as a hash). The API checks the origin, the ticket and a live session. It re-checks the session and the current role before every question, and closes sockets whose session has ended.
+The widget connects to the API over Socket.IO with a one-time ticket from `POST /api/chat/ticket` (60 seconds, bound to the user and session, stored in Redis as a hash and spent atomically, so any API instance accepts it once). The API checks the origin, the ticket and a live session. It re-checks the session and the current role before every question, and closes sockets whose session has ended.
 
 The prompt is built from the shared field descriptions of the screen the user is on, and only from what their role may see. The answer streams back and can be stopped. Each user may ask 10 questions a minute.
 

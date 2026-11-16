@@ -31,7 +31,7 @@ export class ChatHandshake {
     if (socket.handshake.headers.origin !== this.config.adminOrigin) {
       this.refuse(socket, 'Chat handshake refused: foreign origin');
     }
-    const holder = this.tickets.consume(socket.handshake.auth.ticket);
+    const holder = await this.tickets.consume(socket.handshake.auth.ticket);
     if (holder === undefined) {
       this.refuse(socket, 'Chat handshake refused: missing, spent or expired ticket');
     }

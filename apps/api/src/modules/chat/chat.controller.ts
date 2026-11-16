@@ -36,10 +36,10 @@ export class ChatController {
   @Post('ticket')
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: TICKETS_PER_MINUTE, ttl: MINUTE_MS } })
-  ticket(@CurrentAuth() auth: AuthContext): ChatTicket {
+  async ticket(@CurrentAuth() auth: AuthContext): Promise<ChatTicket> {
     // Without a model key there is nothing to connect to; the widget checks the status first.
     this.answers.assertAvailable();
-    const { ticket, expiresAt } = this.tickets.issue({
+    const { ticket, expiresAt } = await this.tickets.issue({
       userId: auth.user.id,
       sessionId: auth.session.id,
     });

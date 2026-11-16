@@ -1,11 +1,11 @@
 import { CHAT_TICKET_TTL_SECONDS } from '@ers/shared';
+import { Injectable } from '@nestjs/common';
 
 import { SECOND_MS } from '../../common/time.js';
+import { RedisService } from '../../redis/redis.service.js';
 import { generateSessionToken, hashSessionToken } from '../auth/session-tokens.js';
 
-const TICKET_TTL_MS = CHAT_TICKET_TTL_SECONDS * SECOND_MS;
-/** Hard cap on unspent tickets, so a flood cannot grow memory without bound. */
-const MAX_STORED_TICKETS = 10_000;
+const TICKET_KEY_PREFIX = 'chat-ticket:';
 
 /**
  * Who a ticket was issued to. The gateway must still check that this session is alive when the
@@ -16,63 +16,58 @@ export interface TicketHolder {
   sessionId: string;
 }
 
-interface StoredTicket extends TicketHolder {
-  expiresAt: number;
+function keyOf(ticket: string): string {
+  return `${TICKET_KEY_PREFIX}${hashSessionToken(ticket)}`;
+}
+
+/** Reads back what `issue` stored; anything else in the key is treated as no ticket. */
+function parseHolder(stored: string | null): TicketHolder | undefined {
+  if (stored === null) return undefined;
+  let value: unknown;
+  try {
+    value = JSON.parse(stored);
+  } catch {
+    // Recovered on purpose: a value issue() did not write is a refusal, not an outage.
+    return undefined;
+  }
+  if (
+    typeof value === 'object' &&
+    value !== null &&
+    'userId' in value &&
+    'sessionId' in value &&
+    typeof value.userId === 'string' &&
+    typeof value.sessionId === 'string'
+  ) {
+    return { userId: value.userId, sessionId: value.sessionId };
+  }
+  return undefined;
 }
 
 /**
  * One-time chat tickets. The browser cannot send the HttpOnly session cookie to the API host
  * cross-site, so it trades a CSRF-checked REST call for a short-lived random ticket and puts that in
- * the socket handshake. Only hashes are kept, in memory: the API runs as one instance, and a
- * restart only makes the admin fetch a new ticket.
+ * the socket handshake. Kept in Redis, so a ticket issued by one API instance opens a socket on
+ * another; only its hash is stored, and Redis drops it when it expires.
  */
+@Injectable()
 export class ChatTicketStore {
-  private readonly tickets = new Map<string, StoredTicket>();
-  private lastSweep = 0;
+  constructor(private readonly redis: RedisService) {}
 
-  issue(holder: TicketHolder, now: number = Date.now()): { ticket: string; expiresAt: Date } {
-    this.sweep(now);
+  async issue(holder: TicketHolder): Promise<{ ticket: string; expiresAt: Date }> {
+    // Taken before the write, so the expiry the admin sees is never later than Redis's.
+    const expiresAt = new Date(Date.now() + CHAT_TICKET_TTL_SECONDS * SECOND_MS);
     const ticket = generateSessionToken();
-    const expiresAt = now + TICKET_TTL_MS;
-    this.tickets.set(hashSessionToken(ticket), { ...holder, expiresAt });
-    this.evictOverflow();
-    return { ticket, expiresAt: new Date(expiresAt) };
+    const value = JSON.stringify({ userId: holder.userId, sessionId: holder.sessionId });
+    await this.redis.set(keyOf(ticket), value, 'EX', CHAT_TICKET_TTL_SECONDS);
+    return { ticket, expiresAt };
   }
 
-  /** The holder of a valid ticket, which is spent by this call; undefined for unknown or expired. */
-  consume(ticket: unknown, now: number = Date.now()): TicketHolder | undefined {
-    if (typeof ticket !== 'string' || ticket === '') {
-      return undefined;
-    }
-    const key = hashSessionToken(ticket);
-    const stored = this.tickets.get(key);
-    this.tickets.delete(key);
-    if (stored === undefined || stored.expiresAt <= now) {
-      return undefined;
-    }
-    return { userId: stored.userId, sessionId: stored.sessionId };
-  }
-
-  /** Drops expired tickets at most once per ticket lifetime, so issuing stays cheap. */
-  private sweep(now: number): void {
-    if (now - this.lastSweep < TICKET_TTL_MS) {
-      return;
-    }
-    this.lastSweep = now;
-    for (const [key, stored] of this.tickets) {
-      if (stored.expiresAt <= now) {
-        this.tickets.delete(key);
-      }
-    }
-  }
-
-  /** Over the cap, the oldest tickets go first (a Map keeps insertion order). */
-  private evictOverflow(): void {
-    for (const key of this.tickets.keys()) {
-      if (this.tickets.size <= MAX_STORED_TICKETS) {
-        return;
-      }
-      this.tickets.delete(key);
-    }
+  /**
+   * The holder of a valid ticket, which is spent by this call; undefined for unknown or expired.
+   * GETDEL reads and deletes in one step, so two sockets racing with one ticket cannot both pass.
+   */
+  async consume(ticket: unknown): Promise<TicketHolder | undefined> {
+    if (typeof ticket !== 'string' || ticket === '') return undefined;
+    return parseHolder(await this.redis.getdel(keyOf(ticket)));
   }
 }
