@@ -116,4 +116,42 @@ describe('readRound', () => {
 
     expect(result.extras).toEqual({ extra_content: { google: { thought_signature: 'sig' } } });
   });
+
+  it('keeps the token counts the provider sends in a last piece without choices', async () => {
+    const { result } = await read(chunk({ content: 'Hi' }, 'stop'), {
+      choices: [],
+      usage: {
+        prompt_tokens: 2750,
+        completion_tokens: 12,
+        total_tokens: 2762,
+        prompt_tokens_details: { cached_tokens: 2048 },
+      },
+    } as unknown as ChatCompletionChunk);
+
+    expect(result.usage).toEqual({ promptTokens: 2750, completionTokens: 12, cachedTokens: 2048 });
+  });
+
+  it('counts no cached tokens when the provider does not report them', async () => {
+    const { result } = await read({
+      choices: [{ delta: { content: 'Hi' }, finish_reason: 'stop', index: 0 }],
+      usage: { prompt_tokens: 3, completion_tokens: 9, total_tokens: 12 },
+    } as unknown as ChatCompletionChunk);
+
+    expect(result.usage).toEqual({ promptTokens: 3, completionTokens: 9, cachedTokens: 0 });
+  });
+
+  it('counts a token count the provider left out as none', async () => {
+    const { result } = await read({
+      choices: [{ delta: { content: 'Hi' }, finish_reason: 'stop', index: 0 }],
+      usage: { prompt_tokens: 2700, total_tokens: 2700 },
+    } as unknown as ChatCompletionChunk);
+
+    expect(result.usage).toEqual({ promptTokens: 2700, completionTokens: 0, cachedTokens: 0 });
+  });
+
+  it('has no token counts when the provider sends none', async () => {
+    const { result } = await read(chunk({ content: 'Hi' }, 'stop'));
+
+    expect(result.usage).toBeUndefined();
+  });
 });

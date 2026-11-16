@@ -9,12 +9,48 @@ export type FinishReason = ChatCompletionChunk.Choice['finish_reason'];
 /** A tool call as the model sent it, extra fields kept: Gemini needs its thought signature back. */
 export type ModelToolCall = ChatCompletionMessageFunctionToolCall & Record<string, unknown>;
 
+/** What a reply cost, as the provider counted it; cached tokens are billed at a discount. */
+export interface RoundUsage {
+  promptTokens: number;
+  completionTokens: number;
+  cachedTokens: number;
+}
+
 export interface RoundResult {
   text: string;
   toolCalls: ModelToolCall[];
   finishReason: FinishReason;
   /** Fields the model put on its message beside the text (Gemini: `extra_content`). */
   extras: Record<string, unknown>;
+  /** Present when the provider reported it (requested with `stream_options.include_usage`). */
+  usage?: RoundUsage;
+}
+
+export const NO_USAGE: RoundUsage = { promptTokens: 0, completionTokens: 0, cachedTokens: 0 };
+
+/** The tokens of all rounds so far; a round the provider did not count adds nothing. */
+export function addUsage(total: RoundUsage, round: RoundUsage | undefined): RoundUsage {
+  if (round === undefined) return total;
+  return {
+    promptTokens: total.promptTokens + round.promptTokens,
+    completionTokens: total.completionTokens + round.completionTokens,
+    cachedTokens: total.cachedTokens + round.cachedTokens,
+  };
+}
+
+/** A count from the provider; compatible APIs may leave one out, which then counts as none. */
+function countOf(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+}
+
+/** Keeps the counts of a piece that has them; most pieces have none. */
+function keepUsage(result: RoundResult, usage: ChatCompletionChunk['usage']): void {
+  if (usage === undefined || usage === null) return;
+  result.usage = {
+    promptTokens: countOf(usage.prompt_tokens),
+    completionTokens: countOf(usage.completion_tokens),
+    cachedTokens: countOf(usage.prompt_tokens_details?.cached_tokens),
+  };
 }
 
 /** Fields of a streamed piece that are not its content or tool calls, kept for the next request. */
@@ -63,6 +99,8 @@ export async function readRound(
 ): Promise<RoundResult> {
   const result: RoundResult = { text: '', toolCalls: [], finishReason: null, extras: {} };
   for await (const chunk of stream) {
+    // OpenAI sends the counts in a last piece with no choices; Gemini puts them on its last choice.
+    keepUsage(result, chunk.usage);
     const choice = chunk.choices[0];
     if (choice === undefined) continue;
     result.finishReason = choice.finish_reason ?? result.finishReason;

@@ -4,6 +4,7 @@ import { Injectable } from '@nestjs/common';
 import {
   buildAssistantInstructions,
   resolveTimeZone,
+  withPanelNote,
   type AssistantScreen,
 } from '../../domain/assistant-prompt.js';
 
@@ -14,6 +15,7 @@ import {
   type ChatEntry,
   type ChatOwner,
 } from './chat-history.store.js';
+import { compactOldToolResults } from './tool-reply.js';
 
 import type { User } from '../../generated/prisma/client.js';
 
@@ -64,9 +66,13 @@ export class ChatConversations {
 
   /**
    * Answers a question in the user's chat: the model sees the instructions for the user's current
-   * role, the chat so far and the question. A finished answer is added to the chat; a cancelled one
-   * is not, so the chat never holds half an answer. When the chat the browser kept is gone, a new
-   * one starts with this answer, and its id comes back for the browser to keep instead.
+   * role, the chat so far with older tool data left out, and the question with the panel's note.
+   * The chat in Redis stays whole and keeps the bare question, so what the model reads changes from
+   * one question to the next only where tool data was just left out, and the provider can reuse
+   * everything before that point.
+   * A finished answer is added to the chat; a cancelled one is not, so the chat never holds half an
+   * answer. When the chat the browser kept is gone, a new one starts with this answer, and its id
+   * comes back for the browser to keep instead.
    */
   async answer(
     ask: AssistantQuestion,
@@ -76,7 +82,9 @@ export class ChatConversations {
     const chatId = chatIdOf(ask.chatId);
     const kept = chatId === undefined ? undefined : await this.history.load(owner, chatId);
     const timeZone = resolveTimeZone(ask.timeZone);
-    const instructions = buildAssistantInstructions({
+    const instructions = buildAssistantInstructions({ role: ask.user.role });
+    const asked = withPanelNote({
+      question: ask.question,
       role: ask.user.role,
       now: new Date(),
       timeZone,
@@ -85,7 +93,11 @@ export class ChatConversations {
     const question: ChatEntry = { role: 'user', content: ask.question };
     const { outcome, entries } = await this.agent.run({
       ...callbacks,
-      messages: [{ role: 'system', content: instructions }, ...(kept ?? []), question],
+      messages: [
+        { role: 'system', content: instructions },
+        ...compactOldToolResults(kept ?? []),
+        { role: 'user', content: asked },
+      ],
       user: ask.user,
       timeZone,
     });

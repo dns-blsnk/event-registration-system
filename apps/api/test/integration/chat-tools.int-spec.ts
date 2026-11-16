@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+import { TOOL_PAGE_SIZE } from '../../src/modules/chat/tools/assistant-tool.js';
 import { ChatToolbox } from '../../src/modules/chat/tools/chat-toolbox.js';
 import { PrismaService } from '../../src/prisma/prisma.service.js';
 import { createTestApp } from '../helpers/create-test-app.js';
@@ -301,6 +302,20 @@ describe('assistant tools', () => {
       const outcome = await toolbox.run('list_tags', { q: name }, context(admin));
 
       expect(outcome).toEqual({ data: { total: 1, tags: [{ id: tag.id, name }] } });
+    });
+
+    it('gives the model one page of rows and the total of all of them', async () => {
+      const admin = await createUser(prisma, { role: 'ADMIN' });
+      const prefix = `page-${randomUUID()}`;
+      const count = TOOL_PAGE_SIZE + 1;
+      await prisma.tag.createMany({
+        data: Array.from({ length: count }, (_, index) => ({ name: `${prefix}-${String(index)}` })),
+      });
+
+      const outcome = await toolbox.run('list_tags', { q: prefix }, context(admin));
+
+      expect(outcome).toMatchObject({ data: { total: count } });
+      expect((outcome as { data: { tags: unknown[] } }).data.tags).toHaveLength(TOOL_PAGE_SIZE);
     });
   });
 

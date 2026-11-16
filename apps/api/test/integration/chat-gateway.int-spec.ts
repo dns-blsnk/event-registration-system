@@ -4,7 +4,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest
 
 import { AppLogService } from '../../src/modules/app-logs/app-log.service.js';
 import { AI_CLIENT } from '../../src/modules/chat/chat-agent.js';
-import { ChatHistoryStore } from '../../src/modules/chat/chat-history.store.js';
+import { ChatHistoryStore, type ChatEntry } from '../../src/modules/chat/chat-history.store.js';
 import { ChatGateway } from '../../src/modules/chat/chat.gateway.js';
 import { PrismaService } from '../../src/prisma/prisma.service.js';
 import { signedInAgent, type SignedInAgent } from '../helpers/auth.js';
@@ -48,8 +48,9 @@ const model = {
   requests: [] as FakeRequest[],
 };
 
-function systemOf(request: FakeRequest | undefined): string {
-  return request?.messages[0]?.content ?? '';
+/** The question as the model read it: the last user message, with the panel's note. */
+function questionOf(request: FakeRequest | undefined): string {
+  return request?.messages.findLast((message) => message.role === 'user')?.content ?? '';
 }
 
 const fakeAiClient = {
@@ -196,7 +197,7 @@ describe('chat gateway', () => {
       text: 'Seats left.',
       done: { id: 'q1', cancelled: false },
     });
-    expect(systemOf(model.requests[0])).toContain('the sessions screen open, in the field');
+    expect(questionOf(model.requests[0])).toContain('the sessions screen open, in the field');
   });
 
   it('refuses a socket without a ticket', async () => {
@@ -256,7 +257,7 @@ describe('chat gateway', () => {
     socket.emit(ChatEvent.ASK, { id: 'q1', resource: 'users', question: 'Roles?' });
 
     expect((await result).done).toMatchObject({ id: 'q1', cancelled: false });
-    expect(systemOf(model.requests[0])).not.toContain('users screen');
+    expect(questionOf(model.requests[0])).not.toContain('users screen');
   });
 
   it('answers a question asked from no screen at all', async () => {
@@ -309,6 +310,10 @@ describe('chat gateway', () => {
       'tool',
     ]);
     expect(JSON.stringify(second?.messages[2])).toContain('thought_signature');
+    // The model reads the panel's note with the question; the chat below keeps the bare question.
+    expect(questionOf(second)).toMatch(
+      /^Panel note: .*Europe\/Tallinn.*Question: Events in Tallinn\?$/s,
+    );
     expect((await historyAfter(socket, ChatEvent.RESUME, { chatId })).messages).toEqual([
       { role: 'user', text: 'Events in Tallinn?' },
       // The opened list comes back too, so the answer can offer it again after a reload.
@@ -469,6 +474,36 @@ describe('chat gateway', () => {
         { role: 'assistant', text: 'None this week.' },
       ],
     });
+  });
+
+  it('sends the model the rows of the last search only, and keeps the chat whole', async () => {
+    const { socket, agent } = await connectAs('CUSTOMER');
+    const store = app.get(ChatHistoryStore);
+    const me = { userId: agent.userId, role: 'CUSTOMER' as const };
+    const chatId = await store.create(me);
+    const rows = [{ title: 'React Day' }, { title: 'Vue Night' }];
+    const searchTurn = (question: string, id: string): ChatEntry[] => [
+      { role: 'user', content: question },
+      {
+        role: 'assistant',
+        content: null,
+        tool_calls: [{ id, type: 'function', function: { name: 'search', arguments: '{}' } }],
+      },
+      { role: 'tool', tool_call_id: id, content: JSON.stringify({ result: { total: 2, rows } }) },
+      { role: 'assistant', content: 'Two.' },
+    ];
+    const kept = [...searchTurn('Events?', 'c1'), ...searchTurn('In Tallinn?', 'c2')];
+    await store.append(me, chatId, kept);
+
+    const result = answer(socket, 'q1');
+    socket.emit(ChatEvent.ASK, { id: 'q1', question: 'And the second?', chatId });
+    await result;
+
+    const replies = model.requests[0]?.messages.filter((message) => message.role === 'tool');
+    expect(replies?.[0]?.content).not.toContain('React Day');
+    expect(replies?.[0]?.content).toContain('"total":2');
+    expect(replies?.[1]?.content).toContain('React Day');
+    expect((await store.load(me, chatId))?.slice(0, kept.length)).toEqual(kept);
   });
 
   it('never resumes another user’s chat, even with its id', async () => {

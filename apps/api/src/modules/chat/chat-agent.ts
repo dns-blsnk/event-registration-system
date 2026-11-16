@@ -6,14 +6,14 @@ import OpenAI from 'openai';
 import { DomainError } from '../../common/errors/domain-error.js';
 import { SECOND_MS } from '../../common/time.js';
 
-import { assistantEntry, readRound } from './chat-round.js';
+import { addUsage, assistantEntry, NO_USAGE, readRound } from './chat-round.js';
+import { toolReply } from './tool-reply.js';
 import { ChatToolbox, type ToolOutcome } from './tools/chat-toolbox.js';
-import { OPENED_LIST_FIELD } from './tools/tool-navigation.js';
 
 import type { AiReasoningEffort } from '../../config/config.schema.js';
 import type { User } from '../../generated/prisma/client.js';
 import type { ChatEntry } from './chat-history.store.js';
-import type { ModelToolCall, FinishReason } from './chat-round.js';
+import type { ModelToolCall, FinishReason, RoundUsage } from './chat-round.js';
 import type { ListToOpen } from './tools/tool-navigation.js';
 import type { ChatCompletionFunctionTool } from 'openai/resources/chat/completions';
 
@@ -66,6 +66,14 @@ export interface AgentResult {
   outcome: AnswerOutcome;
   /** What the model and the tools added in this turn, to keep in the chat's history. */
   entries: ChatEntry[];
+}
+
+/** One answer as it builds up: what to keep in the chat, and what it took, for the log. */
+interface AnswerState {
+  entries: ChatEntry[];
+  rounds: number;
+  toolCalls: number;
+  usage: RoundUsage;
 }
 
 /** Marks a failure of the caller's own callback, so it is not mistaken for a provider outage. */
@@ -131,24 +139,6 @@ function argumentsOf(call: ModelToolCall): unknown {
   }
 }
 
-/** Whether the list a search asked to show was opened, in words the model can relay. */
-function listNote(outcome: { listToOpen?: ListToOpen; notShown?: string }) {
-  if (outcome.listToOpen !== undefined) {
-    return {
-      list: 'Opened in the panel with these filters.',
-      [OPENED_LIST_FIELD]: outcome.listToOpen,
-    };
-  }
-  if (outcome.notShown !== undefined) return { list: `Not opened: ${outcome.notShown}` };
-  return {};
-}
-
-/** What the model reads back from a tool: the data or the error, and whether a list opened. */
-function toolReply(outcome: ToolOutcome): string {
-  if ('error' in outcome) return JSON.stringify({ error: outcome.error });
-  return JSON.stringify({ result: outcome.data, ...listNote(outcome) });
-}
-
 /**
  * Answers one question with the model and the user's tools: each round streams the model's text;
  * when it asks for tools they run with the user's own permissions, their results go back, and the
@@ -185,11 +175,14 @@ export class ChatAgent {
     }
     const timeout = AbortSignal.timeout(ANSWER_TIMEOUT_MS);
     const signal = AbortSignal.any([turn.signal, timeout]);
-    const entries: ChatEntry[] = [];
+    const answer: AnswerState = { entries: [], rounds: 0, toolCalls: 0, usage: NO_USAGE };
     try {
-      const outcome = await this.rounds(client, turn, signal, entries);
-      return { outcome, entries };
+      await this.rounds(client, turn, signal, answer);
+      this.logAnswer(turn, answer, 'assistant answered');
+      return { outcome: 'completed', entries: answer.entries };
     } catch (error) {
+      // Rounds that finished were billed even when the answer was not, so they are logged too.
+      this.logAnswer(turn, answer, 'assistant stopped');
       if (error instanceof CallbackFailure) throw error.cause;
       if (turn.signal.aborted) return { outcome: 'cancelled', entries: [] };
       if (timeout.aborted) {
@@ -202,15 +195,21 @@ export class ChatAgent {
     }
   }
 
+  private logAnswer(turn: AgentTurn, answer: AnswerState, message: string): void {
+    const { rounds, toolCalls, usage } = answer;
+    this.logger.info({ userId: turn.user.id, rounds, toolCalls, ...usage }, message);
+  }
+
+  /** Runs model rounds until one ends in text, adding to `answer` as each round finishes. */
   private async rounds(
     client: AnswerClient,
     turn: AgentTurn,
     signal: AbortSignal,
-    entries: ChatEntry[],
-  ): Promise<AnswerOutcome> {
+    answer: AnswerState,
+  ): Promise<void> {
     const emit = guarded(turn.onText);
+    const { entries } = answer;
     let wroteText = false;
-    let toolCalls = 0;
     for (let round = 1; round <= MAX_ROUNDS; round += 1) {
       const tools = round < MAX_ROUNDS ? this.toolbox.definitionsFor(turn.user.role) : [];
       const stream = await client.chat.completions.create(
@@ -219,6 +218,8 @@ export class ChatAgent {
       );
       const result = await readRound(stream, separatedAfter(wroteText, emit));
       wroteText ||= result.text !== '';
+      answer.rounds = round;
+      answer.usage = addUsage(answer.usage, result.usage);
       if (result.toolCalls.length === 0 || round === MAX_ROUNDS) {
         const closing = closingText(result.finishReason, result.text !== '') ?? '';
         if (closing !== '') emit(closing);
@@ -226,16 +227,14 @@ export class ChatAgent {
         // would make every later request in this chat invalid. The closing words are kept, so the
         // chat reads later as it did live.
         entries.push(assistantEntry({ ...result, toolCalls: [], text: result.text + closing }));
-        this.logger.info({ userId: turn.user.id, rounds: round, toolCalls }, 'assistant answered');
-        return 'completed';
+        return;
       }
       entries.push(assistantEntry(result));
-      toolCalls += result.toolCalls.length;
+      answer.toolCalls += result.toolCalls.length;
       for (const call of result.toolCalls) {
         entries.push(await this.runTool(call, turn));
       }
     }
-    return 'completed';
   }
 
   private async runTool(call: ModelToolCall, turn: AgentTurn): Promise<ChatEntry> {
@@ -263,6 +262,8 @@ export class ChatAgent {
       ...(reasoningEffort === 'default' ? {} : { reasoning_effort: reasoningEffort }),
       ...(tools.length === 0 ? {} : { tools }),
       stream: true as const,
+      // Token counts for the log; OpenAI and Gemini both accept it.
+      stream_options: { include_usage: true },
       messages,
     };
   }
