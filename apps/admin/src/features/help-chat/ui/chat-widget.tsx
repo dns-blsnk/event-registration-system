@@ -1,0 +1,226 @@
+import {
+  CHAT_FORM_FIELDS,
+  isResource,
+  type ChatStatus,
+  type PublicUser,
+  type Resource,
+} from '@ers/shared';
+import CloudOffIcon from '@mui/icons-material/CloudOff';
+import Paper from '@mui/material/Paper';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+import { useCustom, useGetIdentity, useResourceParams } from '@refinedev/core';
+import { useThemedLayoutContext } from '@refinedev/mui';
+import { useEffect, useRef } from 'react';
+
+import {
+  blocker,
+  reachabilityOf,
+  starterQuestions,
+  type ChatAvailability,
+} from '../model/chat-state';
+import { useHelpChat } from '../model/help-chat-context';
+import { describeList, type ListToOpen } from '../model/list-to-open';
+import { useChat, type ChatControls } from '../model/use-chat';
+import { useFocusedField } from '../model/use-focused-field';
+import { useOpenList } from '../model/use-open-list';
+
+import { ChatComposer } from './chat-composer';
+import { ChatHeader } from './chat-header';
+import { ChatMessages, type ListLinks } from './chat-messages';
+
+import type { SxProps, Theme } from '@mui/material/styles';
+
+const PANEL_SIZE = { width: 380, height: 520 } as const;
+/** Refine's side menu widths, open and collapsed. */
+const SIDER_WIDTH = { open: 240, collapsed: 56 } as const;
+/** The gap between the panel and the menu and the bottom of the window. */
+const PANEL_GAP = 16;
+
+/** Next to the side menu's bottom, where its entry is; across the bottom on a phone. */
+function panelPlace(isSiderCollapsed: boolean) {
+  const siderWidth = isSiderCollapsed ? SIDER_WIDTH.collapsed : SIDER_WIDTH.open;
+  return {
+    position: 'fixed',
+    // Over the page, as the floating button was: tables' sticky parts must not cover the composer.
+    zIndex: 'speedDial',
+    bottom: PANEL_GAP,
+    left: { xs: PANEL_GAP, md: siderWidth + PANEL_GAP },
+    maxWidth: `calc(100vw - ${String(PANEL_GAP)}px - ${String(PANEL_GAP)}px)`,
+  } as const satisfies SxProps<Theme>;
+}
+
+/** The screen's name as the menu shows it (the resource label), else its route name. */
+function labelOf(resource: { name: string; meta?: { label?: string } }): string {
+  return resource.meta?.label ?? resource.name;
+}
+
+/** The focused field of this screen, only if the screen's form has it (anything else is not sent). */
+function screenField(
+  screen: Resource | undefined,
+  name: string | undefined,
+): { name: string; label: string } | undefined {
+  if (screen === undefined || name === undefined) return undefined;
+  const description = CHAT_FORM_FIELDS[screen][name];
+  return description === undefined ? undefined : { name, label: description.label };
+}
+
+/** What questions are about, e.g. "Sessions · Capacity"; nothing outside a resource screen. */
+function contextOf(
+  screen: { label: string } | undefined,
+  field: { label: string } | undefined,
+): string | undefined {
+  return screen === undefined
+    ? undefined
+    : [screen.label, field?.label].filter(Boolean).join(' · ');
+}
+
+interface ChatPanelProps {
+  chat: ChatControls;
+  availability: ChatAvailability;
+  screen: { name: Resource; label: string } | undefined;
+  field: { name: string; label: string } | undefined;
+  suggestions: readonly string[];
+  links: ListLinks;
+  isSiderCollapsed: boolean;
+  onClose: () => void;
+}
+
+/** The open panel: header, conversation (or why it cannot start) and the question box. */
+function ChatPanel({
+  chat,
+  availability,
+  screen,
+  field,
+  suggestions,
+  links,
+  isSiderCollapsed,
+  onClose,
+}: ChatPanelProps): React.JSX.Element {
+  const reason = blocker(availability);
+  // One rule for both ways to ask (typing and the starter questions): only while connected.
+  const canAsk = availability.isAvailable && chat.connection === 'online';
+  // The screen and field are a hint for the assistant; questions are about anything the role sees.
+  const ask = (question: string): void => {
+    chat.ask({
+      ...(screen === undefined ? {} : { resource: screen.name }),
+      ...(field === undefined ? {} : { field: field.name }),
+      question,
+    });
+  };
+  const context = contextOf(screen, field);
+  return (
+    <Paper
+      elevation={8}
+      role="dialog"
+      aria-label="Help chat"
+      sx={{
+        ...panelPlace(isSiderCollapsed),
+        ...PANEL_SIZE,
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+      }}
+    >
+      <ChatHeader
+        reachability={reachabilityOf(availability, chat.connection)}
+        context={context}
+        onNewChat={chat.messages.length === 0 ? undefined : chat.reset}
+        onClose={onClose}
+      />
+      {reason === undefined ? (
+        <ChatMessages
+          messages={chat.messages}
+          suggestions={suggestions}
+          links={links}
+          onAsk={canAsk && !chat.isAnswering ? ask : undefined}
+        />
+      ) : (
+        <Stack
+          spacing={1}
+          alignItems="center"
+          justifyContent="center"
+          sx={{ flex: 1, p: 3, textAlign: 'center', bgcolor: 'background.default' }}
+        >
+          <CloudOffIcon color="disabled" fontSize="large" />
+          <Typography variant="body2" color="text.secondary">
+            {reason}
+          </Typography>
+        </Stack>
+      )}
+      <ChatComposer
+        fieldLabel={field?.label}
+        canAsk={canAsk}
+        isAnswering={chat.isAnswering}
+        onAsk={ask}
+        onStop={chat.cancel}
+      />
+    </Paper>
+  );
+}
+
+/**
+ * The assistant's panel, opened from its entry in the side menu, on any page. The open screen and
+ * the field the user was last in go with each question as a hint. Nothing connects until it is
+ * first opened; the conversation, and an answer still streaming, survive closing the panel.
+ */
+export function ChatWidget(): React.JSX.Element | null {
+  const { isOpen, openCount, close, focusTrigger } = useHelpChat();
+  const { siderCollapsed } = useThemedLayoutContext();
+  const wasOpened = openCount > 0;
+  // Tracked while closed too: the user picks a field first, then opens the chat to ask about it.
+  const focusedName = useFocusedField();
+  const { resource, resources } = useResourceParams();
+  const openList = useOpenList();
+  const links: ListLinks = {
+    describe: (list: ListToOpen) => {
+      const item = resources.find((candidate) => candidate.name === list.resource);
+      return describeList(list, item === undefined ? list.resource : labelOf(item));
+    },
+    open: (list: ListToOpen) => {
+      // Not awaited: opening never rejects, and a click needs no answer back.
+      void openList(list, { automatic: false, isWanted: () => true });
+    },
+  };
+  const screen = isResource(resource?.name)
+    ? { name: resource.name, label: labelOf(resource) }
+    : undefined;
+  const field = screenField(screen?.name, focusedName);
+  const { data: user } = useGetIdentity<PublicUser | null>();
+  const { query } = useCustom<ChatStatus>({
+    url: '/chat/status',
+    method: 'get',
+    queryOptions: { enabled: wasOpened },
+    errorNotification: false,
+  });
+  const availability: ChatAvailability = {
+    isLoaded: query.isSuccess,
+    isFailed: query.isError,
+    isAvailable: query.data?.data.isAvailable === true,
+  };
+  const chat = useChat(availability.isAvailable && wasOpened, openList);
+  // A failed status check is retried on reopening, as the panel tells the user.
+  const retriedFor = useRef(openCount);
+  useEffect(() => {
+    if (openCount === retriedFor.current) return;
+    retriedFor.current = openCount;
+    if (query.isError) void query.refetch();
+  }, [openCount, query]);
+  // Back to the menu entry after closing, so keyboard users are not dropped at the top of the page.
+  useEffect(() => {
+    if (!isOpen && wasOpened) focusTrigger();
+  }, [isOpen, wasOpened, focusTrigger]);
+  if (!isOpen) return null;
+  return (
+    <ChatPanel
+      chat={chat}
+      availability={availability}
+      screen={screen}
+      field={field}
+      suggestions={starterQuestions(user?.role, field?.label)}
+      links={links}
+      isSiderCollapsed={siderCollapsed}
+      onClose={close}
+    />
+  );
+}

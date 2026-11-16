@@ -1,0 +1,165 @@
+import { z } from 'zod';
+
+const MIN_SECRET_LENGTH = 32;
+const DEFAULT_API_PORT = 3000;
+const MAX_PORT = 65_535;
+const MAX_PROXY_HOPS = 5;
+/** Gemini's OpenAI-compatible endpoint; the free tier of AI Studio needs no card. */
+const DEFAULT_AI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/openai/';
+const DEFAULT_AI_MODEL = 'gemini-3.5-flash-lite';
+/** Namespaces this app's keys, so one Redis can serve several apps or isolated test runs. */
+const DEFAULT_REDIS_KEY_PREFIX = 'ers:';
+const REDIS_KEY_PREFIX_PATTERN = /^[\w:-]{1,40}$/;
+/** `default` sends no `reasoning_effort`, for providers or models that reject the parameter. */
+const AI_REASONING_EFFORTS = ['default', 'minimal', 'low', 'medium', 'high'] as const;
+
+const NODE_ENVS = ['development', 'test', 'production'] as const;
+const LOG_LEVELS = ['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'] as const;
+
+const httpUrl = z.url({ protocol: /^https?$/ });
+const redisUrl = z.url({ protocol: /^rediss?$/ });
+const postgresUrl = z.url({ protocol: /^postgres(ql)?$/ });
+
+const booleanString = z
+  .enum(['true', 'false'])
+  .default('false')
+  .transform((value) => value === 'true');
+
+/** Raw environment variables. Names match `.env.example`. */
+const envSchema = z.object({
+  NODE_ENV: z.enum(NODE_ENVS),
+  LOG_LEVEL: z.enum(LOG_LEVELS).default('info'),
+  API_PORT: z.coerce.number().int().positive().max(MAX_PORT).optional(),
+  /** Commit the running build came from; Render sets it, deploy checks wait for it in /health. */
+  RENDER_GIT_COMMIT: z
+    .string()
+    .regex(/^[0-9a-f]{7,40}$/)
+    .optional(),
+  /** Set by hosts such as Render; API_PORT, when given, wins. */
+  PORT: z.coerce.number().int().positive().max(MAX_PORT).optional(),
+  /** Reverse proxies in front of the API (Render, Vercel rewrite); needed for the real client IP. */
+  TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(MAX_PROXY_HOPS).default(0),
+  ADMIN_ORIGIN: httpUrl,
+  DATABASE_URL: postgresUrl,
+  REDIS_URL: redisUrl,
+  REDIS_KEY_PREFIX: z.string().regex(REDIS_KEY_PREFIX_PATTERN).default(DEFAULT_REDIS_KEY_PREFIX),
+  SESSION_SECRET: z.string().min(MIN_SECRET_LENGTH),
+  S3_ENDPOINT: httpUrl,
+  S3_REGION: z.string().min(1),
+  S3_BUCKET: z.string().min(1),
+  S3_ACCESS_KEY_ID: z.string().min(1),
+  S3_SECRET_ACCESS_KEY: z.string().min(1),
+  S3_FORCE_PATH_STYLE: booleanString,
+  /** Any OpenAI-compatible chat API; the defaults point at Google AI Studio (Gemini). */
+  AI_API_KEY: z.string().optional(),
+  AI_BASE_URL: httpUrl.default(DEFAULT_AI_BASE_URL),
+  AI_MODEL: z.string().min(1).default(DEFAULT_AI_MODEL),
+  AI_REASONING_EFFORT: z.enum(AI_REASONING_EFFORTS).default('low'),
+  /** Password of the demo accounts the seed creates. Only the seed reads and checks it, so a bad
+   * value never stops the API from starting. */
+  SEED_DEMO_PASSWORD: z.string().optional(),
+  GITHUB_CLIENT_ID: z.string().optional(),
+  GITHUB_CLIENT_SECRET: z.string().optional(),
+});
+
+export type NodeEnv = (typeof NODE_ENVS)[number];
+export type LogLevel = (typeof LOG_LEVELS)[number];
+
+export interface Config {
+  readonly nodeEnv: NodeEnv;
+  readonly isProduction: boolean;
+  /** Commit of this build when the host reports it, otherwise undefined (local, tests). */
+  readonly version: string | undefined;
+  readonly logLevel: LogLevel;
+  readonly port: number;
+  readonly trustProxyHops: number;
+  readonly adminOrigin: string;
+  readonly databaseUrl: string;
+  readonly redis: { readonly url: string; readonly keyPrefix: string };
+  readonly sessionSecret: string;
+  readonly s3: {
+    readonly endpoint: string;
+    readonly region: string;
+    readonly bucket: string;
+    readonly accessKeyId: string;
+    readonly secretAccessKey: string;
+    readonly forcePathStyle: boolean;
+  };
+  readonly ai: {
+    readonly apiKey: string | undefined;
+    readonly baseUrl: string;
+    readonly model: string;
+    readonly reasoningEffort: AiReasoningEffort;
+  };
+  readonly seedDemoPassword: string | undefined;
+  readonly github: { readonly clientId: string; readonly clientSecret: string } | undefined;
+}
+
+export type AiReasoningEffort = (typeof AI_REASONING_EFFORTS)[number];
+
+/** Thrown at startup when the environment is incomplete. Lists variable names, never values. */
+export class ConfigError extends Error {
+  constructor(readonly variables: readonly string[]) {
+    super(`Invalid or missing environment variables: ${variables.join(', ')}`);
+    this.name = 'ConfigError';
+  }
+}
+
+type RawEnv = Readonly<Record<string, string | undefined>>;
+
+/** Blank values count as unset, so defaults and "optional" behave the same for `KEY=` and no key. */
+function dropBlankValues(env: RawEnv): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(env).flatMap(([key, value]) => {
+      const trimmed = value?.trim();
+      return trimmed === undefined || trimmed === '' ? [] : [[key, trimmed]];
+    }),
+  );
+}
+
+export function parseConfig(env: RawEnv): Config {
+  const result = envSchema.safeParse(dropBlankValues(env));
+  if (!result.success) {
+    const variables = [...new Set(result.error.issues.map((issue) => String(issue.path[0])))];
+    throw new ConfigError(variables.sort());
+  }
+  const values = result.data;
+  // Production always runs behind Render's proxy: with 0 hops every client would share one IP,
+  // breaking rate limits and lockouts.
+  if (values.NODE_ENV === 'production' && values.TRUST_PROXY_HOPS === 0) {
+    throw new ConfigError(['TRUST_PROXY_HOPS']);
+  }
+  const { GITHUB_CLIENT_ID: githubClientId, GITHUB_CLIENT_SECRET: githubClientSecret } = values;
+
+  return {
+    nodeEnv: values.NODE_ENV,
+    isProduction: values.NODE_ENV === 'production',
+    version: values.RENDER_GIT_COMMIT,
+    logLevel: values.LOG_LEVEL,
+    port: values.API_PORT ?? values.PORT ?? DEFAULT_API_PORT,
+    trustProxyHops: values.TRUST_PROXY_HOPS,
+    adminOrigin: new URL(values.ADMIN_ORIGIN).origin,
+    databaseUrl: values.DATABASE_URL,
+    redis: { url: values.REDIS_URL, keyPrefix: values.REDIS_KEY_PREFIX },
+    sessionSecret: values.SESSION_SECRET,
+    s3: {
+      endpoint: values.S3_ENDPOINT,
+      region: values.S3_REGION,
+      bucket: values.S3_BUCKET,
+      accessKeyId: values.S3_ACCESS_KEY_ID,
+      secretAccessKey: values.S3_SECRET_ACCESS_KEY,
+      forcePathStyle: values.S3_FORCE_PATH_STYLE,
+    },
+    ai: {
+      apiKey: values.AI_API_KEY,
+      baseUrl: values.AI_BASE_URL,
+      model: values.AI_MODEL,
+      reasoningEffort: values.AI_REASONING_EFFORT,
+    },
+    seedDemoPassword: values.SEED_DEMO_PASSWORD,
+    github:
+      githubClientId !== undefined && githubClientSecret !== undefined
+        ? { clientId: githubClientId, clientSecret: githubClientSecret }
+        : undefined,
+  };
+}

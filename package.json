@@ -1,0 +1,51 @@
+{
+  "name": "event-registration-system",
+  "private": true,
+  "packageManager": "pnpm@10.34.9",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "pnpm codegen && pnpm --parallel --filter @ers/api --filter @ers/admin dev",
+    "lint": "eslint . --max-warnings=0 && pnpm --filter @ers/admin lint:fsd",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "pnpm codegen && pnpm -r --if-present typecheck",
+    "test": "pnpm codegen && pnpm -r --if-present test",
+    "build": "pnpm -r --if-present build",
+    "test:e2e": "pnpm --filter @ers/api build && pnpm --filter @ers/e2e test:e2e",
+    "prepare": "husky && pnpm codegen",
+    "db:reset": "pnpm --filter @ers/api db:reset",
+    "db:seed": "pnpm --filter @ers/api db:seed",
+    "codegen": "pnpm --filter @ers/shared build && pnpm --filter @ers/api db:generate"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^21.2.4",
+    "@commitlint/config-conventional": "^21.2.4",
+    "@eslint/js": "9.39.5",
+    "eslint": "9.39.5",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-import-resolver-typescript": "^4.4.5",
+    "eslint-plugin-import-x": "^4.18.1",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.14.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.6.0",
+    "prettier": "^3.10.1",
+    "typescript": "6.0.3",
+    "typescript-eslint": "^8.72.2"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@swc/core",
+      "esbuild",
+      "argon2",
+      "prisma",
+      "@prisma/engines",
+      "@prisma/client"
+    ]
+  }
+}

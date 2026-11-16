@@ -1,0 +1,40 @@
+# Personal planning notes (contain the company's internal grading rubric)
+planning/
+
+# IDE and OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+
+# Claude Code local files
+.claude/settings.local.json
+CLAUDE.local.md
+
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+build/
+coverage/
+*.tsbuildinfo
+
+# Environment and secrets (only .env.example is committed)
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Generated Prisma client (pnpm db:generate)
+apps/api/src/generated/
+
+# Playwright
+**/test-results/
+**/playwright-report/
+.playwright-mcp/

@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+
+# A newer push makes an older run of the same branch or PR pointless; runs on main and dev are
+# kept, so every commit there gets its own result.
+concurrency:
+  group: ci-${{ github.head_ref || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/dev' }}
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Lint, typecheck, test, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      # Install runs the root `prepare` script, which builds the shared package and the Prisma
+      # client once; the steps below call the package scripts directly so they do not redo it.
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Check formatting
+        run: pnpm format:check
+
+      - name: Typecheck
+        run: pnpm -r --if-present typecheck
+
+      # The same containers as local development: Postgres and Redis for integration tests and
+      # SeaweedFS as the S3 store (it needs command-line options, which job service containers
+      # cannot take). s3-setup waits until storage answers and creates the buckets; its output is
+      # in this log.
+      - name: Start test database, Redis and storage
+        run: |
+          docker compose up -d --wait postgres-test redis-test s3
+          docker compose run --rm s3-setup
+
+      - name: Test (unit and integration)
+        run: pnpm -r --if-present test
+
+      - name: Build
+        run: pnpm build
+
+      # Browser tests: a fresh database is seeded, then the built API and the admin run against it.
+      # Off until the repository variable RUN_E2E is "true": they are flaky in CI and are being
+      # fixed; run them locally with `pnpm test:e2e` meanwhile.
+      - name: Install the browser for end-to-end tests
+        if: vars.RUN_E2E == 'true'
+        run: pnpm --filter @ers/e2e exec playwright install --with-deps chromium
+
+      # The Build step above already built the API.
+      - name: End-to-end tests
+        if: vars.RUN_E2E == 'true'
+        run: pnpm --filter @ers/e2e test:e2e
+
+      - name: Keep the end-to-end report on failure
+        if: failure() && vars.RUN_E2E == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/e2e/playwright-report
+          retention-days: 7
+
+      - name: Show container logs on failure
+        if: failure()
+        run: docker compose logs --no-color postgres-test redis-test s3

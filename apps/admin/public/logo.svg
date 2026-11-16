@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <defs>
+    <!-- Gradient of the E -->
+    <linearGradient id="grad-e" x1="0" y1="0" x2="100" y2="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0A3496" />
+      <stop offset="60%" stop-color="#144EB8" />
+      <stop offset="100%" stop-color="#2570D4" />
+    </linearGradient>
+
+    <!-- Gradient of the stem and leg of the R -->
+    <linearGradient id="grad-r-stem" x1="58" y1="0" x2="150" y2="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#1248B2" />
+      <stop offset="55%" stop-color="#1E62CC" />
+      <stop offset="100%" stop-color="#3595DF" />
+    </linearGradient>
+
+    <!-- Gradient of the bowl of the R -->
+    <linearGradient id="grad-r-bowl" x1="58" y1="150" x2="150" y2="10" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#1A5BC4" />
+      <stop offset="100%" stop-color="#349AE0" />
+    </linearGradient>
+
+    <!-- Gradient of the S ribbon -->
+    <linearGradient id="grad-s" x1="106" y1="180" x2="200" y2="20" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#26BBE0" />
+      <stop offset="45%" stop-color="#45E2D2" />
+      <stop offset="100%" stop-color="#69FAD9" />
+    </linearGradient>
+
+    <!-- Clip for the glass overlap on the lower curve of the E -->
+    <clipPath id="clip-e">
+      <path d="M 0 0 H 48 V 28 H 28 V 73 H 48 V 97 H 28 V 100 A 72 72 0 0 0 92 171.6 L 88.9 199.4 A 100 100 0 0 1 0 100 Z" />
+    </clipPath>
+  </defs>
+
+  <!-- Letter E -->
+  <path
+    d="M 0 0 H 48 V 28 H 28 V 73 H 48 V 97 H 28 V 100 A 72 72 0 0 0 92 171.6 L 88.9 199.4 A 100 100 0 0 1 0 100 Z"
+    fill="url(#grad-e)"
+  />
+
+  <!-- Stem of the R -->
+  <path
+    d="M 58 0 H 86 V 199 A 100 100 0 0 1 58 190.8 Z"
+    fill="url(#grad-r-stem)"
+    fill-opacity="0.92"
+  />
+
+  <!-- Soft highlight where the stem of the R crosses the lower curve of the E -->
+  <g clip-path="url(#clip-e)">
+    <path
+      d="M 58 0 H 86 V 199 A 100 100 0 0 1 58 190.8 Z"
+      fill="#FFFFFF"
+      fill-opacity="0.16"
+    />
+  </g>
+
+  <!-- Leg of the R -->
+  <path
+    d="M 85 123 L 105 102 L 150 186.6 A 100 100 0 0 1 124 197.1 Z"
+    fill="url(#grad-r-stem)"
+  />
+
+  <!-- Bowl and crossbar of the R -->
+  <path
+    d="M 86 0 H 94 C 122 0, 150 18, 150 45 C 150 58, 145 68, 134 79 L 58 152 L 58 114 L 112 62 C 118 56, 122 50, 122 44 C 122 33, 114 28, 104 28 L 86 28 Z"
+    fill="url(#grad-r-bowl)"
+  />
+
+  <!-- Letter S (a translucent ribbon over the R) -->
+  <path
+    d="M 200 0 V 52 H 172 V 36 C 172 28, 163 25, 153 25 C 141 25, 134 33, 134 44 C 134 58, 146 68, 164 81 C 184 96, 193 114, 193 136 C 193 168, 158 194, 112 199 L 109 171 C 142 167, 165 152, 165 136 C 165 116, 152 105, 139 95 C 120 80, 106 64, 106 44 C 106 18, 125 0, 153 0 Z"
+    fill="url(#grad-s)"
+    fill-opacity="0.80"
+  />
+</svg>
