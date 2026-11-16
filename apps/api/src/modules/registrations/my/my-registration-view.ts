@@ -1,6 +1,6 @@
 import { RegistrationStatus, type MyRegistration } from '@ers/shared';
 
-import type { Prisma } from '../../generated/prisma/client.js';
+import type { Prisma } from '../../../generated/prisma/client.js';
 
 export const MY_REGISTRATION_INCLUDE = {
   session: {

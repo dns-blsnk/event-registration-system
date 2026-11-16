@@ -18,20 +18,24 @@ import {
   Res,
 } from '@nestjs/common';
 
-import { RequirePermission } from '../../common/auth/access.decorator.js';
-import { CurrentAuth } from '../../common/auth/current-user.decorator.js';
-import { DomainError } from '../../common/errors/domain-error.js';
-import { dateRangeFilter, enumFilter, parseListQuery } from '../../common/pagination/list-query.js';
-import { sendList } from '../../common/pagination/list-result.js';
+import { RequirePermission } from '../../../common/auth/access.decorator.js';
+import { CurrentAuth } from '../../../common/auth/current-user.decorator.js';
+import { DomainError } from '../../../common/errors/domain-error.js';
+import {
+  dateRangeFilter,
+  enumFilter,
+  parseListQuery,
+} from '../../../common/pagination/list-query.js';
+import { sendList } from '../../../common/pagination/list-result.js';
+import { BookingService } from '../booking.service.js';
 
-import { BookingService } from './booking.service.js';
 import { BookDto } from './dto/book.dto.js';
 import {
   MyRegistrationsService,
   type MyRegistrationSortField,
 } from './my-registrations.service.js';
 
-import type { AuthContext } from '../../common/auth/auth-context.js';
+import type { AuthContext } from '../../../common/auth/auth-context.js';
 import type { Response } from 'express';
 
 const SORTABLE: readonly MyRegistrationSortField[] = ['createdAt'];
