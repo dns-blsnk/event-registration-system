@@ -1,4 +1,10 @@
-import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from '@ers/shared';
+import {
+  DAY_PATTERN,
+  DEFAULT_PAGE_SIZE,
+  LIST_TEXT_FILTER_MAX_LENGTH,
+  MAX_PAGE_SIZE,
+  UUID_PATTERN,
+} from '@ers/shared';
 
 import { fieldError } from '../errors/field-error.js';
 
@@ -34,8 +40,6 @@ export interface ListQuerySpec<TField extends string> {
   sortable: readonly TField[];
   defaultSort: { field: TField; direction: SortDirection };
 }
-
-const MAX_SEARCH_LENGTH = 100;
 
 type RawQuery = Readonly<Record<string, unknown>>;
 
@@ -92,7 +96,8 @@ export function parseListQuery<TField extends string>(
   if (end <= start) {
     throw invalid('_end', '_end must be greater than _start');
   }
-  const search = typeof query.q === 'string' ? query.q.trim().slice(0, MAX_SEARCH_LENGTH) : '';
+  const search =
+    typeof query.q === 'string' ? query.q.trim().slice(0, LIST_TEXT_FILTER_MAX_LENGTH) : '';
   return {
     skip: start,
     take: Math.min(end - start, MAX_PAGE_SIZE),
@@ -115,9 +120,6 @@ export function enumFilter<T extends string>(
   }
   return raw as T;
 }
-
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const MAX_TEXT_FILTER_LENGTH = 100;
 
 /** Reads an optional UUID filter. */
 export function uuidFilter(raw: unknown, field: string): string | undefined {
@@ -160,7 +162,6 @@ export function dateFilter(raw: unknown, field: string): Date | undefined {
   return date;
 }
 
-const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const END_OF_DAY_SUFFIX = 'T23:59:59.999Z';
 
 export interface DateRange {
@@ -181,9 +182,7 @@ export function dateRangeFilter(
   const from = dateFilter(query[fromField], fromField);
   const rawTo = query[toField];
   const to = dateFilter(
-    typeof rawTo === 'string' && DATE_ONLY_PATTERN.test(rawTo)
-      ? `${rawTo}${END_OF_DAY_SUFFIX}`
-      : rawTo,
+    typeof rawTo === 'string' && DAY_PATTERN.test(rawTo) ? `${rawTo}${END_OF_DAY_SUFFIX}` : rawTo,
     toField,
   );
   if (from !== undefined && to !== undefined && to.getTime() < from.getTime()) {
@@ -203,6 +202,6 @@ export function textFilter(raw: unknown, field: string): string | undefined {
   if (typeof raw !== 'string') {
     throw invalid(field, `${field} must be a string`);
   }
-  const value = raw.trim().slice(0, MAX_TEXT_FILTER_LENGTH);
+  const value = raw.trim().slice(0, LIST_TEXT_FILTER_MAX_LENGTH);
   return value === '' ? undefined : value;
 }
