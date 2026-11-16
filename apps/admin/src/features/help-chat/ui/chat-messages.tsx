@@ -151,6 +151,13 @@ function Bubble({
   );
 }
 
+/** A long suggestion wraps inside its chip instead of running past the panel. */
+const SUGGESTION_SX = {
+  height: 'auto',
+  maxWidth: '100%',
+  '& .MuiChip-label': { whiteSpace: 'normal', py: 0.75 },
+} as const;
+
 /** Before the first question: what the assistant does, and questions to start with. */
 function Welcome({
   suggestions,
@@ -160,7 +167,8 @@ function Welcome({
   onAsk: ((question: string) => void) | undefined;
 }): React.JSX.Element {
   return (
-    <Stack spacing={1.5} alignItems="flex-start">
+    // Never wider than the panel: the flex parent would otherwise let it grow to its longest line.
+    <Stack spacing={1.5} alignItems="flex-start" sx={{ minWidth: 0, width: '100%' }}>
       <Stack direction="row" spacing={1} alignItems="center">
         <AssistantAvatar />
         <Typography variant="body2">
@@ -175,6 +183,7 @@ function Welcome({
             label={suggestion}
             variant="outlined"
             color="primary"
+            sx={SUGGESTION_SX}
             onClick={() => {
               onAsk(suggestion);
             }}
