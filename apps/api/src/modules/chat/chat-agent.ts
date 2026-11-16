@@ -19,12 +19,17 @@ import type { ChatCompletionFunctionTool } from 'openai/resources/chat/completio
 
 /** The chat-completions client, or undefined when no key is configured (the chat is then unavailable). */
 export const AI_CLIENT = Symbol('AI_CLIENT');
-/** Which model answers and how hard it thinks (AI_MODEL, AI_REASONING_EFFORT). */
+/**
+ * Which model answers, how hard it thinks and whether it reports tokens (AI_MODEL,
+ * AI_REASONING_EFFORT, AI_STREAM_USAGE).
+ */
 export const CHAT_MODEL_SETTINGS = Symbol('CHAT_MODEL_SETTINGS');
 
 export interface ChatModelSettings {
   model: string;
   reasoningEffort: AiReasoningEffort;
+  /** Whether requests ask for token counts (AI_STREAM_USAGE). */
+  streamUsage: boolean;
 }
 
 /** Just the part of the SDK client the agent uses, so tests can pass a fake. */
@@ -255,15 +260,16 @@ export class ChatAgent {
   }
 
   private request(messages: ChatEntry[], tools: ChatCompletionFunctionTool[]) {
-    const { model, reasoningEffort } = this.settings;
+    const { model, reasoningEffort, streamUsage } = this.settings;
     return {
       model,
       max_completion_tokens: ANSWER_MAX_TOKENS,
       ...(reasoningEffort === 'default' ? {} : { reasoning_effort: reasoningEffort }),
       ...(tools.length === 0 ? {} : { tools }),
       stream: true as const,
-      // Token counts for the log; OpenAI and Gemini both accept it.
-      stream_options: { include_usage: true },
+      // Token counts for the log. Most compatible APIs accept it; AI_STREAM_USAGE=false drops it
+      // for one that refuses unknown options, so the chat keeps working without the counts.
+      ...(streamUsage ? { stream_options: { include_usage: true } } : {}),
       messages,
     };
   }

@@ -66,6 +66,14 @@ describe('parseConfig', () => {
     expect(config.ai.model).toBe('gemini-3.5-flash-lite');
     expect(config.ai.baseUrl).toBe('https://generativelanguage.googleapis.com/v1beta/openai/');
     expect(config.ai.reasoningEffort).toBe('low');
+    expect(config.ai.streamUsage).toBe(true);
+  });
+
+  it('can stop asking the provider for token counts, for APIs that refuse the option', () => {
+    expect(parseConfig(envWith({ AI_STREAM_USAGE: 'false' })).ai.streamUsage).toBe(false);
+    expect(configErrorFor(envWith({ AI_STREAM_USAGE: 'no' })).variables).toContain(
+      'AI_STREAM_USAGE',
+    );
   });
 
   it('reports the build commit the host gives, and refuses one that is not a commit hash', () => {

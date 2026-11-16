@@ -71,6 +71,7 @@ const ANSWER_MAX_RETRIES = 0;
       useFactory: (config: Config) => ({
         model: config.ai.model,
         reasoningEffort: config.ai.reasoningEffort,
+        streamUsage: config.ai.streamUsage,
       }),
     },
   ],
