@@ -1,7 +1,8 @@
 import { RegistrationStatus } from '@ers/shared';
 import { Injectable } from '@nestjs/common';
 
-import { orderByOf, type ListQuery } from '../../common/pagination/list-query.js';
+import { orderByOf, type DateRange, type ListQuery } from '../../common/pagination/list-query.js';
+import { containsInsensitive } from '../../common/pagination/search.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 
 import { MY_REGISTRATION_INCLUDE, toMyRegistration } from './my-registration-view.js';
@@ -12,6 +13,43 @@ import type { MyRegistration } from '@ers/shared';
 
 export type MyRegistrationSortField = 'createdAt';
 
+export interface MyRegistrationFilters {
+  status?: RegistrationStatus | undefined;
+  /** When the session starts. */
+  startsAt?: DateRange | undefined;
+}
+
+/** The session side of the filters, as one relation filter: the start days and the title search. */
+function sessionWhereOf(
+  search: string | undefined,
+  startsAt: DateRange | undefined,
+): Prisma.SessionWhereInput {
+  return {
+    ...(startsAt === undefined ? {} : { startsAt }),
+    ...(search === undefined
+      ? {}
+      : {
+          OR: [
+            { title: containsInsensitive(search) },
+            { event: { title: containsInsensitive(search) } },
+          ],
+        }),
+  };
+}
+
+/** The customer's own rows; `q` matches the session or event title, so "React" finds both. */
+function whereOf(
+  customerId: string,
+  search: string | undefined,
+  filters: MyRegistrationFilters,
+): Prisma.RegistrationWhereInput {
+  return {
+    customerId,
+    ...(filters.status === undefined ? {} : { status: filters.status }),
+    session: sessionWhereOf(search, filters.startsAt),
+  };
+}
+
 /** Read side of "My registrations": always limited to the signed-in customer. */
 @Injectable()
 export class MyRegistrationsService {
@@ -20,12 +58,9 @@ export class MyRegistrationsService {
   async list(
     customerId: string,
     query: ListQuery<MyRegistrationSortField>,
-    status: RegistrationStatus | undefined,
+    filters: MyRegistrationFilters,
   ): Promise<ListResult<MyRegistration>> {
-    const where: Prisma.RegistrationWhereInput = {
-      customerId,
-      ...(status === undefined ? {} : { status }),
-    };
+    const where = whereOf(customerId, query.search, filters);
     const [rows, total] = await this.prisma.$transaction([
       this.prisma.registration.findMany({
         where,

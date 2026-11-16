@@ -453,6 +453,149 @@ describe('customer registrations API', () => {
       ]);
     });
 
+    it('finds registrations by session or event title, case-insensitively', async () => {
+      const customer = await signedInAgent(app);
+      const reactEvent = await createEvent(prisma, { title: 'React Summit' });
+      const otherEvent = await createEvent(prisma, { title: 'Data Day' });
+      const byEvent = await createRegistration(prisma, await createSession(prisma, reactEvent), {
+        customerId: customer.userId,
+      });
+      const bySession = await createRegistration(
+        prisma,
+        await createSession(prisma, otherEvent, { title: 'Hooks with react' }),
+        { customerId: customer.userId },
+      );
+      await createRegistration(prisma, await createSession(prisma, otherEvent), {
+        customerId: customer.userId,
+      });
+
+      const response = await customer.agent
+        .get('/api/my-registrations')
+        .query({ q: 'REACT' })
+        .expect(200);
+
+      expect(response.body.map((registration: { id: string }) => registration.id).sort()).toEqual(
+        [byEvent.id, bySession.id].sort(),
+      );
+    });
+
+    it("never finds another customer's registration by title", async () => {
+      const customer = await signedInAgent(app);
+      const event = await createEvent(prisma, { title: 'Private Workshop' });
+      await createRegistration(prisma, await createSession(prisma, event));
+
+      const response = await customer.agent
+        .get('/api/my-registrations')
+        .query({ q: 'Private Workshop' })
+        .expect(200);
+
+      expect(response.body).toEqual([]);
+      expect(response.headers['x-total-count']).toBe('0');
+    });
+
+    it('filters by the day the session starts', async () => {
+      const customer = await signedInAgent(app);
+      const event = await createEvent(prisma, { startsAt: '2031-03-01T09:00:00.000Z' });
+      const inRange = await createRegistration(
+        prisma,
+        await createSession(prisma, event, { startsAt: '2031-03-10T09:00:00.000Z' }),
+        { customerId: customer.userId },
+      );
+      await createRegistration(
+        prisma,
+        await createSession(prisma, event, { startsAt: '2031-03-20T09:00:00.000Z' }),
+        { customerId: customer.userId },
+      );
+
+      const response = await customer.agent
+        .get('/api/my-registrations')
+        .query({ startsFrom: '2031-03-09', startsTo: '2031-03-10' })
+        .expect(200);
+
+      expect(response.body.map((registration: { id: string }) => registration.id)).toEqual([
+        inRange.id,
+      ]);
+    });
+
+    it('combines the title search with the status and the start days', async () => {
+      const customer = await signedInAgent(app);
+      const event = await createEvent(prisma, {
+        title: 'React Summit',
+        startsAt: '2031-04-01T09:00:00.000Z',
+      });
+      const sessionOn = (startsAt: string) => createSession(prisma, event, { startsAt });
+      const match = await createRegistration(prisma, await sessionOn('2031-04-05T09:00:00.000Z'), {
+        customerId: customer.userId,
+      });
+      await createRegistration(prisma, await sessionOn('2031-04-05T13:00:00.000Z'), {
+        customerId: customer.userId,
+        status: 'CANCELLED',
+      });
+      await createRegistration(prisma, await sessionOn('2031-04-25T09:00:00.000Z'), {
+        customerId: customer.userId,
+      });
+
+      const response = await customer.agent
+        .get('/api/my-registrations')
+        .query({
+          q: 'react',
+          status: 'CONFIRMED',
+          startsFrom: '2031-04-01',
+          startsTo: '2031-04-10',
+        })
+        .expect(200);
+
+      expect(response.body.map((registration: { id: string }) => registration.id)).toEqual([
+        match.id,
+      ]);
+    });
+
+    it('takes a range open at one end', async () => {
+      const customer = await signedInAgent(app);
+      const event = await createEvent(prisma, { startsAt: '2031-05-01T09:00:00.000Z' });
+      await createRegistration(
+        prisma,
+        await createSession(prisma, event, { startsAt: '2031-05-02T09:00:00.000Z' }),
+        { customerId: customer.userId },
+      );
+      const later = await createRegistration(
+        prisma,
+        await createSession(prisma, event, { startsAt: '2031-05-20T09:00:00.000Z' }),
+        { customerId: customer.userId },
+      );
+
+      const response = await customer.agent
+        .get('/api/my-registrations')
+        .query({ startsFrom: '2031-05-10' })
+        .expect(200);
+
+      expect(response.body.map((registration: { id: string }) => registration.id)).toEqual([
+        later.id,
+      ]);
+    });
+
+    it('rejects a start day that is not a date', async () => {
+      const customer = await signedInAgent(app);
+
+      const response = await customer.agent
+        .get('/api/my-registrations')
+        .query({ startsFrom: 'not-a-date' })
+        .expect(400);
+
+      expect(response.body.code).toBe('VALIDATION_FAILED');
+    });
+
+    it('rejects a date range that ends before it starts', async () => {
+      const customer = await signedInAgent(app);
+
+      const response = await customer.agent
+        .get('/api/my-registrations')
+        .query({ startsFrom: '2031-03-10', startsTo: '2031-03-01' })
+        .expect(400);
+
+      expect(response.body.code).toBe('VALIDATION_FAILED');
+    });
+
     it("answers 404 when showing another customer's registration", async () => {
       const customer = await signedInAgent(app);
       const foreign = await createRegistration(

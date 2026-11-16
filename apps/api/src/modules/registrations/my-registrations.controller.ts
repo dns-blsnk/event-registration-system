@@ -21,7 +21,7 @@ import {
 import { RequirePermission } from '../../common/auth/access.decorator.js';
 import { CurrentAuth } from '../../common/auth/current-user.decorator.js';
 import { DomainError } from '../../common/errors/domain-error.js';
-import { enumFilter, parseListQuery } from '../../common/pagination/list-query.js';
+import { dateRangeFilter, enumFilter, parseListQuery } from '../../common/pagination/list-query.js';
 import { sendList } from '../../common/pagination/list-result.js';
 
 import { BookingService } from './booking.service.js';
@@ -55,8 +55,11 @@ export class MyRegistrationsController {
       sortable: SORTABLE,
       defaultSort: { field: 'createdAt', direction: 'desc' },
     });
-    const status = enumFilter(query.status, 'status', REGISTRATION_STATUSES);
-    return sendList(response, await this.registrations.list(auth.user.id, listQuery, status));
+    const filters = {
+      status: enumFilter(query.status, 'status', REGISTRATION_STATUSES),
+      startsAt: dateRangeFilter(query, 'startsFrom', 'startsTo'),
+    };
+    return sendList(response, await this.registrations.list(auth.user.id, listQuery, filters));
   }
 
   @RequirePermission(Resource.MY_REGISTRATIONS, Action.SHOW)
