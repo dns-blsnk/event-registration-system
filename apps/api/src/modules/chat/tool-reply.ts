@@ -15,6 +15,21 @@ const LIST_FIELD = 'list';
 export const OMITTED_RESULT =
   'Left out to save space: this came from an earlier tool call. Call the tool again if you need it.';
 
+/** What identifies a single record (one event), kept when the rest of its data is left out. */
+const IDENTITY_FIELDS = ['id', 'title', 'name'] as const;
+
+/** A list's total, or a single record's identity, so the model can still refer to it. */
+function essentialsOf(data: unknown): Record<string, unknown> {
+  if (!isRecord(data)) return {};
+  if (typeof data.total === 'number') return { total: data.total };
+  return Object.fromEntries(
+    IDENTITY_FIELDS.flatMap((field) => {
+      const value = data[field];
+      return typeof value === 'string' ? [[field, value]] : [];
+    }),
+  );
+}
+
 /** Whether the list a search asked to show was opened, in words the model can relay. */
 function listNote(outcome: { listToOpen?: ListToOpen; notShown?: string }) {
   if (outcome.listToOpen !== undefined) {
@@ -34,19 +49,18 @@ export function toolReply(outcome: ToolOutcome): string {
 }
 
 /**
- * A tool reply without its data: the total and the note about an opened list stay, so the model
- * still knows how many there were and what the user saw. Errors and anything else stay whole.
+ * A tool reply without its data: a list's total (or one record's id and name) and the note about an
+ * opened list stay, so the model still knows what it found and what the user saw. Errors and
+ * anything else stay whole.
  */
 function shortened(entry: ChatEntry): ChatEntry {
   if (entry.role !== 'tool' || typeof entry.content !== 'string') return entry;
   const reply = parseJson(entry.content);
   if (!isRecord(reply) || !(RESULT_FIELD in reply)) return entry;
-  const data = reply[RESULT_FIELD];
   const note = reply[LIST_FIELD];
-  const total = isRecord(data) && typeof data.total === 'number' ? data.total : undefined;
   const summary = {
     [RESULT_FIELD]: OMITTED_RESULT,
-    ...(total === undefined ? {} : { total }),
+    ...essentialsOf(reply[RESULT_FIELD]),
     ...(typeof note === 'string' ? { [LIST_FIELD]: note } : {}),
   };
   return { ...entry, content: JSON.stringify(summary) };

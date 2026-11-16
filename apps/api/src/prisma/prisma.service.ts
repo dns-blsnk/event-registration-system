@@ -11,9 +11,11 @@ export const DB_CONNECT_TIMEOUT_MS = 3000;
 const DB_STATEMENT_TIMEOUT_MS = 10_000;
 const DB_IDLE_TIMEOUT_MS = 30_000;
 /**
- * Bookings for one popular session queue on its row lock inside their transactions. Prisma's
- * defaults (2 s to get a connection, 5 s per transaction) turn a short queue under load into
- * spurious "try again" conflicts; these leave room for it while still failing fast on a real hang.
+ * Bookings for one popular session queue on its row lock inside their transactions, and
+ * user-management writes queue behind each other the same way. Prisma's defaults (2 s to get a
+ * connection, 5 s per transaction) turn a short queue under load into spurious "try again"
+ * conflicts; these leave room for it while still failing fast on a real hang. Every transaction
+ * uses them, so none sets its own.
  */
 export const TRANSACTION_MAX_WAIT_MS = 5000;
 export const TRANSACTION_TIMEOUT_MS = 15_000;

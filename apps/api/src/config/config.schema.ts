@@ -24,6 +24,10 @@ const booleanString = z
   .enum(['true', 'false'])
   .default('false')
   .transform((value) => value === 'true');
+const booleanStringOn = z
+  .enum(['true', 'false'])
+  .default('true')
+  .transform((value) => value === 'true');
 
 /** Raw environment variables. Names match `.env.example`. */
 const envSchema = z.object({
@@ -55,6 +59,8 @@ const envSchema = z.object({
   AI_BASE_URL: httpUrl.default(DEFAULT_AI_BASE_URL),
   AI_MODEL: z.string().min(1).default(DEFAULT_AI_MODEL),
   AI_REASONING_EFFORT: z.enum(AI_REASONING_EFFORTS).default('low'),
+  /** Ask for token counts with each answer (`stream_options`); off for an API that refuses it. */
+  AI_STREAM_USAGE: booleanStringOn,
   /** Password of the demo accounts the seed creates. Only the seed reads and checks it, so a bad
    * value never stops the API from starting. */
   SEED_DEMO_PASSWORD: z.string().optional(),
@@ -90,6 +96,7 @@ export interface Config {
     readonly baseUrl: string;
     readonly model: string;
     readonly reasoningEffort: AiReasoningEffort;
+    readonly streamUsage: boolean;
   };
   readonly seedDemoPassword: string | undefined;
   readonly github: { readonly clientId: string; readonly clientSecret: string } | undefined;
@@ -155,6 +162,7 @@ export function parseConfig(env: RawEnv): Config {
       baseUrl: values.AI_BASE_URL,
       model: values.AI_MODEL,
       reasoningEffort: values.AI_REASONING_EFFORT,
+      streamUsage: values.AI_STREAM_USAGE,
     },
     seedDemoPassword: values.SEED_DEMO_PASSWORD,
     github:

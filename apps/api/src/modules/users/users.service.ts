@@ -34,9 +34,6 @@ export interface UserFilters {
 
 const NOT_FOUND_MESSAGE = 'User not found';
 
-/** Lock waits can queue behind other user-management writes; allow for that, then fail as 409. */
-const LOCKING_TRANSACTION = { maxWait: 5000, timeout: 15_000 } as const;
-
 /** A refusal from the shared user-management rules becomes a 403. */
 function assertAllowed(refusal: string | undefined): void {
   if (refusal !== undefined) {
@@ -144,7 +141,7 @@ export class UsersService {
       const updated = await tx.user.update({ where: { id }, data: { ...nameData, role } });
       await this.sessions.revokeAllForUser(id, undefined, tx);
       return { user: updated, isRoleChanged: true };
-    }, LOCKING_TRANSACTION);
+    });
     if (isRoleChanged) await this.sessions.afterSignOut(id);
     return user;
   }
@@ -163,7 +160,7 @@ export class UsersService {
       await this.assertNotLastSuperAdmin(tx, target);
       await this.assertHasNoHistory(tx, id);
       await tx.user.delete({ where: { id } });
-    }, LOCKING_TRANSACTION);
+    });
     await this.sessions.afterSignOut(id);
   }
 

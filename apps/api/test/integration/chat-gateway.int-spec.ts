@@ -506,6 +506,36 @@ describe('chat gateway', () => {
     expect((await store.load(me, chatId))?.slice(0, kept.length)).toEqual(kept);
   });
 
+  it('keeps the rows of the latest search when a question without tools came after it', async () => {
+    const { socket, agent } = await connectAs('CUSTOMER');
+    const store = app.get(ChatHistoryStore);
+    const me = { userId: agent.userId, role: 'CUSTOMER' as const };
+    const chatId = await store.create(me);
+    await store.append(me, chatId, [
+      { role: 'user', content: 'Events?' },
+      {
+        role: 'assistant',
+        content: null,
+        tool_calls: [{ id: 'c1', type: 'function', function: { name: 'search', arguments: '{}' } }],
+      },
+      {
+        role: 'tool',
+        tool_call_id: 'c1',
+        content: JSON.stringify({ result: { total: 1, rows: [{ title: 'React Day' }] } }),
+      },
+      { role: 'assistant', content: 'One.' },
+      { role: 'user', content: 'What is a waitlist?' },
+      { role: 'assistant', content: 'A queue for a seat.' },
+    ]);
+
+    const result = answer(socket, 'q1');
+    socket.emit(ChatEvent.ASK, { id: 'q1', question: 'Tell me about that event', chatId });
+    await result;
+
+    const reply = model.requests[0]?.messages.find((message) => message.role === 'tool');
+    expect(reply?.content).toContain('React Day');
+  });
+
   it('never resumes another user’s chat, even with its id', async () => {
     const owner = await signedInAgent(app, 'CUSTOMER');
     const store = app.get(ChatHistoryStore);

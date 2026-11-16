@@ -149,6 +149,18 @@ describe('readRound', () => {
     expect(result.usage).toEqual({ promptTokens: 2700, completionTokens: 0, cachedTokens: 0 });
   });
 
+  it('keeps the highest running total when several pieces carry counts', async () => {
+    const piece = (prompt: number, completion: number) =>
+      ({
+        choices: [{ delta: { content: 'x' }, finish_reason: null, index: 0 }],
+        usage: { prompt_tokens: prompt, completion_tokens: completion, total_tokens: 0 },
+      }) as unknown as ChatCompletionChunk;
+
+    const { result } = await read(piece(2700, 3), piece(2700, 12), piece(0, 0));
+
+    expect(result.usage).toEqual({ promptTokens: 2700, completionTokens: 12, cachedTokens: 0 });
+  });
+
   it('has no token counts when the provider sends none', async () => {
     const { result } = await read(chunk({ content: 'Hi' }, 'stop'));
 

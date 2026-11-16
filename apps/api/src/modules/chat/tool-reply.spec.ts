@@ -89,14 +89,17 @@ describe('compactOldToolResults', () => {
     expect(compacted.slice(4)).toEqual(entries.slice(4));
   });
 
-  it('keeps an earlier reply without a total, such as one event, as just the note', () => {
+  it('keeps the id and title of an earlier single record, such as one event', () => {
+    const event = { id: 'e1', title: 'React Day', description: 'A long text', seats: { total: 5 } };
     const entries = [
-      ...searchTurn('That event?', { data: { id: 'e1' } }, 'c1'),
+      ...searchTurn('That event?', { data: event }, 'c1'),
       ...searchTurn('Tags?', { data: rows }, 'c2'),
     ];
 
     expect(replyOf(compactOldToolResults(entries)[2])).toEqual({
       result: OMITTED_RESULT,
+      id: 'e1',
+      title: 'React Day',
     });
   });
 

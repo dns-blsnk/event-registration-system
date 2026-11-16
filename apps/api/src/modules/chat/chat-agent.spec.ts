@@ -87,7 +87,12 @@ function agentWith(replies: Reply[], outcome?: ToolOutcome) {
   const { toolbox, run } = fakeToolbox(outcome);
   const info = vi.fn();
   const logger = { setContext: vi.fn(), info } as unknown as PinoLogger;
-  const agent = new ChatAgent(client, { model: 'm', reasoningEffort: 'low' }, toolbox, logger);
+  const agent = new ChatAgent(
+    client,
+    { model: 'm', reasoningEffort: 'low', streamUsage: true },
+    toolbox,
+    logger,
+  );
   return { agent, requests, run, info };
 }
 
@@ -131,6 +136,18 @@ describe('ChatAgent', () => {
       stream_options: { include_usage: true },
     });
     expect(requests[0]?.params.tools).toHaveLength(1);
+  });
+
+  it('does not ask for token counts when they are turned off', async () => {
+    const { client, requests } = fakeClient([{ texts: ['Hi.'] }]);
+    const { toolbox } = fakeToolbox();
+    const logger = { setContext: vi.fn(), info: vi.fn() } as unknown as PinoLogger;
+    const settings = { model: 'm', reasoningEffort: 'low', streamUsage: false } as const;
+    const agent = new ChatAgent(client, settings, toolbox, logger);
+
+    await ask(agent);
+
+    expect(requests[0]?.params).not.toHaveProperty('stream_options');
   });
 
   it('logs the tokens of every round of an answer, cached ones apart', async () => {
@@ -357,7 +374,12 @@ describe('ChatAgent', () => {
   it('is unavailable without an API key', async () => {
     const { toolbox } = fakeToolbox();
     const logger = { setContext: vi.fn(), info: vi.fn() } as unknown as PinoLogger;
-    const agent = new ChatAgent(undefined, { model: 'm', reasoningEffort: 'low' }, toolbox, logger);
+    const agent = new ChatAgent(
+      undefined,
+      { model: 'm', reasoningEffort: 'low', streamUsage: true },
+      toolbox,
+      logger,
+    );
 
     expect(agent.isAvailable).toBe(false);
     await expect(ask(agent)).rejects.toMatchObject({ code: 'SERVICE_UNAVAILABLE' });
