@@ -48,8 +48,9 @@ const model = {
   requests: [] as FakeRequest[],
 };
 
-function systemOf(request: FakeRequest | undefined): string {
-  return request?.messages[0]?.content ?? '';
+/** The question as the model read it: the last user message, with the panel's note. */
+function questionOf(request: FakeRequest | undefined): string {
+  return request?.messages.findLast((message) => message.role === 'user')?.content ?? '';
 }
 
 const fakeAiClient = {
@@ -196,7 +197,7 @@ describe('chat gateway', () => {
       text: 'Seats left.',
       done: { id: 'q1', cancelled: false },
     });
-    expect(systemOf(model.requests[0])).toContain('the sessions screen open, in the field');
+    expect(questionOf(model.requests[0])).toContain('the sessions screen open, in the field');
   });
 
   it('refuses a socket without a ticket', async () => {
@@ -256,7 +257,7 @@ describe('chat gateway', () => {
     socket.emit(ChatEvent.ASK, { id: 'q1', resource: 'users', question: 'Roles?' });
 
     expect((await result).done).toMatchObject({ id: 'q1', cancelled: false });
-    expect(systemOf(model.requests[0])).not.toContain('users screen');
+    expect(questionOf(model.requests[0])).not.toContain('users screen');
   });
 
   it('answers a question asked from no screen at all', async () => {
@@ -309,6 +310,10 @@ describe('chat gateway', () => {
       'tool',
     ]);
     expect(JSON.stringify(second?.messages[2])).toContain('thought_signature');
+    // The model reads the panel's note with the question; the chat below keeps the bare question.
+    expect(questionOf(second)).toMatch(
+      /^Panel note: .*Europe\/Tallinn.*Question: Events in Tallinn\?$/s,
+    );
     expect((await historyAfter(socket, ChatEvent.RESUME, { chatId })).messages).toEqual([
       { role: 'user', text: 'Events in Tallinn?' },
       // The opened list comes back too, so the answer can offer it again after a reload.
