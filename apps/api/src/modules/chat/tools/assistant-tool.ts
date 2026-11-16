@@ -30,7 +30,11 @@ export interface AssistantTool<TSchema extends z.ZodType = z.ZodType> {
   run(args: z.infer<TSchema>, context: ToolContext): Promise<unknown>;
 }
 
-/** Results are capped: enough for an answer, small enough to keep the model's context short. */
-export const TOOL_PAGE_SIZE = 20;
+/**
+ * Results are capped: enough rows to answer in words, small enough to keep the model's context
+ * short. Every result is resent in each later round and question, and the full list opens in the
+ * panel (`show`), so more rows would cost tokens without a better answer.
+ */
+export const TOOL_PAGE_SIZE = 10;
 /** Said in every search tool's description, so the model knows a list may be cut. */
 export const UP_TO_A_PAGE = `Returns at most ${String(TOOL_PAGE_SIZE)} and the total count.`;
