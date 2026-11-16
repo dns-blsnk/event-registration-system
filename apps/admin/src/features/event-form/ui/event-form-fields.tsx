@@ -12,13 +12,28 @@ import Autocomplete from '@mui/material/Autocomplete';
 import Stack from '@mui/material/Stack';
 import TextField, { type TextFieldProps } from '@mui/material/TextField';
 import { useAutocomplete } from '@refinedev/mui';
-import { Controller, type Control, type FieldErrors, type UseFormRegister } from 'react-hook-form';
+import {
+  Controller,
+  useWatch,
+  type Control,
+  type FieldErrors,
+  type UseFormRegister,
+} from 'react-hook-form';
 
 import { REQUIRED_DATE_SX } from '@/shared/lib/date-input';
 import { fieldHelp, REQUIRED } from '@/shared/lib/forms';
 import { searchByQ } from '@/shared/ui/filter-form';
 
 import type { EventFormValues } from '../model/event-form-values';
+
+/**
+ * Raises the label over a value that react-hook-form wrote into the field after it mounted (the
+ * edit form, once the event loads): MUI only notices values it sees typed. An empty field is left
+ * to MUI, so its label still rises on focus.
+ */
+function labelOver(value: string): { shrink?: true } {
+  return value === '' ? {} : { shrink: true };
+}
 
 interface EventFormFieldsProps {
   register: UseFormRegister<EventFormValues>;
@@ -36,6 +51,10 @@ export function EventFormFields({
     resource: Resource.TAGS,
     onSearch: searchByQ,
   });
+  const [title, description, city, venue] = useWatch({
+    control,
+    name: ['title', 'description', 'city', 'venue'],
+  });
   return (
     <Stack spacing={2}>
       <TextField
@@ -43,7 +62,10 @@ export function EventFormFields({
         label={EVENT_FIELDS.title.label}
         helperText={fieldHelp(errors.title, EVENT_FIELDS.title.help)}
         error={errors.title !== undefined}
-        slotProps={{ htmlInput: { maxLength: EVENT_TITLE_MAX_LENGTH } }}
+        slotProps={{
+          htmlInput: { maxLength: EVENT_TITLE_MAX_LENGTH },
+          inputLabel: labelOver(title),
+        }}
         required
       />
       <TextField
@@ -51,7 +73,10 @@ export function EventFormFields({
         label={EVENT_FIELDS.description.label}
         helperText={fieldHelp(errors.description, EVENT_FIELDS.description.help)}
         error={errors.description !== undefined}
-        slotProps={{ htmlInput: { maxLength: EVENT_DESCRIPTION_MAX_LENGTH } }}
+        slotProps={{
+          htmlInput: { maxLength: EVENT_DESCRIPTION_MAX_LENGTH },
+          inputLabel: labelOver(description),
+        }}
         multiline
         minRows={3}
         required
@@ -62,7 +87,10 @@ export function EventFormFields({
           label={EVENT_FIELDS.city.label}
           helperText={fieldHelp(errors.city, EVENT_FIELDS.city.help)}
           error={errors.city !== undefined}
-          slotProps={{ htmlInput: { maxLength: EVENT_CITY_MAX_LENGTH } }}
+          slotProps={{
+            htmlInput: { maxLength: EVENT_CITY_MAX_LENGTH },
+            inputLabel: labelOver(city),
+          }}
           required
           fullWidth
         />
@@ -71,7 +99,10 @@ export function EventFormFields({
           label={EVENT_FIELDS.venue.label}
           helperText={fieldHelp(errors.venue, EVENT_FIELDS.venue.help)}
           error={errors.venue !== undefined}
-          slotProps={{ htmlInput: { maxLength: EVENT_VENUE_MAX_LENGTH } }}
+          slotProps={{
+            htmlInput: { maxLength: EVENT_VENUE_MAX_LENGTH },
+            inputLabel: labelOver(venue),
+          }}
           required
           fullWidth
         />
