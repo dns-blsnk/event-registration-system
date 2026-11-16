@@ -71,14 +71,23 @@ export function UserMenu(): React.JSX.Element | null {
         onClick={(event) => {
           setAnchor(event.currentTarget);
         }}
+        sx={{ textAlign: 'left', py: 0.5 }}
         startIcon={
-          <Avatar sx={{ width: 32, height: 32, fontSize: 14, bgcolor: 'primary.main' }}>
+          <Avatar
+            sx={{ width: 36, height: 36, fontSize: 15, fontWeight: 600, bgcolor: 'primary.main' }}
+          >
             {initialsOf(user.name)}
           </Avatar>
         }
       >
-        <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
-          {user.name}
+        {/* Name and role: which role is in use matters when trying the roles out. */}
+        <Box component="span" sx={{ display: { xs: 'none', sm: 'block' }, lineHeight: 1.25 }}>
+          <Typography component="span" display="block" fontWeight={600} fontSize={15}>
+            {user.name}
+          </Typography>
+          <Typography component="span" display="block" variant="caption" color="text.secondary">
+            {ROLE_LABELS[user.role]}
+          </Typography>
         </Box>
       </Button>
       <Popover

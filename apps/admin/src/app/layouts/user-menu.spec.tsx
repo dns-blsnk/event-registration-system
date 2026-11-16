@@ -35,7 +35,16 @@ describe('UserMenu', () => {
     await openMenu();
 
     expect(screen.getByText('ada@demo.test')).toBeInTheDocument();
-    expect(screen.getByText('Organizer')).toBeInTheDocument();
+    expect(screen.getAllByText('Organizer')).not.toHaveLength(0);
+  });
+
+  it('shows the role under the name in the header', async () => {
+    mockHttp([signedInAs('ORGANIZER')]);
+    renderAdminPage({ path: '/', route: '/', element: <UserMenu /> });
+
+    expect(
+      await screen.findByRole('button', { name: 'Account menu for Ada Lovelace' }),
+    ).toHaveTextContent('Organizer');
   });
 
   it('opens with focus on the first action, not on the account details', async () => {
