@@ -28,11 +28,19 @@ function extraFields(source: object, known: ReadonlySet<string>): [string, unkno
   return Object.entries(source).filter(([key]) => !known.has(key) && !UNSAFE_KEYS.has(key));
 }
 
-type ToolCallDelta = NonNullable<ChatCompletionChunk.Choice.Delta['tool_calls']>[number];
+type StreamedToolCall = NonNullable<ChatCompletionChunk.Choice.Delta['tool_calls']>[number];
+/** OpenAI streams a call in indexed pieces; Gemini sends each call whole, with no index. */
+type ToolCallDelta = Omit<StreamedToolCall, 'index'> & { index?: number };
+
+/** Which call a piece belongs to: its index, else a new call when it has an id, else the last one. */
+function positionOf(calls: ModelToolCall[], delta: ToolCallDelta): number {
+  if (delta.index !== undefined) return delta.index;
+  return delta.id !== undefined ? calls.length : Math.max(calls.length - 1, 0);
+}
 
 /** Adds one streamed piece of a tool call to the call it belongs to. */
 function mergeCall(calls: ModelToolCall[], delta: ToolCallDelta): void {
-  const index = delta.index;
+  const index = positionOf(calls, delta);
   const call = (calls[index] ??= {
     id: '',
     type: 'function',
