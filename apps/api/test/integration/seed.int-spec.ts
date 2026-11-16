@@ -105,7 +105,7 @@ describe('demo data seed', () => {
     for (const event of events) {
       expect(event.bannerKey).not.toBeNull();
       const image = await fetch(await storage.presignedGetUrl(event.bannerKey ?? ''));
-      expect(image.headers.get('content-type')).toBe('image/png');
+      expect(image.headers.get('content-type')).toBe('image/webp');
     }
   });
 
