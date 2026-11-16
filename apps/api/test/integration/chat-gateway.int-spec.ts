@@ -295,7 +295,8 @@ describe('chat gateway', () => {
       done: { id: 'q1', cancelled: false },
     });
     expect(await progress).toEqual({ id: 'q1', text: 'Searching events…' });
-    expect(await navigation).toMatchObject({
+    const opened = await navigation;
+    expect(opened).toMatchObject({
       id: 'q1',
       resource: 'events',
       filters: { city: 'Tallinn', startsFrom: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/) },
@@ -310,7 +311,12 @@ describe('chat gateway', () => {
     expect(JSON.stringify(second?.messages[2])).toContain('thought_signature');
     expect((await historyAfter(socket, ChatEvent.RESUME, { chatId })).messages).toEqual([
       { role: 'user', text: 'Events in Tallinn?' },
-      { role: 'assistant', text: 'Seats left.' },
+      // The opened list comes back too, so the answer can offer it again after a reload.
+      {
+        role: 'assistant',
+        text: 'Seats left.',
+        list: { resource: opened.resource, filters: opened.filters },
+      },
     ]);
   });
 

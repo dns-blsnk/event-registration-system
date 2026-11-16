@@ -8,6 +8,7 @@ import { SECOND_MS } from '../../common/time.js';
 
 import { assistantEntry, readRound } from './chat-round.js';
 import { ChatToolbox, type ToolOutcome } from './tools/chat-toolbox.js';
+import { OPENED_LIST_FIELD } from './tools/tool-navigation.js';
 
 import type { AiReasoningEffort } from '../../config/config.schema.js';
 import type { User } from '../../generated/prisma/client.js';
@@ -131,8 +132,13 @@ function argumentsOf(call: ModelToolCall): unknown {
 }
 
 /** Whether the list a search asked to show was opened, in words the model can relay. */
-function listNote(outcome: { listToOpen?: unknown; notShown?: string }): { list?: string } {
-  if (outcome.listToOpen !== undefined) return { list: 'Opened in the panel with these filters.' };
+function listNote(outcome: { listToOpen?: ListToOpen; notShown?: string }) {
+  if (outcome.listToOpen !== undefined) {
+    return {
+      list: 'Opened in the panel with these filters.',
+      [OPENED_LIST_FIELD]: outcome.listToOpen,
+    };
+  }
   if (outcome.notShown !== undefined) return { list: `Not opened: ${outcome.notShown}` };
   return {};
 }

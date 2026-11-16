@@ -8,6 +8,8 @@ import { RedisService } from '../../redis/redis.service.js';
 import { execOrThrow } from '../../redis/transaction.js';
 import { SignOutHooks } from '../identity/index.js';
 
+import { readOpenedList, type ListToOpen } from './tools/tool-navigation.js';
+
 import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 
 const CHAT_TTL_MS = CHAT_HISTORY_TTL_MINUTES * MINUTE_MS;
@@ -135,14 +137,19 @@ const ROUND_SEPARATOR = '\n\n';
 
 /**
  * The chat as the user saw it: each question, then everything the assistant wrote in answer to it
- * across its rounds, as one message. Tool calls and results are left out.
+ * across its rounds, as one message, with the list it opened. Tool calls and results are left out.
  */
 export function toDisplayMessages(entries: readonly ChatEntry[]): ChatHistoryMessage[] {
   const messages: ChatHistoryMessage[] = [];
   let answer: string[] = [];
+  let list: ListToOpen | undefined;
   const closeAnswer = () => {
-    if (answer.length > 0) messages.push({ role: 'assistant', text: answer.join(ROUND_SEPARATOR) });
+    if (answer.length > 0) {
+      const text = answer.join(ROUND_SEPARATOR);
+      messages.push({ role: 'assistant', text, ...(list === undefined ? {} : { list }) });
+    }
     answer = [];
+    list = undefined;
   };
   for (const entry of entries) {
     if (entry.role === 'user' && typeof entry.content === 'string') {
@@ -154,6 +161,8 @@ export function toDisplayMessages(entries: readonly ChatEntry[]): ChatHistoryMes
       entry.content !== ''
     ) {
       answer.push(entry.content);
+    } else if (entry.role === 'tool') {
+      list = readOpenedList(entry.content) ?? list;
     }
   }
   closeAnswer();

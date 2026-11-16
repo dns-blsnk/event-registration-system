@@ -86,9 +86,11 @@ function withContext(question: ChatQuestion): ChatQuestion {
 /** The chat as the server kept it; each question and its answer share an id, as when asked. */
 function fromHistory({ messages }: ChatHistory): ChatMessage[] {
   let id = '';
-  return messages.map(({ role, text }, index) => {
+  return messages.map(({ role, text, list }, index) => {
     if (role === 'user' || id === '') id = `history-${String(index)}`;
-    return { id, role, text, state: 'done' };
+    const message: ChatMessage = { id, role, text, state: 'done' };
+    // Offered, not "opened": after a reload the page may show anything else.
+    return list === undefined ? message : { ...message, list: { target: list, isOpened: false } };
   });
 }
 

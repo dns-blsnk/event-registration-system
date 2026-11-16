@@ -40,6 +40,39 @@ describe('toDisplayMessages', () => {
     ]);
   });
 
+  it('keeps the list a tool opened on the answer it belongs to', () => {
+    const opened: ChatEntry = {
+      role: 'tool',
+      tool_call_id: 'c1',
+      content: JSON.stringify({
+        result: { total: 2 },
+        openedList: { resource: 'events', filters: { city: 'Tallinn' } },
+      }),
+    };
+
+    expect(toDisplayMessages([question('q'), toolCall, opened, answer('Two.')])).toEqual([
+      { role: 'user', text: 'q' },
+      {
+        role: 'assistant',
+        text: 'Two.',
+        list: { resource: 'events', filters: { city: 'Tallinn' } },
+      },
+    ]);
+  });
+
+  it('drops a kept list the list rules no longer accept', () => {
+    const opened: ChatEntry = {
+      role: 'tool',
+      tool_call_id: 'c1',
+      content: JSON.stringify({ openedList: { resource: 'events', filters: { color: 'red' } } }),
+    };
+
+    expect(toDisplayMessages([question('q'), toolCall, opened, answer('Two.')])).toEqual([
+      { role: 'user', text: 'q' },
+      { role: 'assistant', text: 'Two.' },
+    ]);
+  });
+
   it('skips an empty answer and the system prompt', () => {
     expect(
       toDisplayMessages([{ role: 'system', content: 'rules' }, question('q'), answer('')]),

@@ -78,6 +78,8 @@ export interface ChatResume {
 export interface ChatHistoryMessage {
   role: 'user' | 'assistant';
   text: string;
+  /** The list this answer opened, so the chat can offer it again after a reload. */
+  list?: Omit<ChatNavigation, 'id'>;
 }
 
 export interface ChatHistory {

@@ -412,6 +412,28 @@ describe('useChat', () => {
     ]);
   });
 
+  it('shows the list an answer opened as a link to open again after a reload', () => {
+    keepChatId(CHAT);
+    const { result } = renderHook(() => useChat(true));
+    const list = { resource: 'events', filters: { city: 'Tallinn' } };
+
+    connectWith(currentSocket(), {
+      chatId: CHAT,
+      messages: [
+        { role: 'user', text: 'Events in Tallinn?' },
+        { role: 'assistant', text: 'Two.', list },
+      ],
+    });
+
+    expect(result.current.messages[1]).toEqual({
+      id: 'history-0',
+      role: 'assistant',
+      text: 'Two.',
+      state: 'done',
+      list: { target: list, isOpened: false },
+    });
+  });
+
   it('starts a new chat on the server, waiting for it before anything can be asked', () => {
     const { result } = renderHook(() => useChat(true));
     const socket = currentSocket();

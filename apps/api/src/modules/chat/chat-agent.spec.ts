@@ -150,6 +150,11 @@ describe('ChatAgent', () => {
       role: 'tool',
       content: expect.stringContaining('Opened in the panel'),
     });
+    // Kept with the chat, so the answer shows the same list after a reload.
+    const reply = entries[1]?.content;
+    expect(typeof reply === 'string' ? JSON.parse(reply) : reply).toMatchObject({
+      openedList: list,
+    });
   });
 
   it('tells the model when its arguments are not JSON, without running the tool', async () => {

@@ -1,6 +1,7 @@
 import {
   CHAT_NAVIGATION,
   chatFiltersProblem,
+  isChatNavigableResource,
   type ChatNavigableResource,
   type ChatNavigation,
 } from '@ers/shared';
@@ -47,4 +48,39 @@ export function listToOpen(
   }
   const problem = chatFiltersProblem(resource, filters);
   return problem === undefined ? { resource, filters } : { problem };
+}
+
+/** Where a tool's reply to the model keeps the list it opened, so the chat can show it again. */
+export const OPENED_LIST_FIELD = 'openedList';
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function parseJson(text: string): unknown {
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    // Recovered on purpose: a reply that is not JSON simply opened no list.
+    return undefined;
+  }
+}
+
+/** The kept list, if it is still one the list rules accept; a kept value is never trusted. */
+function toCheckedList(value: unknown): ListToOpen | undefined {
+  if (!isRecord(value) || !isRecord(value.filters)) return undefined;
+  const { resource, filters } = value;
+  if (typeof resource !== 'string' || !isChatNavigableResource(resource)) return undefined;
+  if (chatFiltersProblem(resource, filters) !== undefined) return undefined;
+  const entries = Object.entries(filters).filter(
+    (entry): entry is [string, string] => typeof entry[1] === 'string',
+  );
+  return { resource, filters: Object.fromEntries(entries) };
+}
+
+/** The list a tool's reply says it opened, or undefined when it opened none. */
+export function readOpenedList(reply: unknown): ListToOpen | undefined {
+  if (typeof reply !== 'string') return undefined;
+  const value = parseJson(reply);
+  return isRecord(value) ? toCheckedList(value[OPENED_LIST_FIELD]) : undefined;
 }
