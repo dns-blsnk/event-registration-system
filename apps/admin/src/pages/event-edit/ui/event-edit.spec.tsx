@@ -1,13 +1,23 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
+import { pickBanner } from '@/test/banner';
 import { mockHttp, type MockRoute } from '@/test/http-mock';
 import { renderAdminPage } from '@/test/render-admin';
 
 import { EventEdit } from './event-edit';
 
 import type { EventDetail } from '@ers/shared';
+
+vi.mock('react-easy-crop', async () => ({ default: (await import('@/test/banner')).FakeCropper }));
+vi.mock('@/features/event-form/lib/read-image', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  imageSizeOf: (await import('@/test/banner-mocks')).BANNER_MOCKS.imageSizeOf,
+}));
+vi.mock('@/features/event-form/lib/crop-banner', async () => ({
+  cropBanner: (await import('@/test/banner-mocks')).BANNER_MOCKS.cropBanner,
+}));
 
 const signedIn: MockRoute = {
   method: 'get',
@@ -48,6 +58,22 @@ function bodyOf(call: { data?: unknown } | undefined): Record<string, unknown> {
   return JSON.parse(String(call?.data)) as Record<string, unknown>;
 }
 
+function renderEdit(): void {
+  renderAdminPage({ path: '/events/e1/edit', route: '/events/:id/edit', element: <EventEdit /> });
+}
+
+function writesOf(calls: { method?: string | undefined; url?: string | undefined }[]): string[] {
+  return calls
+    .filter((call) => call.method !== 'get')
+    .map((call) => `${String(call.method)} ${String(call.url)}`);
+}
+
+const published: EventDetail = {
+  ...event,
+  status: 'PUBLISHED',
+  bannerUrl: 'https://files.test/current.webp',
+};
+
 describe('EventEdit', () => {
   it('loads the event into the form and saves changes as a PATCH', async () => {
     const { calls } = mockHttp([
@@ -80,91 +106,69 @@ describe('EventEdit', () => {
 
     expect(await screen.findByText(/can no longer be changed/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /save/i })).toBeDisabled();
-    expect(screen.queryByLabelText('Banner image')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Banner')).toBeDisabled();
   });
 
-  it('refuses a file that is not a supported image before uploading it', async () => {
+  it('sends a new banner only on Save, after the details', async () => {
     const { calls } = mockHttp([
       signedIn,
       tags,
       { method: 'get', url: '/events/e1', status: 200, body: event },
-    ]);
-    renderAdminPage({ path: '/events/e1/edit', route: '/events/:id/edit', element: <EventEdit /> });
-    await screen.findByDisplayValue('Kyiv Frontend Summit');
-
-    await userEvent.upload(
-      screen.getByLabelText('Banner image'),
-      new File(['%PDF'], 'banner.pdf', { type: 'application/pdf' }),
-      {
-        applyAccept: false,
-      },
-    );
-
-    expect(calls.some((call) => call.method === 'put')).toBe(false);
-  });
-
-  it('keeps unsaved edits when a banner is uploaded', async () => {
-    mockHttp([
-      signedIn,
-      tags,
-      { method: 'get', url: '/events/e1', status: 200, body: event },
+      { method: 'patch', url: '/events/e1', status: 200, body: { ...event, title: 'Renamed' } },
       { method: 'put', url: '/events/e1/banner', status: 204 },
     ]);
-    renderAdminPage({ path: '/events/e1/edit', route: '/events/:id/edit', element: <EventEdit /> });
+    renderEdit();
     const title = await screen.findByDisplayValue('Kyiv Frontend Summit');
     await userEvent.clear(title);
-    await userEvent.type(title, 'Unsaved title');
+    await userEvent.type(title, 'Renamed');
 
-    await userEvent.upload(
-      screen.getByLabelText('Banner image'),
-      new File(['png'], 'banner.png', { type: 'image/png' }),
-    );
+    await pickBanner();
 
-    expect(await screen.findByRole('button', { name: 'Replace banner' })).toBeInTheDocument();
-    expect(screen.getByDisplayValue('Unsaved title')).toBeInTheDocument();
+    expect(writesOf(calls)).toEqual([]);
+    expect(screen.getByDisplayValue('Renamed')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /save/i }));
+    await waitFor(() => {
+      expect(writesOf(calls)).toEqual(['patch /events/e1', 'put /events/e1/banner']);
+    });
   });
 
-  it('uploads a banner as multipart form data', async () => {
+  it('lets a draft drop its banner', async () => {
     const { calls } = mockHttp([
       signedIn,
       tags,
-      { method: 'get', url: '/events/e1', status: 200, body: event },
-      { method: 'put', url: '/events/e1/banner', status: 204 },
       {
         method: 'get',
         url: '/events/e1',
         status: 200,
-        body: { ...event, bannerUrl: 'https://files.test/b.png' },
+        body: { ...event, bannerUrl: 'https://files.test/current.webp' },
       },
+      { method: 'patch', url: '/events/e1', status: 200, body: event },
+      { method: 'delete', url: '/events/e1/banner', status: 204 },
     ]);
-    renderAdminPage({ path: '/events/e1/edit', route: '/events/:id/edit', element: <EventEdit /> });
+    renderEdit();
     await screen.findByDisplayValue('Kyiv Frontend Summit');
 
-    await userEvent.upload(
-      screen.getByLabelText('Banner image'),
-      new File(['png'], 'banner.png', { type: 'image/png' }),
-    );
+    await userEvent.click(screen.getByRole('button', { name: 'Remove' }));
+    await userEvent.click(screen.getByRole('button', { name: /save/i }));
 
     await waitFor(() => {
-      expect(calls.some((call) => call.method === 'put' && call.url === '/events/e1/banner')).toBe(
-        true,
-      );
+      expect(writesOf(calls)).toContain('delete /events/e1/banner');
     });
-    expect(calls.find((call) => call.method === 'put')?.data).toBeInstanceOf(FormData);
   });
 
-  it('refuses an oversized banner before uploading it', async () => {
+  it('keeps a published event from losing its banner', async () => {
     const { calls } = mockHttp([
       signedIn,
       tags,
-      { method: 'get', url: '/events/e1', status: 200, body: event },
+      { method: 'get', url: '/events/e1', status: 200, body: published },
     ]);
-    renderAdminPage({ path: '/events/e1/edit', route: '/events/:id/edit', element: <EventEdit /> });
+    renderEdit();
     await screen.findByDisplayValue('Kyiv Frontend Summit');
-    const huge = new File([new Uint8Array(6 * 1024 * 1024)], 'huge.png', { type: 'image/png' });
 
-    await userEvent.upload(screen.getByLabelText('Banner image'), huge);
+    await userEvent.click(screen.getByRole('button', { name: 'Remove' }));
+    await userEvent.click(screen.getByRole('button', { name: /save/i }));
 
-    expect(calls.some((call) => call.method === 'put')).toBe(false);
+    expect(await screen.findByText(/^Add a banner/)).toBeInTheDocument();
+    expect(writesOf(calls)).toEqual([]);
   });
 });

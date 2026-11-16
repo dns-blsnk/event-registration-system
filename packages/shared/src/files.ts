@@ -8,6 +8,13 @@ export const BANNER_MAX_BYTES = BANNER_MAX_MEBIBYTES * BYTES_PER_MEBIBYTE;
 /** The multipart field the banner upload is sent in. */
 export const BANNER_FILE_FIELD = 'file';
 
+/**
+ * Largest original photo the admin opens for framing. Only the framed 2160 × 1080 crop is
+ * uploaded, so a big phone photo is fine here even though the upload limit is lower.
+ */
+export const BANNER_SOURCE_MAX_MEBIBYTES = 25;
+export const BANNER_SOURCE_MAX_BYTES = BANNER_SOURCE_MAX_MEBIBYTES * BYTES_PER_MEBIBYTE;
+
 /** Image types accepted for banners; the API checks the real type from the file's first bytes. */
 export const BANNER_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
 export type BannerMimeType = (typeof BANNER_MIME_TYPES)[number];
