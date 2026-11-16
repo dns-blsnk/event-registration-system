@@ -19,7 +19,10 @@ export class EventLifecycleService {
     private readonly banners: EventBannerService,
   ) {}
 
-  /** DRAFT -> PUBLISHED: must not have started and needs at least one session. */
+  /**
+   * DRAFT -> PUBLISHED: must not have started and needs a banner and at least one session. The
+   * banner is the event's face in the catalog, so a draft may lack one but a published event may not.
+   */
   async publish(id: string, actor: User, now: Date = new Date()): Promise<EventWithRelations> {
     return this.prisma.$transaction(async (tx) => {
       const event = await lockScopedEvent(tx, id, actor);
@@ -28,6 +31,9 @@ export class EventLifecycleService {
         endsAt: event.endsAt,
         now,
       });
+      if (event.bannerKey === null) {
+        throw new DomainError(ErrorCode.CONFLICT, 'Add a banner before publishing the event');
+      }
       if ((await tx.session.count({ where: { eventId: id } })) === 0) {
         throw new DomainError(
           ErrorCode.CONFLICT,

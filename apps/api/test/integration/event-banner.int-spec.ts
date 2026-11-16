@@ -112,6 +112,19 @@ describe('event banner', () => {
     expect(await keyOf(event.id)).toBeNull();
   });
 
+  it('keeps the banner of a published event, which can only be replaced', async () => {
+    const event = await createEvent(prisma, { organizerId: organizer.userId });
+    await upload(organizer, event.id, PNG, 204);
+
+    const response = await organizer.agent
+      .delete(`/api/events/${event.id}/banner`)
+      .set('x-csrf-token', organizer.csrfToken)
+      .expect(409);
+
+    expect(response.body.message).toMatch(/replace it instead/);
+    expect(await keyOf(event.id)).not.toBeNull();
+  });
+
   it('rejects a file with an image header but no readable picture', async () => {
     const event = await createEvent(prisma, { organizerId: organizer.userId });
     const broken = Buffer.from('89504e470d0a1a0a0000000d49484452', 'hex');
