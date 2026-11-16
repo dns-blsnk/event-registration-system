@@ -1,11 +1,54 @@
-# event-registration-system
+<div align="center">
 
-Admin panel for events, sessions and registrations: four roles, a managed Postgres database, private object storage for event banners and an AI help chat that knows the screen you are on.
+<img src="apps/admin/public/logo.svg" alt="ERS logo" width="96" height="96" />
+
+# Event Registration System
+
+**An admin panel for events, sessions and bookings, with real roles, a waitlist that cannot oversell and an AI assistant that knows the screen you are on.**
+
+[![CI](https://github.com/dns-blsnk/event-registration-system/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/dns-blsnk/event-registration-system/actions/workflows/ci.yml)
+[![Live demo](https://img.shields.io/badge/live%20demo-online-2ea44f?logo=vercel&logoColor=white)](https://event-registration-system-plum.vercel.app)
+[![API health](https://img.shields.io/badge/API-health-46E3B7?logo=render&logoColor=white)](https://ers-api-9j21.onrender.com/api/health)
+
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
+![Node.js 24](https://img.shields.io/badge/Node.js%2024-5FA04E?logo=nodedotjs&logoColor=white)
+![NestJS](https://img.shields.io/badge/NestJS-E0234E?logo=nestjs&logoColor=white)
+![Prisma](https://img.shields.io/badge/Prisma-2D3748?logo=prisma&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=white)
+![Redis](https://img.shields.io/badge/Redis-FF4438?logo=redis&logoColor=white)
+![Socket.IO](https://img.shields.io/badge/Socket.IO-010101?logo=socketdotio&logoColor=white)
+![React](https://img.shields.io/badge/React-149ECA?logo=react&logoColor=white)
+![Refine](https://img.shields.io/badge/Refine-14141F)
+![MUI](https://img.shields.io/badge/MUI-007FFF?logo=mui&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=white)
+![Cloudflare R2](https://img.shields.io/badge/Cloudflare%20R2-F38020?logo=cloudflare&logoColor=white)
+![Gemini](https://img.shields.io/badge/Gemini-8E75B2?logo=googlegemini&logoColor=white)
+![Vitest](https://img.shields.io/badge/Vitest-6E9F18?logo=vitest&logoColor=white)
+![Playwright](https://img.shields.io/badge/Playwright-2EAD33)
+
+[Live demo](#live-demo) · [Features](#features) · [Why this stack](#why-this-stack) · [Getting started](#getting-started) · [How it works](#how-it-works) · [Deployment](#deployment) · [Tests](#tests)
+
+</div>
+
+<p align="center">
+  <img src="docs/screenshots/event.jpg" alt="An event page: the banner with the title on it, dates, venue, organizer and how full it is" width="100%" />
+</p>
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/events.jpg" alt="The events list with filters, status, organizer and fill rate" /></td>
+    <td width="50%">
+      <strong>Built on Refine resources.</strong> Server-side pagination, filters and sorting over 300 events, 1500 sessions and 30 000 bookings. Every filter has a helper text from the same field descriptions the AI assistant reads.
+    </td>
+  </tr>
+</table>
 
 ## Live demo
 
-- **Admin:** https://event-registration-system-plum.vercel.app
-- **API health:** https://ers-api-9j21.onrender.com/api/health
+| What          | Where                                                                                          |
+| ------------- | ---------------------------------------------------------------------------------------------- |
+| 🖥️ Admin      | [event-registration-system-plum.vercel.app](https://event-registration-system-plum.vercel.app) |
+| 💓 API health | [ers-api-9j21.onrender.com/api/health](https://ers-api-9j21.onrender.com/api/health)           |
 
 Sign up on the sign-in page to get a customer account: browse the catalog, book a session, land on the waitlist when it is full. The staff demo accounts (`owner@demo.test`, `admin@demo.test`, `organizer@demo.test`) are shared together with the submission rather than published here, because they can change the live data.
 
