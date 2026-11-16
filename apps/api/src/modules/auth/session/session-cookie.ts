@@ -1,4 +1,4 @@
-import type { Config } from '../../config/config.schema.js';
+import type { Config } from '../../../config/config.schema.js';
 import type { CookieOptions, Request } from 'express';
 
 /**

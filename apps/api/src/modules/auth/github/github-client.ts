@@ -1,11 +1,11 @@
 import { ErrorCode } from '@ers/shared';
 import { Injectable } from '@nestjs/common';
 
-import { DomainError } from '../../common/errors/domain-error.js';
-import { SECOND_MS } from '../../common/time.js';
-import { InjectConfig } from '../../config/config.module.js';
+import { DomainError } from '../../../common/errors/domain-error.js';
+import { SECOND_MS } from '../../../common/time.js';
+import { InjectConfig } from '../../../config/config.module.js';
 
-import type { Config } from '../../config/config.schema.js';
+import type { Config } from '../../../config/config.schema.js';
 
 const TOKEN_URL = 'https://github.com/login/oauth/access_token';
 const USER_URL = 'https://api.github.com/user';

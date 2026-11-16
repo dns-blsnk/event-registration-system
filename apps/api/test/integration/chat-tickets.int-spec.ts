@@ -4,7 +4,7 @@ import { setTimeout as sleep } from 'node:timers/promises';
 import { CHAT_TICKET_TTL_SECONDS } from '@ers/shared';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { hashSessionToken } from '../../src/modules/auth/session-tokens.js';
+import { hashSessionToken } from '../../src/modules/auth/session/session-tokens.js';
 import { ChatTicketStore } from '../../src/modules/chat/chat-tickets.js';
 import { RedisService } from '../../src/redis/redis.service.js';
 import { createTestApp } from '../helpers/create-test-app.js';

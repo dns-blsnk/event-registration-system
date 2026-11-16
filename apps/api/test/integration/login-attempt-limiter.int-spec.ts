@@ -8,7 +8,7 @@ import {
   LoginAttemptLimiter,
   MAX_FAILURES_PER_ACCOUNT,
   MAX_FAILURES_PER_CLIENT,
-} from '../../src/modules/auth/login-attempt-limiter.js';
+} from '../../src/modules/auth/local/login-attempt-limiter.js';
 import { RedisService } from '../../src/redis/redis.service.js';
 import { createTestApp } from '../helpers/create-test-app.js';
 

@@ -1,14 +1,14 @@
 import { ErrorCode, Role } from '@ers/shared';
 import { Injectable } from '@nestjs/common';
 
-import { DomainError } from '../../common/errors/domain-error.js';
-import { PrismaService } from '../../prisma/prisma.service.js';
+import { DomainError } from '../../../common/errors/domain-error.js';
+import { PrismaService } from '../../../prisma/prisma.service.js';
+import { normalizeEmail } from '../email.js';
 
-import { normalizeEmail } from './email.js';
 import { PasswordService } from './password.service.js';
 
-import type { User } from '../../generated/prisma/client.js';
-import type { SignupDto } from './dto/signup.dto.js';
+import type { User } from '../../../generated/prisma/client.js';
+import type { SignupDto } from '../dto/signup.dto.js';
 
 @Injectable()
 export class RegistrationService {

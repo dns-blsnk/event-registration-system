@@ -1,11 +1,11 @@
 import { ErrorCode } from '@ers/shared';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { DomainError } from '../../common/errors/domain-error.js';
+import { DomainError } from '../../../common/errors/domain-error.js';
 
 import { GithubClient } from './github-client.js';
 
-import type { Config } from '../../config/config.schema.js';
+import type { Config } from '../../../config/config.schema.js';
 
 const CONFIGURED = { github: { clientId: 'client-id', clientSecret: 'client-secret' } } as Config;
 const RETURN = { code: 'the-code', verifier: 'the-verifier', redirectUri: 'http://x/cb' };

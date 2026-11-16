@@ -16,11 +16,11 @@ import {
   readSessionToken,
   sessionCookieName,
   sessionCookieOptions,
-} from './session-cookie.js';
+} from './session/session-cookie.js';
 
 import type { AuthContext } from '../../common/auth/auth-context.js';
 import type { Config } from '../../config/config.schema.js';
-import type { SessionMeta } from './session.service.js';
+import type { SessionMeta } from './session/session.service.js';
 import type { AuthResponse, SessionResponse } from '@ers/shared';
 import type { Request, Response } from 'express';
 

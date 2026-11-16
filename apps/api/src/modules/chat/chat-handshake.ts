@@ -4,7 +4,7 @@ import { Injectable } from '@nestjs/common';
 import { DomainError } from '../../common/errors/domain-error.js';
 import { InjectConfig } from '../../config/config.module.js';
 import { AppLogService } from '../app-logs/app-log.service.js';
-import { SessionService } from '../auth/session.service.js';
+import { SessionService } from '../auth/session/session.service.js';
 
 import { ChatTicketStore } from './chat-tickets.js';
 

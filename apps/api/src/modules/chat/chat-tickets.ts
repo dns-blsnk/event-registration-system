@@ -3,7 +3,7 @@ import { Injectable } from '@nestjs/common';
 
 import { SECOND_MS } from '../../common/time.js';
 import { RedisService } from '../../redis/redis.service.js';
-import { generateSessionToken, hashSessionToken } from '../auth/session-tokens.js';
+import { generateSessionToken, hashSessionToken } from '../auth/session/session-tokens.js';
 
 const TICKET_KEY_PREFIX = 'chat-ticket:';
 

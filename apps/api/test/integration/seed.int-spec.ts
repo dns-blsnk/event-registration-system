@@ -5,7 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { generateSeedPlan, type SeedPlan } from '../../prisma/seed/generate.js';
 import { writeSeedPlan } from '../../prisma/seed/write.js';
-import { PasswordService } from '../../src/modules/auth/password.service.js';
+import { PasswordService } from '../../src/modules/auth/local/password.service.js';
 import { StorageService } from '../../src/modules/storage/storage.service.js';
 import { PrismaService } from '../../src/prisma/prisma.service.js';
 import { createTestApp } from '../helpers/create-test-app.js';

@@ -1,14 +1,14 @@
 import { ErrorCode } from '@ers/shared';
 import { Injectable } from '@nestjs/common';
 
-import { DomainError } from '../../common/errors/domain-error.js';
-import { PrismaService } from '../../prisma/prisma.service.js';
+import { DomainError } from '../../../common/errors/domain-error.js';
+import { PrismaService } from '../../../prisma/prisma.service.js';
+import { normalizeEmail } from '../email.js';
 
-import { normalizeEmail } from './email.js';
 import { LoginAttemptLimiter } from './login-attempt-limiter.js';
 import { PasswordService } from './password.service.js';
 
-import type { User } from '../../generated/prisma/client.js';
+import type { User } from '../../../generated/prisma/client.js';
 
 /** Same message for unknown email and wrong password, so it cannot be used to find accounts. */
 const INVALID_CREDENTIALS = 'Invalid email or password';

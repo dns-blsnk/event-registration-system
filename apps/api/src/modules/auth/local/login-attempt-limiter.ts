@@ -2,9 +2,9 @@ import { createHash } from 'node:crypto';
 
 import { Injectable } from '@nestjs/common';
 
-import { MINUTE_MS } from '../../common/time.js';
-import { countHits } from '../../redis/fixed-window.js';
-import { RedisService } from '../../redis/redis.service.js';
+import { MINUTE_MS } from '../../../common/time.js';
+import { countHits } from '../../../redis/fixed-window.js';
+import { RedisService } from '../../../redis/redis.service.js';
 
 const FAILED_LOGIN_WINDOW_MINUTES = 15;
 export const FAILED_LOGIN_WINDOW_MS = FAILED_LOGIN_WINDOW_MINUTES * MINUTE_MS;

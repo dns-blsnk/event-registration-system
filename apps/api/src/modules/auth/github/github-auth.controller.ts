@@ -10,22 +10,22 @@ import {
 import { Controller, Get, Query, Req, Res } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 
-import { Public } from '../../common/auth/access.decorator.js';
-import { DomainError } from '../../common/errors/domain-error.js';
-import { MINUTE_MS } from '../../common/time.js';
-import { InjectConfig } from '../../config/config.module.js';
-
-import { startGithubAuthorization } from './github-oauth.js';
-import { GithubSignInService } from './github-sign-in.service.js';
-import { githubStateCookieName, githubStateCookieOptions } from './github-state-cookie.js';
+import { Public } from '../../../common/auth/access.decorator.js';
+import { DomainError } from '../../../common/errors/domain-error.js';
+import { MINUTE_MS } from '../../../common/time.js';
+import { InjectConfig } from '../../../config/config.module.js';
 import {
   clearSessionCookieOptions,
   readSessionToken,
   sessionCookieName,
   sessionCookieOptions,
-} from './session-cookie.js';
+} from '../session/session-cookie.js';
 
-import type { Config } from '../../config/config.schema.js';
+import { startGithubAuthorization } from './github-oauth.js';
+import { GithubSignInService } from './github-sign-in.service.js';
+import { githubStateCookieName, githubStateCookieOptions } from './github-state-cookie.js';
+
+import type { Config } from '../../../config/config.schema.js';
 import type { Request, Response } from 'express';
 
 /** A person starts a GitHub sign-in a few times a minute at most; each start costs GitHub calls. */

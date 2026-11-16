@@ -1,7 +1,7 @@
 import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from '@ers/shared';
 
 import { loadConfig } from '../../src/config/config.module.js';
-import { PasswordService } from '../../src/modules/auth/password.service.js';
+import { PasswordService } from '../../src/modules/auth/local/password.service.js';
 import { StorageService } from '../../src/modules/storage/storage.service.js';
 import { PrismaService } from '../../src/prisma/prisma.service.js';
 

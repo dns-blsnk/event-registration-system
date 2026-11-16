@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { TEST_ENV } from '../../../test/helpers/test-env.js';
-import { parseConfig } from '../../config/config.schema.js';
+import { TEST_ENV } from '../../../../test/helpers/test-env.js';
+import { parseConfig } from '../../../config/config.schema.js';
 
 import {
   clearSessionCookieOptions,

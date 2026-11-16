@@ -17,8 +17,8 @@ import { orderByOf, type ListQuery } from '../../common/pagination/list-query.js
 import { personSearch } from '../../common/pagination/search.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { normalizeEmail } from '../auth/email.js';
-import { PasswordService } from '../auth/password.service.js';
-import { SessionService } from '../auth/session.service.js';
+import { PasswordService } from '../auth/local/password.service.js';
+import { SessionService } from '../auth/session/session.service.js';
 
 import type { ListResult } from '../../common/pagination/list-result.js';
 import type { Prisma, User } from '../../generated/prisma/client.js';

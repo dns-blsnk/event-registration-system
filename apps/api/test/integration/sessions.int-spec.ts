@@ -1,12 +1,12 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { hashSessionToken } from '../../src/modules/auth/session-tokens.js';
+import { hashSessionToken } from '../../src/modules/auth/session/session-tokens.js';
 import {
   SESSION_IDLE_TIMEOUT_MS,
   SESSION_TOUCH_INTERVAL_MS,
   SESSION_TTL_MS,
   SessionService,
-} from '../../src/modules/auth/session.service.js';
+} from '../../src/modules/auth/session/session.service.js';
 import { PrismaService } from '../../src/prisma/prisma.service.js';
 import { createTestApp } from '../helpers/create-test-app.js';
 import { createUser } from '../helpers/factories.js';

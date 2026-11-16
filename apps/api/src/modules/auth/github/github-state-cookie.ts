@@ -1,8 +1,7 @@
-import { MINUTE_MS } from '../../common/time.js';
+import { MINUTE_MS } from '../../../common/time.js';
+import { clearSessionCookieOptions } from '../session/session-cookie.js';
 
-import { clearSessionCookieOptions } from './session-cookie.js';
-
-import type { Config } from '../../config/config.schema.js';
+import type { Config } from '../../../config/config.schema.js';
 import type { CookieOptions } from 'express';
 
 /** Long enough to approve the app on GitHub, short enough that a stale state is useless. */
