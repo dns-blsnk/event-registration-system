@@ -1,17 +1,19 @@
-import TextField from '@mui/material/TextField';
-import dayjs from 'dayjs';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import dayjs, { type Dayjs } from 'dayjs';
 import { useRef, useState } from 'react';
 
-import { EMPTY_DATE_SX } from '@/shared/lib/date-input';
+import { FILTER_FIELD_SX } from '@/shared/lib/forms';
 
-import { ClearAdornment } from '../clear-adornment/clear-adornment';
 import { filterText } from '../filter-form/filter-form';
 
 import type { FieldDescription } from '@ers/shared';
 import type { CrudFilters } from '@refinedev/core';
 
 const INPUT_DAY = 'YYYY-MM-DD';
-const DAY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+/** The same day format the lists show, whatever the browser's locale. */
+const SHOWN_DAY = 'DD MMM YYYY';
 
 /** Start of a range takes the day's first moment, its end the day's last, both in local time. */
 export type DayBound = 'start' | 'end';
@@ -33,17 +35,37 @@ export function dayToInstant(day: string, bound: DayBound): string {
   return (bound === 'start' ? local.startOf('day') : local.endOf('day')).toISOString();
 }
 
-function isDay(value: string): boolean {
-  return DAY_PATTERN.test(value) && dayjs(value).isValid();
-}
-
 function instantToDay(instant: string): string {
   return instant === '' ? '' : dayjs(instant).format(INPUT_DAY);
 }
 
+interface DayLimits {
+  minDate?: Dayjs;
+  maxDate?: Dayjs;
+}
+
+function limitsOf(limit: string | undefined, bound: DayBound): DayLimits {
+  if (limit === undefined || limit === '') return {};
+  const limitDay = dayjs(limit);
+  return bound === 'start' ? { maxDate: limitDay } : { minDate: limitDay };
+}
+
+/** A typed day past the other end of the range; the calendar does not offer those at all. */
+function isOutOfRange(value: Dayjs, { minDate, maxDate }: DayLimits): boolean {
+  return (
+    (minDate !== undefined && value.isBefore(minDate, 'day')) ||
+    (maxDate !== undefined && value.isAfter(maxDate, 'day'))
+  );
+}
+
+function pickedOf(day: string): Dayjs | null {
+  return day === '' ? null : dayjs(day);
+}
+
 /**
- * A day filter. It applies when the field loses focus, not on every keystroke, since typing a
- * year passes through partial values. Days are the viewer's local days, sent as exact instants.
+ * A day filter. A day picked in the calendar applies at once; a typed one when the field loses
+ * focus, not on every keystroke, since typing passes through half-filled dates. Days are the
+ * viewer's local days, sent as exact instants.
  */
 export function DateFilter({
   name,
@@ -54,65 +76,70 @@ export function DateFilter({
   limit,
 }: DateFilterProps): React.JSX.Element {
   const day = instantToDay(filterText(name, filters));
-  // Grey only while really blank; a half-typed date reads as blank to `value` but not `badInput`.
-  const [isBlank, setBlank] = useState(day === '');
+  const limits = limitsOf(limit, bound);
+  const [picked, setPicked] = useState(pickedOf(day));
   const [followedDay, setFollowedDay] = useState(day);
-  // The field is remounted for a new filter value (see the key), and starts blank or not with it.
+  const inputRef = useRef<HTMLInputElement>(null);
+  // The filter changed elsewhere (Back, "Clear filters"): show it. Set during render, so there is
+  // no paint with the old day, and the field is not remounted (an open calendar stays open).
   if (day !== followedDay) {
     setFollowedDay(day);
-    setBlank(day === '');
+    setPicked(pickedOf(day));
   }
-  const limitDay = limit === undefined || limit === '' ? undefined : instantToDay(limit);
-  // Clearing remounts the field (see the key); keyboard focus moves into the new one.
-  const isRefocusing = useRef(false);
+  /** Applies a day, or removes the filter for none; a half-typed, out-of-range or active day is skipped. */
+  const apply = (value: Dayjs | null): void => {
+    if (value !== null && (!value.isValid() || isOutOfRange(value, limits))) return;
+    const next = value === null ? '' : value.format(INPUT_DAY);
+    if (next === day) return;
+    onChange([
+      { field: name, operator: 'eq', value: next === '' ? undefined : dayToInstant(next, bound) },
+    ]);
+  };
   return (
-    <TextField
-      // Keyed by the active value, so the field follows filters changed elsewhere (Back, clearing).
-      key={`${name}:${day}`}
-      // Named like the filter, so the help chat can tell which day field is in focus.
-      name={name}
-      type="date"
-      sx={isBlank ? EMPTY_DATE_SX : {}}
-      onInput={(event) => {
-        const input = event.target as HTMLInputElement;
-        setBlank(input.value === '' && !input.validity.badInput);
-      }}
-      label={description.label}
-      helperText={description.help}
-      defaultValue={day}
-      inputRef={(input: HTMLInputElement | null) => {
-        if (input === null || !isRefocusing.current) return;
-        isRefocusing.current = false;
-        input.focus();
-      }}
-      onBlur={(event) => {
-        const picked = event.target.value;
-        if (picked === day || (picked !== '' && !isDay(picked))) return;
-        onChange([
-          {
-            field: name,
-            operator: 'eq',
-            value: picked === '' ? undefined : dayToInstant(picked, bound),
+    <LocalizationProvider dateAdapter={AdapterDayjs}>
+      <DatePicker
+        // Named like the filter, so the help chat can tell which day field is in focus. The plain
+        // input structure keeps one real <input> carrying that name.
+        name={name}
+        enableAccessibleFieldDOMStructure={false}
+        inputRef={inputRef}
+        label={description.label}
+        format={SHOWN_DAY}
+        value={picked}
+        onChange={setPicked}
+        onAccept={(value, context) => {
+          // The field "accepts" every complete date typed, even year 0002 on the way to 2026;
+          // only a day picked in the calendar applies here, typed ones wait for blur.
+          if (context.source === 'view') apply(value);
+        }}
+        {...limits}
+        slotProps={{
+          field: {
+            // Only a set day can be cleared; an empty field keeps just the calendar button.
+            clearable: day !== '',
+            onClear: () => {
+              apply(null);
+              // The button hides with the day; keyboard focus stays in the field.
+              inputRef.current?.focus();
+            },
           },
-        ]);
-      }}
-      size="small"
-      slotProps={{
-        input: {
-          endAdornment: (
-            <ClearAdornment
-              label={description.label}
-              isHidden={day === ''}
-              onClear={() => {
-                isRefocusing.current = true;
-                onChange([{ field: name, operator: 'eq', value: undefined }]);
-              }}
-            />
-          ),
-        },
-        inputLabel: { shrink: true },
-        htmlInput: bound === 'start' ? { max: limitDay } : { min: limitDay },
-      }}
-    />
+          clearButton: {
+            'aria-label': `Clear ${description.label}`,
+            // Pressing it must not blur the field first: a typed day applies on blur.
+            onMouseDown: (event) => {
+              event.preventDefault();
+            },
+          },
+          textField: {
+            size: 'small',
+            sx: FILTER_FIELD_SX,
+            helperText: description.help,
+            onBlur: () => {
+              apply(picked);
+            },
+          },
+        }}
+      />
+    </LocalizationProvider>
   );
 }

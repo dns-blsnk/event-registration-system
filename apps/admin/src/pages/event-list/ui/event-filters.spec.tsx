@@ -90,18 +90,17 @@ describe('event filters', () => {
     const { calls } = mockHttp([signedIn('ORGANIZER'), ...repeated(events), ...repeated(tags)]);
     renderList();
 
-    pickDay(await screen.findByLabelText('Starts from'), '2026-12-01');
+    pickDay(await screen.findByLabelText('Starts from'), '01 Dec 2026');
     await waitFor(() => {
       expect(eventsQuery(calls)).toMatchObject({ startsFrom: new Date(2026, 11, 1).toISOString() });
     });
-    pickDay(screen.getByLabelText('Starts until'), '2026-12-31');
+    pickDay(screen.getByLabelText('Starts until'), '31 Dec 2026');
 
     await waitFor(() => {
       expect(eventsQuery(calls)).toMatchObject({
         startsTo: new Date(2026, 11, 31, 23, 59, 59, 999).toISOString(),
       });
     });
-    expect(screen.getByLabelText('Starts from')).toHaveAttribute('max', '2026-12-31');
   });
 
   it('does not refetch while a day is still being typed, and clears a removed day', async () => {
@@ -111,7 +110,7 @@ describe('event filters', () => {
     await screen.findByRole('combobox', { name: 'Tag' });
     const before = calls.filter((call) => call.url?.startsWith('/events')).length;
 
-    fireEvent.change(from, { target: { value: '2026-12-01' } });
+    fireEvent.change(from, { target: { value: '01 Dec 2026' } });
     expect(calls.filter((call) => call.url?.startsWith('/events'))).toHaveLength(before);
 
     fireEvent.blur(from);

@@ -46,7 +46,7 @@ export function ChatHeader({
       <AssistantAvatar size="large" isInverted />
       <Box sx={{ flexGrow: 1, minWidth: 0 }}>
         <Typography variant="subtitle1" component="h2" fontWeight={700}>
-          Help assistant
+          AI assistant
         </Typography>
         <Stack direction="row" spacing={0.75} alignItems="center">
           <Box

@@ -71,7 +71,7 @@ describe('MyRegistrationList', () => {
       '/catalog/e1#session-s1',
     );
     expect(screen.getByText('Waitlisted')).toBeInTheDocument();
-    expect(screen.getByText('#2')).toBeInTheDocument();
+    expect(screen.getByText('#2 in line')).toBeInTheDocument();
   });
 
   it('offers no cancel for past, cancelled or attended bookings', async () => {
@@ -218,7 +218,7 @@ describe('MyRegistrationList', () => {
     await screen.findByText('State of React');
 
     const field = screen.getByLabelText('Starts from');
-    fireEvent.change(field, { target: { value: '2026-12-01' } });
+    fireEvent.change(field, { target: { value: '01 Dec 2026' } });
     fireEvent.blur(field);
 
     await waitFor(() => {

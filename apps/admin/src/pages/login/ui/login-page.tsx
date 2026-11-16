@@ -1,26 +1,29 @@
 import {
-  AUTH_PROVIDER_PATHS,
+  EMAIL_MAX_LENGTH,
   GITHUB_SIGN_IN_ERROR_PARAM,
   GITHUB_SIGN_IN_ERRORS,
   isGithubSignInError,
-  type AuthProviders,
+  SIGNUP_FIELDS,
 } from '@ers/shared';
-import GitHubIcon from '@mui/icons-material/GitHub';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import Link from '@mui/material/Link';
 import Stack from '@mui/material/Stack';
-import { useCustom } from '@refinedev/core';
-import { AuthPage } from '@refinedev/mui';
+import TextField from '@mui/material/TextField';
+import { useLogin } from '@refinedev/core';
+import { useForm } from 'react-hook-form';
 import { Link as RouterLink, useSearchParams } from 'react-router';
 
-import { API_BASE_URL } from '@/shared/api';
+import { GithubSignIn } from '@/features/github-sign-in';
 import { REGISTER_PATH } from '@/shared/config';
+import { EMAIL_RULES, REQUIRED } from '@/shared/lib/forms';
+import { AuthLayout } from '@/shared/ui/auth-layout';
+import { PasswordField } from '@/shared/ui/password-field';
 
-/** A full page load, not an API call: the API redirects the browser on to GitHub. */
-export const GITHUB_SIGN_IN_URL = `${API_BASE_URL}${AUTH_PROVIDER_PATHS.github}`;
-/** Width of Refine's auth card, so the error lines up with it. */
-const AUTH_CARD_WIDTH = 400;
+interface LoginValues {
+  email: string;
+  password: string;
+}
 
 /**
  * Why the last GitHub sign-in failed (only known reasons, never text taken from the URL), and a
@@ -44,47 +47,63 @@ function useGithubSignInError(): { message: string | undefined; dismiss: () => v
   };
 }
 
-/** Email and password sign-in from Refine's MUI auth page, plus GitHub when the API enables it. */
+/**
+ * Email and password sign-in, plus GitHub when the API enables it. A refused sign-in shows as
+ * Refine's error notification; the auth provider does not say which field was wrong on purpose.
+ */
 export function LoginPage(): React.JSX.Element {
-  const { query } = useCustom<AuthProviders>({
-    url: AUTH_PROVIDER_PATHS.providers,
-    method: 'get',
-    // Optional: if the API cannot say, email sign-in still works and the button stays hidden.
-    errorNotification: false,
-  });
-  const isGithubEnabled = query.data?.data.github === true;
+  const { mutate: signIn, isPending } = useLogin<LoginValues>();
   const githubError = useGithubSignInError();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginValues>({ defaultValues: { email: '', password: '' } });
+  const submit = handleSubmit((values) => {
+    signIn({ ...values, email: values.email.trim() });
+  });
   return (
-    <AuthPage
-      type="login"
-      title="Event Registration"
-      rememberMe={false}
-      forgotPasswordLink={false}
-      registerLink={
-        <Link component={RouterLink} to={REGISTER_PATH} variant="body2">
-          Create an account
-        </Link>
+    <AuthLayout
+      title="Sign in"
+      subtitle="Welcome back. Sign in to manage events and your bookings."
+      footer={
+        <>
+          New here?{' '}
+          <Link component={RouterLink} to={REGISTER_PATH}>
+            Create an account
+          </Link>
+        </>
       }
-      renderContent={(content, title) => (
-        <Stack spacing={2} sx={{ alignItems: 'center' }}>
-          {title}
-          {githubError.message !== undefined && (
-            <Alert
-              severity="error"
-              sx={{ maxWidth: AUTH_CARD_WIDTH }}
-              onClose={githubError.dismiss}
-            >
-              {githubError.message}
-            </Alert>
-          )}
-          {content}
-          {isGithubEnabled && (
-            <Button variant="outlined" startIcon={<GitHubIcon />} href={GITHUB_SIGN_IN_URL}>
-              Sign in with GitHub
-            </Button>
-          )}
-        </Stack>
+    >
+      {githubError.message !== undefined && (
+        <Alert severity="error" onClose={githubError.dismiss}>
+          {githubError.message}
+        </Alert>
       )}
-    />
+      <Stack component="form" noValidate spacing={2} onSubmit={(event) => void submit(event)}>
+        <TextField
+          {...register('email', EMAIL_RULES)}
+          type="email"
+          label={SIGNUP_FIELDS.email.label}
+          helperText={errors.email?.message}
+          error={errors.email !== undefined}
+          autoComplete="email"
+          slotProps={{ htmlInput: { maxLength: EMAIL_MAX_LENGTH } }}
+          required
+        />
+        <PasswordField
+          {...register('password', { required: REQUIRED })}
+          label={SIGNUP_FIELDS.password.label}
+          helperText={errors.password?.message}
+          error={errors.password !== undefined}
+          autoComplete="current-password"
+          required
+        />
+        <Button type="submit" variant="contained" size="large" loading={isPending}>
+          Sign in
+        </Button>
+      </Stack>
+      <GithubSignIn label="Sign in with GitHub" />
+    </AuthLayout>
   );
 }

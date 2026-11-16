@@ -141,8 +141,8 @@ function renderOnSessions(): void {
 }
 
 async function openChat(): Promise<HTMLElement> {
-  await userEvent.click(await screen.findByRole('button', { name: 'Help chat' }));
-  return screen.findByRole('dialog', { name: 'Help chat' });
+  await userEvent.click(await screen.findByRole('button', { name: 'AI assistant' }));
+  return screen.findByRole('dialog', { name: 'AI assistant' });
 }
 
 describe('ChatWidget', () => {
@@ -159,7 +159,7 @@ describe('ChatWidget', () => {
     const { calls } = mockHttp([signedIn, status(true)]);
     renderOnSessions();
 
-    expect(await screen.findByRole('button', { name: 'Help chat' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'AI assistant' })).toBeInTheDocument();
     expect(sockets).toHaveLength(0);
     expect(calls.some((call) => call.url === '/chat/status')).toBe(false);
   });
@@ -364,7 +364,7 @@ describe('ChatWidget', () => {
 
     await userEvent.click(within(dialog).getByRole('button', { name: 'Close help chat' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Help chat' })).toHaveFocus();
+    expect(screen.getByRole('button', { name: 'AI assistant' })).toHaveFocus();
     dialog = await openChat();
 
     expect(within(dialog).getByText('Hello?')).toBeInTheDocument();

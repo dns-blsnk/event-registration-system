@@ -4,6 +4,7 @@ import {
   type MyRegistration,
   RegistrationStatus,
 } from '@ers/shared';
+import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
@@ -72,15 +73,16 @@ function MyBookings(): React.JSX.Element {
       empty={next.length === 0 ? 'No upcoming bookings: find a session in the catalog.' : undefined}
     >
       {next.map((booking) => (
-        <ListItem
-          key={booking.id}
-          disableGutters
-          secondaryAction={<RegistrationStatusChip status={booking.status} />}
-        >
+        // The chip sits in the row, not in `secondaryAction`: that one floats over the text and
+        // keeps room for an icon only, so a long title ran under the wider chip.
+        <ListItem key={booking.id} disableGutters sx={{ gap: 1 }}>
           <ListItemText
             primary={booking.session.title}
             secondary={`${booking.event.title} · ${formatDateTime(booking.session.startsAt)}`}
           />
+          <Box sx={{ flexShrink: 0 }}>
+            <RegistrationStatusChip status={booking.status} />
+          </Box>
         </ListItem>
       ))}
     </Section>

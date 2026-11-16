@@ -5,7 +5,7 @@ import TextField from '@mui/material/TextField';
 import { getDefaultFilter, type CrudFilters } from '@refinedev/core';
 import { useState } from 'react';
 
-import { SELECT_LABEL_PROPS } from '@/shared/lib/forms';
+import { FILTER_FIELD_SX, SELECT_LABEL_PROPS } from '@/shared/lib/forms';
 
 import { SearchField } from '../search-field/search-field';
 
@@ -53,7 +53,7 @@ export function SelectFilterField<TValue extends string>({
         onChange([{ field: name, operator: 'eq', value: value === '' ? undefined : value }]);
       }}
       size="small"
-      sx={{ minWidth: 160 }}
+      sx={FILTER_FIELD_SX}
     >
       <MenuItem value="">All</MenuItem>
       {values.map((value) => (

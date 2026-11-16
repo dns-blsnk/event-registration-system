@@ -1,4 +1,4 @@
-import SupportAgentIcon from '@mui/icons-material/SupportAgent';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import Avatar from '@mui/material/Avatar';
 
 const SIZES = { small: 28, large: 40 } as const;
@@ -21,7 +21,7 @@ export function AssistantAvatar({
         color: isInverted ? 'primary.main' : 'common.white',
       }}
     >
-      <SupportAgentIcon fontSize={size === 'small' ? 'small' : 'medium'} />
+      <AutoAwesomeIcon fontSize={size === 'small' ? 'small' : 'medium'} />
     </Avatar>
   );
 }
