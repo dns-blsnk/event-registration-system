@@ -1,5 +1,6 @@
 import { isInCatalog, REGISTRATION_FIELDS, SESSION_FIELDS, type MyRegistration } from '@ers/shared';
 import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
 import { type GridColDef } from '@mui/x-data-grid';
 import { List } from '@refinedev/mui';
 
@@ -65,12 +66,16 @@ const columns: GridColDef<MyRegistration>[] = [
   {
     field: 'status',
     headerName: REGISTRATION_FIELDS.status.label,
-    minWidth: 170,
+    minWidth: 200,
     sortable: false,
     renderCell: ({ row }) => (
       <Stack direction="row" spacing={1} alignItems="center" sx={{ height: '100%' }}>
         <RegistrationStatusChip status={row.status} />
-        {row.waitlistPosition !== null && <span>#{String(row.waitlistPosition)}</span>}
+        {row.waitlistPosition !== null && (
+          <Typography variant="body2" color="text.secondary">
+            #{String(row.waitlistPosition)} in line
+          </Typography>
+        )}
       </Stack>
     ),
   },

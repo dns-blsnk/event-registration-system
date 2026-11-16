@@ -71,7 +71,7 @@ describe('MyRegistrationList', () => {
       '/catalog/e1#session-s1',
     );
     expect(screen.getByText('Waitlisted')).toBeInTheDocument();
-    expect(screen.getByText('#2')).toBeInTheDocument();
+    expect(screen.getByText('#2 in line')).toBeInTheDocument();
   });
 
   it('offers no cancel for past, cancelled or attended bookings', async () => {
