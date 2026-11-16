@@ -1,10 +1,12 @@
 import {
+  CHAT_HISTORY_REQUEST_ID,
   CHAT_NAMESPACE,
   ChatEvent,
   ErrorCode,
   type ChatChunk,
   type ChatDone,
   type ChatError,
+  type ChatHistory,
 } from '@ers/shared';
 import { Interval } from '@nestjs/schedule';
 import {
@@ -26,11 +28,12 @@ import {
 } from '../../domain/chat-prompt.js';
 
 import { ChatAdmission } from './chat-admission.js';
-import { ChatAnswerService } from './chat-answer.service.js';
+import { ChatConversations } from './chat-conversations.js';
 import { ChatFailures } from './chat-failures.js';
 import { ChatHandshake, HANDSHAKE_REFUSED } from './chat-handshake.js';
-import { parseChatQuestion } from './chat-question.js';
+import { fieldOf, parseChatQuestion } from './chat-question.js';
 
+import type { ValidSession } from '../identity/index.js';
 import type { ChatSocket } from './chat-socket.js';
 import type { Namespace } from 'socket.io';
 
@@ -59,7 +62,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayDisconnect {
   constructor(
     private readonly handshake: ChatHandshake,
     private readonly admission: ChatAdmission,
-    private readonly answerService: ChatAnswerService,
+    private readonly conversations: ChatConversations,
     private readonly failures: ChatFailures,
   ) {}
 
@@ -90,9 +93,32 @@ export class ChatGateway implements OnGatewayInit, OnGatewayDisconnect {
     this.answers.get(socket.id)?.abort();
   }
 
+  /** Continues the chat the browser kept, or starts one. Every reconnect sends it, so it is free. */
+  @SubscribeMessage(ChatEvent.RESUME)
+  async resume(
+    @ConnectedSocket() socket: ChatSocket,
+    @MessageBody() payload: unknown,
+  ): Promise<void> {
+    await this.sendHistory(socket, (userId) =>
+      this.conversations.resume(userId, fieldOf(payload, 'chatId')),
+    );
+  }
+
+  /** Forgets the current chat and starts an empty one; counted like a question. */
+  @SubscribeMessage(ChatEvent.NEW_CHAT)
+  async newChat(
+    @ConnectedSocket() socket: ChatSocket,
+    @MessageBody() payload: unknown,
+  ): Promise<void> {
+    if (await this.isOverLimit(socket, CHAT_HISTORY_REQUEST_ID)) return;
+    await this.sendHistory(socket, (userId) =>
+      this.conversations.startNew(userId, fieldOf(payload, 'chatId')),
+    );
+  }
+
   @SubscribeMessage(ChatEvent.ASK)
   async ask(@ConnectedSocket() socket: ChatSocket, @MessageBody() payload: unknown): Promise<void> {
-    if (await this.isOverLimit(socket, payload)) return;
+    if (await this.isOverLimit(socket, idOf(payload))) return;
     const question = parseChatQuestion(payload);
     if (question === undefined) {
       this.fail(
@@ -138,17 +164,8 @@ export class ChatGateway implements OnGatewayInit, OnGatewayDisconnect {
     socket: ChatSocket,
     question: NonNullable<ReturnType<typeof parseChatQuestion>>,
   ): Promise<ChatPrompt | undefined> {
-    const live = await this.admission.liveSession(socket.data.sessionId);
-    if (live === null) {
-      this.fail(
-        socket,
-        question.id,
-        ErrorCode.UNAUTHENTICATED,
-        'Your session has ended. Sign in again.',
-      );
-      socket.disconnect(true);
-      return undefined;
-    }
+    const live = await this.liveSession(socket, question.id);
+    if (live === undefined) return undefined;
     // The current role, not the one at connect time: what the user may see can change.
     const prompt = buildChatPrompt({ role: live.user.role, ...question });
     if (typeof prompt === 'string') {
@@ -164,13 +181,42 @@ export class ChatGateway implements OnGatewayInit, OnGatewayDisconnect {
     prompt: ChatPrompt,
     signal: AbortSignal,
   ): Promise<void> {
-    const outcome = await this.answerService.answer(prompt, {
+    const outcome = await this.conversations.answer(prompt, {
       signal,
       onText: (text) => {
         socket.emit(ChatEvent.CHUNK, { id, text } satisfies ChatChunk);
       },
     });
     socket.emit(ChatEvent.DONE, { id, cancelled: outcome === 'cancelled' } satisfies ChatDone);
+  }
+
+  /**
+   * The socket's session if it is still live; otherwise tells the client and closes the socket.
+   * Checked on every message, since a session can end and a role can change while it is open.
+   */
+  private async liveSession(socket: ChatSocket, id: string): Promise<ValidSession | undefined> {
+    const live = await this.admission.liveSession(socket.data.sessionId);
+    if (live !== null) return live;
+    this.fail(socket, id, ErrorCode.UNAUTHENTICATED, 'Your session has ended. Sign in again.');
+    socket.disconnect(true);
+    return undefined;
+  }
+
+  /**
+   * Stops any answer still coming, then sends the chat the client should show. Failures carry
+   * CHAT_HISTORY_REQUEST_ID, so the client can tell them from a failed question.
+   */
+  private async sendHistory(
+    socket: ChatSocket,
+    load: (userId: string) => Promise<ChatHistory>,
+  ): Promise<void> {
+    this.answers.get(socket.id)?.abort();
+    try {
+      if ((await this.liveSession(socket, CHAT_HISTORY_REQUEST_ID)) === undefined) return;
+      socket.emit(ChatEvent.HISTORY, await load(socket.data.userId));
+    } catch (error) {
+      this.report(socket, CHAT_HISTORY_REQUEST_ID, error);
+    }
   }
 
   /** Tells the client a question failed; ChatFailures logs why. */
@@ -187,14 +233,14 @@ export class ChatGateway implements OnGatewayInit, OnGatewayDisconnect {
    * Counts this message against the user's limit, readable or not, before any database work.
    * True after telling the client the message was refused.
    */
-  private async isOverLimit(socket: ChatSocket, payload: unknown): Promise<boolean> {
+  private async isOverLimit(socket: ChatSocket, id: string): Promise<boolean> {
     try {
       if (await this.admission.isWithinLimit(socket.data.userId)) return false;
       this.fail(
         socket,
-        idOf(payload),
+        id,
         ErrorCode.RATE_LIMITED,
-        'Too many questions. Wait a minute and try again.',
+        'Too many messages to the assistant. Wait a minute and try again.',
       );
     } catch (error) {
       const { code, message } = this.failures.record(
@@ -202,7 +248,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayDisconnect {
         error,
         'chat message limit check failed',
       );
-      this.fail(socket, idOf(payload), code, message);
+      this.fail(socket, id, code, message);
     }
     return true;
   }
@@ -210,10 +256,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayDisconnect {
 
 /** The client's question id if the payload carries a usable one, so even a refusal can be matched. */
 function idOf(payload: unknown): string {
-  const id: unknown =
-    typeof payload === 'object' && payload !== null
-      ? (payload as Record<string, unknown>).id
-      : undefined;
+  const id = fieldOf(payload, 'id');
   return typeof id === 'string' ? id.slice(0, ID_ECHO_MAX_LENGTH) : '';
 }
 

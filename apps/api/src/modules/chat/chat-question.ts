@@ -7,6 +7,13 @@ function isShortText(value: unknown): value is string {
   return typeof value === 'string' && value !== '' && value.length <= TOKEN_MAX_LENGTH;
 }
 
+/** One field of a socket payload, which may be anything; undefined when it is not an object. */
+export function fieldOf(payload: unknown, key: string): unknown {
+  return typeof payload === 'object' && payload !== null
+    ? (payload as Record<string, unknown>)[key]
+    : undefined;
+}
+
 /**
  * Reads an `ask` payload from the socket. Only the shape is checked here; the question text, the
  * screen and the role are checked when the prompt is built. Undefined means a malformed payload.

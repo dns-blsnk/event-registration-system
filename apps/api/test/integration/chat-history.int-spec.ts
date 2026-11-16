@@ -153,6 +153,8 @@ describe('ChatHistoryStore', () => {
   it('keeps a bounded number of chats per user, dropping the one used longest ago', async () => {
     const userId = randomUUID();
     const first = await store.create(userId);
+    // Chats made within one millisecond expire at the same moment; make the first one clearly older.
+    await redis.zadd(`chats:${userId}`, Date.now() + MINUTE_MS, first);
     for (let index = 0; index < CHATS_PER_USER; index += 1) await store.create(userId);
 
     expect(await redis.zcard(`chats:${userId}`)).toBe(CHATS_PER_USER);

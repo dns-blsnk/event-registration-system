@@ -1,16 +1,17 @@
-import { CHAT_NAMESPACE, ChatEvent, CSRF_HEADER } from '@ers/shared';
+import { CHAT_HISTORY_REQUEST_ID, CHAT_NAMESPACE, ChatEvent, CSRF_HEADER } from '@ers/shared';
 import { io, type Socket } from 'socket.io-client';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { AppLogService } from '../../src/modules/app-logs/app-log.service.js';
 import { AI_CLIENT } from '../../src/modules/chat/chat-answer.service.js';
+import { ChatHistoryStore } from '../../src/modules/chat/chat-history.store.js';
 import { ChatGateway } from '../../src/modules/chat/chat.gateway.js';
 import { PrismaService } from '../../src/prisma/prisma.service.js';
 import { signedInAgent, type SignedInAgent } from '../helpers/auth.js';
 import { createTestApp } from '../helpers/create-test-app.js';
 import { TEST_ENV } from '../helpers/test-env.js';
 
-import type { Role, ChatChunk, ChatDone, ChatError } from '@ers/shared';
+import type { Role, ChatChunk, ChatDone, ChatError, ChatHistory } from '@ers/shared';
 import type { INestApplication } from '@nestjs/common';
 
 const ADMIN_ORIGIN = TEST_ENV.ADMIN_ORIGIN ?? '';
@@ -282,4 +283,140 @@ describe('chat gateway', () => {
     },
     WAIT_MS * 5,
   );
+  /** The HISTORY answer to a resume or new-chat message; rejects with the chat_error instead. */
+  function historyAfter(socket: Socket, event: string, payload: object): Promise<ChatHistory> {
+    return new Promise((resolve, reject) => {
+      socket.once(ChatEvent.HISTORY, resolve);
+      socket.once(ChatEvent.ERROR, reject);
+      socket.emit(event, payload);
+    });
+  }
+
+  /** The chat_error a resume or new-chat message is refused with. */
+  async function refusalOf(socket: Socket, event: string, payload: object): Promise<ChatError> {
+    return historyAfter(socket, event, payload).then(
+      () => {
+        throw new Error('expected a chat_error, got HISTORY');
+      },
+      (error: unknown) => error as ChatError,
+    );
+  }
+
+  it('starts a new, empty chat when the browser kept none', async () => {
+    const { socket } = await connectAs('CUSTOMER');
+
+    const history = await historyAfter(socket, ChatEvent.RESUME, {});
+
+    expect(history.chatId).toMatch(/^[\da-f-]{36}$/);
+    expect(history.messages).toEqual([]);
+  });
+
+  it('resumes the user’s own chat with what they see, not the tool traffic', async () => {
+    const { socket, agent } = await connectAs('CUSTOMER');
+    const store = app.get(ChatHistoryStore);
+    const chatId = await store.create(agent.userId);
+    await store.append(agent.userId, chatId, [
+      { role: 'user', content: 'Events in Tallinn?' },
+      {
+        role: 'assistant',
+        content: null,
+        tool_calls: [{ id: 'c1', type: 'function', function: { name: 'search', arguments: '{}' } }],
+      },
+      { role: 'tool', tool_call_id: 'c1', content: '[]' },
+      { role: 'assistant', content: 'None this week.' },
+    ]);
+
+    const history = await historyAfter(socket, ChatEvent.RESUME, { chatId });
+
+    expect(history).toEqual({
+      chatId,
+      messages: [
+        { role: 'user', text: 'Events in Tallinn?' },
+        { role: 'assistant', text: 'None this week.' },
+      ],
+    });
+  });
+
+  it('never resumes another user’s chat, even with its id', async () => {
+    const owner = await signedInAgent(app, 'CUSTOMER');
+    const store = app.get(ChatHistoryStore);
+    const chatId = await store.create(owner.userId);
+    await store.append(owner.userId, chatId, [{ role: 'user', content: 'my private question' }]);
+    const { socket } = await connectAs('CUSTOMER');
+
+    const history = await historyAfter(socket, ChatEvent.RESUME, { chatId });
+
+    expect(history.chatId).not.toBe(chatId);
+    expect(history.messages).toEqual([]);
+  });
+
+  it('starts a new chat for an id that is not one the server issues', async () => {
+    const { socket } = await connectAs('CUSTOMER');
+
+    const history = await historyAfter(socket, ChatEvent.RESUME, { chatId: '*' });
+
+    expect(history.messages).toEqual([]);
+  });
+
+  it('forgets the current chat when the user starts a new one', async () => {
+    const { socket, agent } = await connectAs('CUSTOMER');
+    const store = app.get(ChatHistoryStore);
+    const old = await store.create(agent.userId);
+    await store.append(agent.userId, old, [{ role: 'user', content: 'old question' }]);
+
+    const history = await historyAfter(socket, ChatEvent.NEW_CHAT, { chatId: old });
+
+    expect(history.chatId).not.toBe(old);
+    expect(history.messages).toEqual([]);
+    expect(await store.load(agent.userId, old)).toBeUndefined();
+  });
+
+  it('counts starting chats against the message limit, but lets every reconnect resume', async () => {
+    const { socket } = await connectAs('ADMIN');
+    for (let index = 0; index < 10; index += 1) {
+      await historyAfter(socket, ChatEvent.NEW_CHAT, {});
+    }
+
+    const refusal = await refusalOf(socket, ChatEvent.NEW_CHAT, {});
+
+    expect(refusal).toMatchObject({ id: CHAT_HISTORY_REQUEST_ID, code: 'RATE_LIMITED' });
+    expect((await historyAfter(socket, ChatEvent.RESUME, {})).messages).toEqual([]);
+  });
+
+  it('never forgets another user’s chat, even when starting a new one with its id', async () => {
+    const owner = await signedInAgent(app, 'CUSTOMER');
+    const store = app.get(ChatHistoryStore);
+    const chatId = await store.create(owner.userId);
+    await store.append(owner.userId, chatId, [{ role: 'user', content: 'mine' }]);
+    const { socket } = await connectAs('CUSTOMER');
+
+    await historyAfter(socket, ChatEvent.NEW_CHAT, { chatId });
+
+    expect(await store.load(owner.userId, chatId)).toEqual([{ role: 'user', content: 'mine' }]);
+  });
+
+  it('refuses to resume a chat once the session has ended, and closes the socket', async () => {
+    const { socket, agent } = await connectAs('CUSTOMER');
+    await app.get(PrismaService).authSession.deleteMany({ where: { userId: agent.userId } });
+    const disconnected = new Promise((resolve) => socket.once('disconnect', resolve));
+
+    const refusal = await refusalOf(socket, ChatEvent.RESUME, {});
+
+    expect(refusal).toMatchObject({ id: CHAT_HISTORY_REQUEST_ID, code: 'UNAUTHENTICATED' });
+    await disconnected;
+  });
+
+  it('tells the client when the chat cannot be loaded, under the history id', async () => {
+    const { socket } = await connectAs('CUSTOMER');
+    const load = vi
+      .spyOn(app.get(ChatHistoryStore), 'load')
+      .mockRejectedValueOnce(new Error('Command timed out'));
+
+    const refusal = await refusalOf(socket, ChatEvent.RESUME, {
+      chatId: '0b9f7f3c-6a35-4c2e-9d8e-2f1a5b7c9d10',
+    });
+    load.mockRestore();
+
+    expect(refusal).toMatchObject({ id: CHAT_HISTORY_REQUEST_ID, code: 'SERVICE_UNAVAILABLE' });
+  });
 });

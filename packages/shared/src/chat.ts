@@ -22,6 +22,9 @@ export interface ChatStatus {
   isAvailable: boolean;
 }
 
+/** The id of a chat_error about RESUME or NEW_CHAT, which carry no question id of their own. */
+export const CHAT_HISTORY_REQUEST_ID = 'history';
+
 /** How long a chat's history is kept after its last message; reopening within it resumes it. */
 export const CHAT_HISTORY_TTL_MINUTES = 30;
 

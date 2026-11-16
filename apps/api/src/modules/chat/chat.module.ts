@@ -11,6 +11,7 @@ import {
   CHAT_REASONING_EFFORT,
   ChatAnswerService,
 } from './chat-answer.service.js';
+import { ChatConversations } from './chat-conversations.js';
 import { ChatFailures } from './chat-failures.js';
 import { ChatHandshake } from './chat-handshake.js';
 import { ChatHistoryStore } from './chat-history.store.js';
@@ -33,6 +34,7 @@ const ANSWER_MAX_RETRIES = 0;
   providers: [
     ChatTicketStore,
     ChatHistoryStore,
+    ChatConversations,
     ChatAdmission,
     ChatAnswerService,
     ChatFailures,
