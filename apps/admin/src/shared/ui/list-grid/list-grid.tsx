@@ -138,6 +138,9 @@ export function ListGrid<R extends GridValidRowModel>({
       {...rest}
       columns={visibleColumns}
       disableColumnFilter
+      // Thin lines between columns, so a value reads against its header (a bar next to a number).
+      showColumnVerticalBorder
+      showCellVerticalBorder
       autoHeight={!fillsWindow}
       onColumnWidthChange={handleColumnWidthChange}
       hideFooter={isEmpty}
