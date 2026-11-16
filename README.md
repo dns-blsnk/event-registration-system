@@ -133,7 +133,7 @@ pnpm dev                     # API on http://localhost:3000, admin on http://loc
 
 `SESSION_SECRET` needs at least 32 random characters (`openssl rand -hex 32`); `SEED_DEMO_PASSWORD` must be 10 to 128 characters. The seed creates four demo accounts that all use `SEED_DEMO_PASSWORD`: `owner@demo.test` (super admin), `admin@demo.test`, `organizer@demo.test` and `customer@demo.test`, plus events, sessions, registrations and banners.
 
-The chat needs `AI_API_KEY` (a Gemini key from [Google AI Studio](https://aistudio.google.com/api-keys); `AI_BASE_URL` and `AI_MODEL` switch to another OpenAI-compatible provider, with `AI_REASONING_EFFORT=default` for models that have no reasoning); without it the widget says the assistant is unavailable and everything else works. GitHub sign-in needs `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` (callback `http://localhost:5173/api/auth/github/callback`); without them the button is hidden.
+The chat needs `AI_API_KEY` (a Gemini key from [Google AI Studio](https://aistudio.google.com/api-keys); `AI_BASE_URL` and `AI_MODEL` switch to another OpenAI-compatible provider, with `AI_REASONING_EFFORT=default` for models that have no reasoning, and `AI_STREAM_USAGE=false` for an API that refuses the token-count option); without it the widget says the assistant is unavailable and everything else works. GitHub sign-in needs `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` (callback `http://localhost:5173/api/auth/github/callback`); without them the button is hidden.
 
 ### Scripts
 
@@ -210,7 +210,7 @@ Until the deploy settings exist, the workflow skips itself. If only some setting
 
 | Package           | Tests | What they cover                                                                                                                                                                                |
 | ----------------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `apps/api`        | 1082  | Unit tests for the domain rules; integration tests for every endpoint against a real Postgres, Redis and S3: each role on each resource, CSRF, cookies, uploads, chat                          |
+| `apps/api`        | 1086  | Unit tests for the domain rules; integration tests for every endpoint against a real Postgres, Redis and S3: each role on each resource, CSRF, cookies, uploads, chat                          |
 | `apps/admin`      | 435   | Pages, forms, access control and the chat widget with React Testing Library                                                                                                                    |
 | `packages/shared` | 158   | The permission matrix, field descriptions and shared validation                                                                                                                                |
 | `apps/e2e`        | 5     | In a real browser: an organizer publishes an event with a framed banner and a session; a new customer books a seat; only the super admin manages admins; a customer is kept out of staff pages |
