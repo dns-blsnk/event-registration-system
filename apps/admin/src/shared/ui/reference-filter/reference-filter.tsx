@@ -3,6 +3,8 @@ import TextField, { type TextFieldProps } from '@mui/material/TextField';
 import { useAutocomplete } from '@refinedev/mui';
 import { useState } from 'react';
 
+import { FILTER_FIELD_SX } from '@/shared/lib/forms';
+
 import { filterText, searchByQ } from '../filter-form/filter-form';
 
 import type { FieldDescription } from '@ers/shared';
@@ -66,7 +68,7 @@ export function ReferenceFilter({
         return label === '' ? NOT_FOUND_LABEL : label;
       }}
       isOptionEqualToValue={(option, value) => option.id === value.id}
-      sx={{ minWidth: 220 }}
+      sx={FILTER_FIELD_SX}
       size="small"
       renderInput={(params) => (
         <TextField

@@ -1,6 +1,7 @@
 import TextField from '@mui/material/TextField';
 import { useRef, useState } from 'react';
 
+import { FILTER_FIELD_SX } from '@/shared/lib/forms';
 import { useDebouncedCallback } from '@/shared/lib/use-debounced-callback';
 
 import { ClearAdornment } from '../clear-adornment/clear-adornment';
@@ -60,6 +61,7 @@ export function SearchField({
       helperText={description.help}
       value={text}
       size="small"
+      sx={FILTER_FIELD_SX}
       inputRef={inputRef}
       onChange={(event) => {
         setText(event.target.value);

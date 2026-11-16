@@ -61,3 +61,9 @@ export async function submitConverted(
 ): Promise<void> {
   await onFinish(payload as never).catch(errorShownByRefine);
 }
+
+/**
+ * One width for every field of a filter row, so a long helper text wraps instead of widening its
+ * field. On phones the row is a column and fields take its full width.
+ */
+export const FILTER_FIELD_SX = { width: { sm: 220 } } as const;
