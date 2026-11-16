@@ -7,8 +7,8 @@ import {
   clearSessionCookieOptions,
   readSessionToken,
   sessionCookieName,
-} from '../../modules/auth/session/session-cookie.js';
-import { SessionService } from '../../modules/auth/session/session.service.js';
+} from '../../modules/identity/session-cookie.js';
+import { SessionService } from '../../modules/identity/session.service.js';
 import { DomainError } from '../errors/domain-error.js';
 
 import { accessRuleOf } from './access-rule.js';

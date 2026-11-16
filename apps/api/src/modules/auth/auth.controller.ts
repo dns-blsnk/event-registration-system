@@ -6,21 +6,22 @@ import { CurrentAuth } from '../../common/auth/current-user.decorator.js';
 import { SkipCsrfToken } from '../../common/auth/skip-csrf-token.decorator.js';
 import { MINUTE_MS } from '../../common/time.js';
 import { InjectConfig } from '../../config/config.module.js';
-
-import { AuthService, type SignInResult } from './auth.service.js';
-import { LoginDto } from './dto/login.dto.js';
-import { SignupDto } from './dto/signup.dto.js';
-import { toPublicUser } from './public-user.js';
 import {
   clearSessionCookieOptions,
   readSessionToken,
   sessionCookieName,
   sessionCookieOptions,
-} from './session/session-cookie.js';
+} from '../identity/session-cookie.js';
+
+import { AuthService } from './auth.service.js';
+import { LoginDto } from './dto/login.dto.js';
+import { SignupDto } from './dto/signup.dto.js';
+import { toPublicUser } from './public-user.js';
 
 import type { AuthContext } from '../../common/auth/auth-context.js';
 import type { Config } from '../../config/config.schema.js';
-import type { SessionMeta } from './session/session.service.js';
+import type { SessionMeta } from '../identity/session.service.js';
+import type { SignInResult } from './sign-in-result.js';
 import type { AuthResponse, SessionResponse } from '@ers/shared';
 import type { Request, Response } from 'express';
 

@@ -18,7 +18,7 @@ import { personSearch } from '../../common/pagination/search.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { normalizeEmail } from '../auth/email.js';
 import { PasswordService } from '../auth/local/password.service.js';
-import { SessionService } from '../auth/session/session.service.js';
+import { SessionService } from '../identity/session.service.js';
 
 import type { ListResult } from '../../common/pagination/list-result.js';
 import type { Prisma, User } from '../../generated/prisma/client.js';

@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import OpenAI from 'openai';
 
 import { APP_CONFIG } from '../../config/config.module.js';
-import { AuthModule } from '../auth/auth.module.js';
+import { IdentityModule } from '../identity/identity.module.js';
 
 import { ChatAdmission } from './chat-admission.js';
 import {
@@ -27,7 +27,7 @@ import type { Config } from '../../config/config.schema.js';
 const ANSWER_MAX_RETRIES = 0;
 
 @Module({
-  imports: [AuthModule],
+  imports: [IdentityModule],
   controllers: [ChatController],
   providers: [
     ChatTicketStore,

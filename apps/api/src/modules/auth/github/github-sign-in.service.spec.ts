@@ -5,7 +5,7 @@ import { Prisma, type User } from '../../../generated/prisma/client.js';
 import { GithubSignInService, type GithubCallback } from './github-sign-in.service.js';
 
 import type { PrismaService } from '../../../prisma/prisma.service.js';
-import type { SessionService } from '../session/session.service.js';
+import type { SessionService } from '../../identity/session.service.js';
 import type { GithubClient } from './github-client.js';
 import type { PinoLogger } from 'nestjs-pino';
 

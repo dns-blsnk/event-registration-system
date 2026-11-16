@@ -2,13 +2,13 @@ import { Injectable, type OnApplicationBootstrap } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PinoLogger } from 'nestjs-pino';
 
-import { clip } from '../../../common/text.js';
-import { DAY_MS, HOUR_MS, MINUTE_MS } from '../../../common/time.js';
-import { PrismaService } from '../../../prisma/prisma.service.js';
+import { clip } from '../../common/text.js';
+import { DAY_MS, HOUR_MS, MINUTE_MS } from '../../common/time.js';
+import { PrismaService } from '../../prisma/prisma.service.js';
 
 import { generateCsrfToken, generateSessionToken, hashSessionToken } from './session-tokens.js';
 
-import type { AuthSession, Prisma, User } from '../../../generated/prisma/client.js';
+import type { AuthSession, Prisma, User } from '../../generated/prisma/client.js';
 
 const SESSION_TTL_DAYS = 7;
 const SESSION_IDLE_HOURS = 24;

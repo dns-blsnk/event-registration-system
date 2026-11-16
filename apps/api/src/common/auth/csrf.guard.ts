@@ -3,7 +3,7 @@ import { Injectable, type CanActivate, type ExecutionContext } from '@nestjs/com
 import { Reflector } from '@nestjs/core';
 
 import { InjectConfig } from '../../config/config.module.js';
-import { tokensMatch } from '../../modules/auth/session/session-tokens.js';
+import { tokensMatch } from '../../modules/identity/session-tokens.js';
 import { DomainError } from '../errors/domain-error.js';
 
 import { isHttpContext } from './http-context.js';

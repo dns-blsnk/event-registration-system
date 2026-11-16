@@ -19,7 +19,7 @@ import {
   readSessionToken,
   sessionCookieName,
   sessionCookieOptions,
-} from '../session/session-cookie.js';
+} from '../../identity/session-cookie.js';
 
 import { startGithubAuthorization } from './github-oauth.js';
 import { GithubSignInService } from './github-sign-in.service.js';

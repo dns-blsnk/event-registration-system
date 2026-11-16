@@ -5,14 +5,14 @@ import { PinoLogger } from 'nestjs-pino';
 import { DomainError } from '../../../common/errors/domain-error.js';
 import { PrismaErrorCode, prismaErrorCode } from '../../../common/errors/prisma-errors.js';
 import { PrismaService } from '../../../prisma/prisma.service.js';
+import { SessionService, type SessionMeta } from '../../identity/session.service.js';
 import { normalizeEmail } from '../email.js';
-import { SessionService, type SessionMeta } from '../session/session.service.js';
 
 import { GithubClient, type GithubProfile } from './github-client.js';
 import { verifyGithubReturn } from './github-oauth.js';
 
 import type { User } from '../../../generated/prisma/client.js';
-import type { SignInResult } from '../auth.service.js';
+import type { SignInResult } from '../sign-in-result.js';
 
 /** What the browser brought back from GitHub; nothing here is trusted yet. */
 export interface GithubCallback {

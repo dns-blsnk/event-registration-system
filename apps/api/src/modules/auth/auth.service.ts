@@ -1,22 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { PinoLogger } from 'nestjs-pino';
 
+import { SessionService, type SessionMeta } from '../identity/session.service.js';
+
 import { CredentialsService } from './local/credentials.service.js';
 import { RegistrationService } from './local/registration.service.js';
-import {
-  SessionService,
-  type CreatedSession,
-  type SessionMeta,
-} from './session/session.service.js';
 
-import type { User } from '../../generated/prisma/client.js';
 import type { LoginDto } from './dto/login.dto.js';
 import type { SignupDto } from './dto/signup.dto.js';
-
-export interface SignInResult {
-  user: User;
-  session: CreatedSession;
-}
+import type { SignInResult } from './sign-in-result.js';
 
 @Injectable()
 export class AuthService {

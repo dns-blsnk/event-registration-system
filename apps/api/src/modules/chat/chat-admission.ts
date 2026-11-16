@@ -3,7 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { MINUTE_MS } from '../../common/time.js';
 import { countHits } from '../../redis/fixed-window.js';
 import { RedisService } from '../../redis/redis.service.js';
-import { SessionService, type ValidSession } from '../auth/session/session.service.js';
+import { SessionService, type ValidSession } from '../identity/session.service.js';
 
 /** A person asks a few questions a minute; more is a script spending the model budget. */
 export const MESSAGES_PER_MINUTE = 10;

@@ -2,8 +2,8 @@ import request from 'supertest';
 
 import { APP_CONFIG } from '../../src/config/config.module.js';
 import { PasswordService } from '../../src/modules/auth/local/password.service.js';
-import { sessionCookieName } from '../../src/modules/auth/session/session-cookie.js';
-import { SessionService } from '../../src/modules/auth/session/session.service.js';
+import { sessionCookieName } from '../../src/modules/identity/session-cookie.js';
+import { SessionService } from '../../src/modules/identity/session.service.js';
 import { PrismaService } from '../../src/prisma/prisma.service.js';
 
 import { createUser } from './factories.js';

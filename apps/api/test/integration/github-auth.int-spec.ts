@@ -12,7 +12,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { DomainError } from '../../src/common/errors/domain-error.js';
 import { APP_CONFIG, loadConfig } from '../../src/config/config.module.js';
 import { GithubClient, type GithubProfile } from '../../src/modules/auth/github/github-client.js';
-import { SessionService } from '../../src/modules/auth/session/session.service.js';
+import { SessionService } from '../../src/modules/identity/session.service.js';
 import { PrismaService } from '../../src/prisma/prisma.service.js';
 import { signedInAgent } from '../helpers/auth.js';
 import { createTestApp } from '../helpers/create-test-app.js';
