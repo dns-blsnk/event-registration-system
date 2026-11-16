@@ -22,7 +22,7 @@ Admin panel for events, sessions and registrations: four roles, a managed Postgr
 
   A super admin is an admin who, on top, is the only one who can create, demote or delete admins and super admins; the last super admin can never be removed. So one admin can never lock another out.
 
-- **Event banners** in private S3-compatible storage. The file type is checked by its content (magic bytes) and size before storing, and images are served through short-lived presigned links.
+- **Event banners** in private S3-compatible storage, one fixed 2:1 shape (2160 × 1080, as Eventbrite uses). The form frames the picture in the browser and previews the event header with it; a new event cannot be saved without one, and only drafts may lack one (the API refuses to publish an event without a banner). The API checks the type by content (magic bytes) and size, refuses images under 1200 × 600, then re-encodes every upload with sharp into a 2160 × 1080 WebP: camera metadata such as location is dropped and nothing but pixels is stored. Images are served through short-lived presigned links.
 - **AI help chat.** A streamed answer about the field or screen you are on, generated from the same field descriptions the forms use. See [Help chat](#help-chat).
 - **Sign-in.** Email and password, or GitHub when it is configured. Self-sign-up always creates a customer; only an admin gives staff roles.
 - **Logs page** for admins: every server error and security event with its request id, kept for 7 days.
