@@ -173,7 +173,9 @@ Expected failures are `DomainError`s with a code from `packages/shared`. A singl
 
 The widget connects to the API over Socket.IO with a one-time ticket from `POST /api/chat/ticket` (60 seconds, bound to the user and session, stored in Redis as a hash and spent atomically, so any API instance accepts it once). The API checks the origin, the ticket and a live session. It re-checks the session and the current role before every question, and closes sockets whose session has ended.
 
-The prompt is built from the shared field descriptions of the screen the user is on, and only from what their role may see. The answer streams back and can be stopped. Each user may ask 10 questions a minute, counted across all their sockets and API instances.
+The instructions are built from the shared field descriptions and domain rules of every list the user's role may open, and nothing else. The screen the user is on and the current time in their zone travel with each question as a short note from the panel, so the instructions and the chat before the question stay the same between questions and a provider with prompt caching can reuse them. Data comes from read-only tools that call the same services, with the same role scoping, as the REST API. A search gives the model at most 10 rows and the total, and the rows of lookups older than the latest one are left out of later requests (the chat kept in Redis stays whole). Every answer logs its prompt, completion and cached tokens.
+
+The answer streams back and can be stopped. Each user may ask 10 questions a minute, counted across all their sockets and API instances.
 
 In production the socket connects to the API host directly (`VITE_CHAT_URL`), because Vercel rewrites do not carry WebSockets.
 
@@ -208,7 +210,7 @@ Until the deploy settings exist, the workflow skips itself. If only some setting
 
 | Package           | Tests | What they cover                                                                                                                                                                                |
 | ----------------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `apps/api`        | 1059  | Unit tests for the domain rules; integration tests for every endpoint against a real Postgres, Redis and S3: each role on each resource, CSRF, cookies, uploads, chat                          |
+| `apps/api`        | 1082  | Unit tests for the domain rules; integration tests for every endpoint against a real Postgres, Redis and S3: each role on each resource, CSRF, cookies, uploads, chat                          |
 | `apps/admin`      | 435   | Pages, forms, access control and the chat widget with React Testing Library                                                                                                                    |
 | `packages/shared` | 158   | The permission matrix, field descriptions and shared validation                                                                                                                                |
 | `apps/e2e`        | 5     | In a real browser: an organizer publishes an event with a framed banner and a session; a new customer books a seat; only the super admin manages admins; a customer is kept out of staff pages |
