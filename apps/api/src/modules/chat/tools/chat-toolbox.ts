@@ -6,13 +6,26 @@ import { z } from 'zod';
 import { DomainError } from '../../../common/errors/domain-error.js';
 
 import { GetEventTool, SearchEventsTool } from './event-tools.js';
+import {
+  ListTagsTool,
+  SearchCustomersTool,
+  SearchRegistrationsTool,
+  SearchSessionsTool,
+} from './staff-tools.js';
 
 import type { AssistantTool, ToolContext } from './assistant-tool.js';
 import type { Role } from '@ers/shared';
 import type { ChatCompletionFunctionTool } from 'openai/resources/chat/completions';
 
 /** Every tool the assistant has; each role gets the ones its permissions allow. */
-export const TOOL_CLASSES: readonly Type<AssistantTool>[] = [SearchEventsTool, GetEventTool];
+export const TOOL_CLASSES: readonly Type<AssistantTool>[] = [
+  SearchEventsTool,
+  GetEventTool,
+  SearchSessionsTool,
+  SearchRegistrationsTool,
+  SearchCustomersTool,
+  ListTagsTool,
+];
 
 /** What a tool run gives back to the model: its data, or why it could not run. */
 export type ToolOutcome = { data: unknown } | { error: string };

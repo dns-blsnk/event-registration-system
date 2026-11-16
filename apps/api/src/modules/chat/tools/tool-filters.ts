@@ -37,13 +37,17 @@ export function startRangeIsOrdered(args: {
 export const START_RANGE_MESSAGE = 'startsTo must not be before startsFrom.';
 export const idArg = (description: string) => z.string().regex(UUID_PATTERN).describe(description);
 
-/** Days the model chose, as the moments the list endpoints filter on, in the user's zone. */
+/**
+ * Days the model chose, as the moments the list endpoints filter on, in the user's zone. Without
+ * any day only what starts from now on is searched: the lists run oldest first, and a page of
+ * finished sessions would crowd out the upcoming ones people ask about.
+ */
 export function zonedRange(
   startsFrom: string | undefined,
   startsTo: string | undefined,
   timeZone: string,
-): DateRange | undefined {
-  if (startsFrom === undefined && startsTo === undefined) return undefined;
+): DateRange {
+  if (startsFrom === undefined && startsTo === undefined) return { gte: new Date() };
   return {
     ...(startsFrom === undefined ? {} : { gte: startOfZonedDay(startsFrom, timeZone) }),
     ...(startsTo === undefined ? {} : { lte: endOfZonedDay(startsTo, timeZone) }),

@@ -42,7 +42,7 @@ const searchEventsArgs = z
       .enum(EVENT_STATUSES as [EventStatus, ...EventStatus[]])
       .describe('Only events in this status.')
       .optional(),
-    tagId: idArg('Only events with this tag id.').optional(),
+    tagId: idArg('Only events with this tag, an id from list_tags.').optional(),
     startsFrom: dayArg('First day the event may start on.').optional(),
     startsTo: dayArg('Last day the event may start on.').optional(),
   })
@@ -52,7 +52,7 @@ const searchEventsArgs = z
 @Injectable()
 export class SearchEventsTool implements AssistantTool<typeof searchEventsArgs> {
   readonly name = 'search_events';
-  readonly description = `Search the events the user may see. All filters are optional and combined. Returns at most ${String(TOOL_PAGE_SIZE)}, soonest first, and the total count.`;
+  readonly description = `Search the events the user may see. All filters are optional and combined. Without days, only upcoming events; give days to look back. Returns at most ${String(TOOL_PAGE_SIZE)}, soonest first, and the total count.`;
   readonly parameters = searchEventsArgs;
   readonly permission = { resource: Resource.EVENTS, action: Action.LIST };
 

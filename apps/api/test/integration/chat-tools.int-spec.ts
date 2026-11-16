@@ -5,7 +5,12 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { ChatToolbox } from '../../src/modules/chat/tools/chat-toolbox.js';
 import { PrismaService } from '../../src/prisma/prisma.service.js';
 import { createTestApp } from '../helpers/create-test-app.js';
-import { createEvent, createUser } from '../helpers/factories.js';
+import {
+  createEvent,
+  createRegistration,
+  createSession,
+  createUser,
+} from '../helpers/factories.js';
 
 import type { User } from '../../src/generated/prisma/client.js';
 import type { INestApplication } from '@nestjs/common';
@@ -31,7 +36,14 @@ describe('assistant tools', () => {
     it('gives staff the event tools, described as JSON Schema without the dialect', () => {
       const definitions = toolbox.definitionsFor('ORGANIZER');
 
-      expect(definitions.map((tool) => tool.function.name)).toEqual(['search_events', 'get_event']);
+      expect(definitions.map((tool) => tool.function.name)).toEqual([
+        'search_events',
+        'get_event',
+        'search_sessions',
+        'search_registrations',
+        'search_customers',
+        'list_tags',
+      ]);
       expect(definitions[0]?.function.parameters).toMatchObject({
         type: 'object',
         additionalProperties: false,
@@ -136,6 +148,147 @@ describe('assistant tools', () => {
       expect(await toolbox.run('get_event', { id: foreign.id }, context(organizer))).toEqual({
         error: expect.stringMatching(/not found/i),
       });
+    });
+  });
+
+  describe('staff searches, scoped like the API', () => {
+    it('finds only sessions of the organizer’s own events', async () => {
+      const organizer = await createUser(prisma, { role: 'ORGANIZER' });
+      const title = `Talk ${randomUUID()}`;
+      const own = await createSession(
+        prisma,
+        await createEvent(prisma, { organizerId: organizer.id }),
+        {
+          title,
+        },
+      );
+      await createSession(prisma, await createEvent(prisma), { title });
+
+      const outcome = await toolbox.run('search_sessions', { q: title }, context(organizer));
+
+      expect(outcome).toMatchObject({ data: { total: 1, sessions: [{ id: own.id, title }] } });
+    });
+
+    it('finds bookings only for the organizer’s own events, without customer emails', async () => {
+      const organizer = await createUser(prisma, { role: 'ORGANIZER' });
+      const ownEvent = await createEvent(prisma, { organizerId: organizer.id });
+      const booker = await createUser(prisma);
+      const own = await createRegistration(prisma, await createSession(prisma, ownEvent), {
+        customerId: booker.id,
+      });
+      await createRegistration(prisma, await createSession(prisma, await createEvent(prisma)));
+
+      const outcome = await toolbox.run(
+        'search_registrations',
+        { eventId: ownEvent.id },
+        context(organizer),
+      );
+
+      expect(outcome).toMatchObject({ data: { total: 1, registrations: [{ id: own.id }] } });
+      expect(JSON.stringify(outcome)).not.toContain(booker.email);
+    });
+
+    it('returns no bookings of another organizer’s event, even by its id', async () => {
+      const organizer = await createUser(prisma, { role: 'ORGANIZER' });
+      const foreign = await createEvent(prisma);
+      await createRegistration(prisma, await createSession(prisma, foreign));
+
+      const outcome = await toolbox.run(
+        'search_registrations',
+        { eventId: foreign.id },
+        context(organizer),
+      );
+
+      expect(outcome).toMatchObject({ data: { total: 0 } });
+    });
+
+    it('finds customers by name and gives no emails', async () => {
+      const admin = await createUser(prisma, { role: 'ADMIN' });
+      const name = `Ann ${randomUUID()}`;
+      const customer = await createUser(prisma, { name });
+      await createRegistration(prisma, await createSession(prisma, await createEvent(prisma)), {
+        customerId: customer.id,
+      });
+
+      const outcome = await toolbox.run('search_customers', { q: name }, context(admin));
+
+      expect(outcome).toMatchObject({ data: { total: 1, customers: [{ id: customer.id, name }] } });
+      expect(JSON.stringify(outcome)).not.toContain(customer.email);
+    });
+
+    it('finds only customers who booked the organizer’s own events', async () => {
+      const organizer = await createUser(prisma, { role: 'ORGANIZER' });
+      const name = `Bea ${randomUUID()}`;
+      const ownCustomer = await createUser(prisma, { name });
+      const otherCustomer = await createUser(prisma, { name });
+      const ownEvent = await createEvent(prisma, { organizerId: organizer.id });
+      await createRegistration(prisma, await createSession(prisma, ownEvent), {
+        customerId: ownCustomer.id,
+      });
+      await createRegistration(prisma, await createSession(prisma, await createEvent(prisma)), {
+        customerId: otherCustomer.id,
+      });
+
+      const outcome = await toolbox.run('search_customers', { q: name }, context(organizer));
+
+      expect(outcome).toMatchObject({ data: { total: 1, customers: [{ id: ownCustomer.id }] } });
+    });
+
+    it('searches only upcoming sessions when no days are given', async () => {
+      const admin = await createUser(prisma, { role: 'ADMIN' });
+      const title = `Talk ${randomUUID()}`;
+      const event = await createEvent(prisma);
+      const upcoming = await createSession(prisma, event, {
+        title,
+        startsAt: new Date(Date.now() + 86_400_000).toISOString(),
+      });
+      await createSession(prisma, event, {
+        title,
+        startsAt: new Date(Date.now() - 86_400_000).toISOString(),
+      });
+
+      const outcome = await toolbox.run('search_sessions', { q: title }, context(admin));
+
+      expect(outcome).toMatchObject({ data: { total: 1, sessions: [{ id: upcoming.id }] } });
+    });
+
+    it('finds almost full sessions', async () => {
+      const admin = await createUser(prisma, { role: 'ADMIN' });
+      const title = `Talk ${randomUUID()}`;
+      const event = await createEvent(prisma);
+      const full = await createSession(prisma, event, { title, capacity: 10, confirmedCount: 10 });
+      await createSession(prisma, event, { title, capacity: 10, confirmedCount: 1 });
+
+      const outcome = await toolbox.run(
+        'search_sessions',
+        { q: title, almostFull: true },
+        context(admin),
+      );
+
+      expect(outcome).toMatchObject({ data: { total: 1, sessions: [{ id: full.id }] } });
+    });
+
+    it.each([
+      ['search_sessions', { almostFull: 'yes' }],
+      ['search_registrations', { status: 'BOOKED' }],
+      ['search_customers', { email: 'a@b.co' }],
+      ['list_tags', { q: '' }],
+    ])('tells the model about invalid arguments to %s', async (name, args) => {
+      const admin = await createUser(prisma, { role: 'ADMIN' });
+
+      expect(await toolbox.run(name, args, context(admin))).toEqual({
+        error: expect.stringContaining('Invalid arguments'),
+      });
+    });
+
+    it('lists tags with their ids for filtering events', async () => {
+      const admin = await createUser(prisma, { role: 'ADMIN' });
+      const name = `tag-${randomUUID()}`;
+      const tag = await prisma.tag.create({ data: { name } });
+
+      const outcome = await toolbox.run('list_tags', { q: name }, context(admin));
+
+      expect(outcome).toEqual({ data: { total: 1, tags: [{ id: tag.id, name }] } });
     });
   });
 

@@ -15,5 +15,6 @@ import { RegistrationsService } from './registrations.service.js';
     RegistrationsService,
     RegistrationStatusService,
   ],
+  exports: [RegistrationsService],
 })
 export class RegistrationsModule {}
