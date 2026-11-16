@@ -1,35 +1,39 @@
-import { inflateSync } from 'node:zlib';
-
+import { BANNER_HEIGHT, BANNER_WIDTH } from '@ers/shared';
+import sharp from 'sharp';
 import { describe, expect, it } from 'vitest';
 
 import { detectImageType } from '../../src/modules/storage/image-type.js';
 
-import { bannerPng, colourFor } from './banner-image.js';
+import { bannerFor, loadSeedBanners } from './banner-image.js';
 
-describe('bannerPng', () => {
-  const png = bannerPng([200, 100, 50]);
+describe('loadSeedBanners', () => {
+  it('re-encodes every shipped banner to the stored WebP size', async () => {
+    const banners = await loadSeedBanners();
 
-  it('passes the upload magic-byte check as a PNG', () => {
-    expect(detectImageType(png)).toBe('image/png');
-  });
-
-  it('holds 64x24 RGB pixels in the requested colour', () => {
-    expect(png.readUInt32BE(16)).toBe(64);
-    expect(png.readUInt32BE(20)).toBe(24);
-    const idatLength = png.readUInt32BE(33);
-    const pixels = inflateSync(png.subarray(41, 41 + idatLength));
-    expect(pixels.length).toBe(24 * (1 + 64 * 3));
-    expect([...pixels.subarray(1, 4)]).toEqual([200, 100, 50]);
-  });
-
-  it('ends with the IEND chunk', () => {
-    expect(png.subarray(-8, -4).toString('ascii')).toBe('IEND');
+    expect(banners).toHaveLength(10);
+    for (const banner of banners) {
+      expect(detectImageType(banner)).toBe('image/webp');
+      const { width, height } = await sharp(banner).metadata();
+      expect([width, height]).toEqual([BANNER_WIDTH, BANNER_HEIGHT]);
+    }
   });
 });
 
-describe('colourFor', () => {
-  it('gives the same colour for the same id and different ones for different ids', () => {
-    expect(colourFor('a')).toEqual(colourFor('a'));
-    expect(colourFor('a')).not.toEqual(colourFor('b'));
+describe('bannerFor', () => {
+  const banners = ['a', 'b', 'c', 'd', 'e'];
+
+  it('gives the same banner for the same id', () => {
+    expect(bannerFor('event-1', banners)).toBe(bannerFor('event-1', banners));
+  });
+
+  it('spreads ids over all the banners', () => {
+    const picked = new Set(
+      Array.from({ length: 100 }, (_, index) => bannerFor(`event-${String(index)}`, banners)),
+    );
+    expect(picked.size).toBe(banners.length);
+  });
+
+  it('refuses to pick from an empty list', () => {
+    expect(() => bannerFor('event-1', [])).toThrow();
   });
 });

@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { ErrorCode } from '@ers/shared';
+import { ErrorCode, EventStatus } from '@ers/shared';
 import { Injectable } from '@nestjs/common';
 import { PinoLogger } from 'nestjs-pino';
 
@@ -10,6 +10,8 @@ import { PrismaService } from '../../../prisma/prisma.service.js';
 import { StorageService } from '../../storage/index.js';
 import { EVENT_NOT_FOUND_MESSAGE, lockScopedEvent } from '../event-lock.js';
 import { eventScope } from '../event-scope.js';
+
+import { toStoredBanner } from './banner-image.js';
 
 import type { User } from '../../../generated/prisma/client.js';
 
@@ -28,11 +30,13 @@ export class EventBannerService {
     this.logger.setContext(EventBannerService.name);
   }
 
-  async replace(eventId: string, image: Uint8Array, actor: User): Promise<void> {
-    // Checked before uploading, so nothing is stored for someone else's event or a locked one.
+  async replace(eventId: string, upload: Uint8Array, actor: User): Promise<void> {
+    // Checked before decoding or uploading, so nothing is processed or stored for someone else's
+    // event or a locked one.
     await this.assertWritable(eventId, actor);
+    const banner = await toStoredBanner(upload);
     const key = `events/${eventId}/banner-${randomUUID()}`;
-    await this.storage.putImage(key, image);
+    await this.storage.putImage(key, banner);
     let previousKey: string | null;
     try {
       previousKey = await this.prisma.$transaction(async (tx) => {
@@ -49,12 +53,19 @@ export class EventBannerService {
   }
 
   /**
-   * Allowed on any event, cancelled and completed included: taking an unwanted image down is
-   * moderation, not editing history.
+   * Allowed on drafts, and on cancelled and completed events too: taking an unwanted image down is
+   * moderation, not editing history. A published event must keep one (publishing requires it), so
+   * its banner can only be replaced.
    */
   async remove(eventId: string, actor: User): Promise<void> {
     const previousKey = await this.prisma.$transaction(async (tx) => {
       const event = await lockScopedEvent(tx, eventId, actor);
+      if (event.status === EventStatus.PUBLISHED) {
+        throw new DomainError(
+          ErrorCode.CONFLICT,
+          'A published event needs a banner: replace it instead of removing it',
+        );
+      }
       if (event.bannerKey !== null) {
         await tx.event.update({ where: { id: eventId }, data: { bannerKey: null } });
       }

@@ -1,4 +1,4 @@
-import { bannerPng, colourFor } from './banner-image.js';
+import { bannerFor, loadSeedBanners } from './banner-image.js';
 
 import type { PrismaClient } from '../../src/generated/prisma/client.js';
 import type { StorageService } from '../../src/modules/storage/storage.service.js';
@@ -8,7 +8,7 @@ import type { SeedPlan } from './generate.js';
 const BATCH_SIZE = 1000;
 /** The whole write is one transaction, so a failure leaves the database empty and re-runnable. */
 const TRANSACTION_TIMEOUT_MS = 300_000;
-const UPLOAD_CONCURRENCY = 16;
+export const UPLOAD_CONCURRENCY = 16;
 
 export interface SeedSummary {
   users: number;
@@ -18,7 +18,7 @@ export interface SeedSummary {
   banners: number;
 }
 
-async function inBatches<T>(
+export async function inBatches<T>(
   rows: readonly T[],
   size: number,
   write: (batch: T[]) => Promise<unknown>,
@@ -32,12 +32,13 @@ async function uploadBanners(
   storage: StorageService,
   plan: SeedPlan,
 ): Promise<Map<string, string>> {
+  const banners = await loadSeedBanners();
   const keys = new Map<string, string>();
   await inBatches(plan.events, UPLOAD_CONCURRENCY, async (batch) =>
     Promise.all(
       batch.map(async (event) => {
         const key = `events/${event.id}/banner-seed`;
-        await storage.putImage(key, bannerPng(colourFor(event.id)));
+        await storage.putImage(key, bannerFor(event.id, banners));
         keys.set(event.id, key);
       }),
     ),

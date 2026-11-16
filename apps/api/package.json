@@ -21,6 +21,7 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:seed": "NODE_ENV=${NODE_ENV:-development} tsx prisma/seed/main.ts",
+    "db:seed:banners": "NODE_ENV=${NODE_ENV:-development} tsx prisma/seed/refresh-banners.ts",
     "db:reset": "prisma migrate reset --force && pnpm db:seed"
   },
   "devDependencies": {
@@ -67,6 +68,7 @@
     "prisma": "7.10.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
+    "sharp": "0.35.5",
     "socket.io": "4.8.4",
     "zod": "^4.6.7"
   }

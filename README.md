@@ -2,6 +2,15 @@
 
 Admin panel for events, sessions and registrations: four roles, a managed Postgres database, private object storage for event banners and an AI help chat that knows the screen you are on.
 
+## Live demo
+
+- **Admin:** https://event-registration-system-plum.vercel.app
+- **API health:** https://ers-api-9j21.onrender.com/api/health
+
+Sign up on the sign-in page to get a customer account: browse the catalog, book a session, land on the waitlist when it is full. The staff demo accounts (`owner@demo.test`, `admin@demo.test`, `organizer@demo.test`) are shared together with the submission rather than published here, because they can change the live data.
+
+The API runs on Render's free plan and sleeps when idle: the first request after a pause can take up to a minute, and if it times out, a reload helps.
+
 ## Features
 
 - **Events and sessions.** Organizers create events, add sessions with a capacity, publish, complete or cancel them. Events move only `DRAFT → PUBLISHED → COMPLETED` or to `CANCELLED`. Cancelling an event cancels all its registrations.
@@ -22,7 +31,7 @@ Admin panel for events, sessions and registrations: four roles, a managed Postgr
 
   A super admin is an admin who, on top, is the only one who can create, demote or delete admins and super admins; the last super admin can never be removed. So one admin can never lock another out.
 
-- **Event banners** in private S3-compatible storage. The file type is checked by its content (magic bytes) and size before storing, and images are served through short-lived presigned links.
+- **Event banners** in private S3-compatible storage, one fixed 2:1 shape (2160 × 1080, as Eventbrite uses). The form frames the picture in the browser and previews the event header with it; a new event cannot be saved without one, and only drafts may lack one (the API refuses to publish an event without a banner). The API checks the type by content (magic bytes) and size, refuses images under 1200 × 600, then re-encodes every upload with sharp into a 2160 × 1080 WebP: camera metadata such as location is dropped and nothing but pixels is stored. Images are served through short-lived presigned links.
 - **AI help chat.** A streamed answer about the field or screen you are on, generated from the same field descriptions the forms use. See [Help chat](#help-chat).
 - **Sign-in.** Email and password, or GitHub when it is configured. Self-sign-up always creates a customer; only an admin gives staff roles.
 - **Logs page** for admins: every server error and security event with its request id, kept for 7 days.
@@ -39,6 +48,33 @@ Admin panel for events, sessions and registrations: four roles, a managed Postgr
 | AI       | Gemini (Google AI Studio free tier) through the OpenAI-compatible API, streamed; any such API works               |
 | Tests    | Vitest; API integration tests against a real Postgres, React Testing Library for the admin, Playwright end to end |
 | Hosting  | API and Postgres on Render, admin on Vercel (free plans)                                                          |
+
+### Why this stack
+
+The task is an admin over related data with real rules, roles and a live deploy, so the choice was driven by three things: the data must stay correct under concurrent bookings, access rules must live in one place, and everything must run on free plans.
+
+- **TypeScript end to end, one monorepo.** The API and the admin share `packages/shared`: roles, the permission matrix, error codes, limits and field descriptions are written once. The admin hides exactly what the API refuses, the forms and the AI chat read the same field texts, and a renamed error code breaks the build instead of a screen. _Lost:_ a Python or Ruby admin (Django admin, ActiveAdmin) would give more screens for free.
+- **Nest.js.** Guards, modules and dependency injection fit "deny by default": a global guard refuses every route that does not declare `@Public()`, `@SignedIn()` or `@RequirePermission(...)`. Modules give clear boundaries (each exposes only its `index.ts`, enforced by lint). _Lost:_ more ceremony than Express or Fastify alone.
+- **PostgreSQL + Prisma.** The booking rules need transactions, row locks, `CHECK` constraints and a conditional `UPDATE` that takes a seat only while one is left. Prisma gives the schema as code, reviewed migrations and typed queries. _Lost:_ a few queries (the "almost full" filter) are less direct than raw SQL would be.
+- **Refine + MUI.** The task asks for an admin built with a framework tool, not by hand. Refine gives resources, routing, `useDataGrid` with server-side pagination, filters and sorting, `useForm`, and an `accessControlProvider` that takes the shared permission matrix as is; MUI gives the data grid and form controls. _Lost:_ some screens are custom on top (the banner cropper, the waitlist table with bulk actions, the chat), and Refine's generated defaults had to be replaced there.
+- **Server-side sessions in an HttpOnly cookie, not JWT.** A session can be revoked at once (sign-out, role change, deleted user), JavaScript can never read it, and the CSRF token is visible and checked on every write. REST goes through a Vercel rewrite, so the cookie is first-party without buying a domain. _Lost:_ one indexed lookup per request.
+- **Socket.IO for the chat.** Answers stream token by token and can be stopped mid-answer. Vercel does not proxy WebSockets, so the socket goes to the API directly and authenticates with a one-time 60-second ticket instead of the cookie.
+- **Redis with a TTL on every key.** Chat tickets, chat history, login failure counters and rate limits must agree across API instances; keeping them in process memory would multiply every limit by the number of instances.
+- **S3-compatible object storage.** The server's disk is ephemeral on Render and not shared between instances. R2 in production, SeaweedFS locally and in CI, the same code.
+- **Gemini through the OpenAI-compatible API.** It has a free tier, and the same client works with any compatible provider by changing `AI_BASE_URL` and `AI_MODEL`.
+- **Render + Vercel + Cloudflare R2.** Free plans for everything, managed Postgres and Redis, deploy from GitHub. _Lost:_ cold starts, and the free database expires after about 30 days.
+
+### Project layout
+
+```
+apps/api          Nest.js API: src/modules/<feature> (controller → service → Prisma),
+                  src/domain (pure business rules), src/common (guards, errors, logging)
+apps/admin        Refine admin, Feature-Sliced Design: app → pages → widgets → features → entities → shared
+apps/e2e          Playwright browser tests
+packages/shared   roles, permission matrix, error codes, limits, field descriptions
+```
+
+Business rules that need no database (status transitions, capacity, schedule overlaps, the chat prompt) are pure functions in `apps/api/src/domain`, tested without Nest or Prisma. Services run them inside transactions. Controllers only validate the input, read the current user and call one service method.
 
 ## Getting started
 
@@ -68,6 +104,7 @@ The chat needs `AI_API_KEY` (a Gemini key from [Google AI Studio](https://aistud
 | `pnpm test:e2e`                     | Playwright browser tests: seeds a fresh `ers_e2e` database on `postgres-test`, then runs the built API and the admin (first run: `pnpm --filter @ers/e2e exec playwright install chromium`) |
 | `pnpm build`                        | Build every package                                                                                                                                                                         |
 | `pnpm db:reset` / `pnpm db:seed`    | Recreate the dev database / load demo data                                                                                                                                                  |
+| `pnpm db:seed:banners`              | Give every event already in the database one of the demo banners, without touching other data                                                                                               |
 
 ## How it works
 
@@ -124,6 +161,27 @@ Until the deploy settings exist, the workflow skips itself. If only some setting
    - Secrets: `RENDER_DEPLOY_HOOK_URL`, `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`.
    - Variable: `ADMIN_URL`.
 
+## Tests
+
+| Package           | Tests | What they cover                                                                                                                                                       |
+| ----------------- | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/api`        | 1059  | Unit tests for the domain rules; integration tests for every endpoint against a real Postgres, Redis and S3: each role on each resource, CSRF, cookies, uploads, chat |
+| `apps/admin`      | 432   | Pages, forms, access control and the chat widget with React Testing Library                                                                                           |
+| `packages/shared` | 158   | The permission matrix, field descriptions and shared validation                                                                                                       |
+| `apps/e2e`        | 3     | In a real browser: an admin sees events; a new customer books a session; a customer is kept out of staff pages                                                        |
+
+The tests target what would hurt most if it broke: who may see and change what (every role against every resource), the booking rules (a race test sends parallel bookings at the last seat and checks that capacity is never exceeded), and the security edges (CSRF, session revocation, forged tickets, file type by content). Integration tests never mock Prisma: a test that passes against a mock can still fail against a real transaction.
+
+## What I deliberately left out
+
+- **Email.** No email verification, password reset or notifications (for example when someone moves up from the waitlist): they need a mail provider and a domain. Because emails are not verified, GitHub sign-in never links to an existing account by email.
+- **Payments and tickets.** A registration is a seat in a session, nothing more. Pricing would add a payment provider and refunds without showing anything new about the admin.
+- **A repository layer over Prisma.** Services use Prisma directly; another abstraction would only wrap the same calls.
+- **Sentry or another error tracker.** Server errors and security events go to stdout and to the `AppLog` table with the request id, which an admin reads on the Logs page. One less external account and secret.
+- **Live updates in the admin.** Lists refresh on navigation and after your own changes, not when someone else books a seat. Only the chat uses a socket.
+- **Translations.** The admin is in English only.
+- **A custom domain.** The `vercel.app` and `onrender.com` addresses work, and a domain can be added later through environment variables only.
+
 ## Known limitations and next steps
 
 - **Direct calls to Render.** `TRUST_PROXY_HOPS=2` counts the Vercel and Render proxies. A client calling the `onrender.com` URL directly can forge its IP, which weakens per-IP rate limits. Login lockout also counts per account (20 failures per 15 minutes), which still bounds password guessing, at the cost that anyone can briefly lock out a known email. A shared secret header from the rewrite would close the IP gap.
@@ -135,3 +193,11 @@ Until the deploy settings exist, the workflow skips itself. If only some setting
 - **"Almost full" filter.** It runs two queries rather than one. A single query would need a generated column, and the 90% threshold would then live both in a migration and in `packages/shared`.
 - **Waitlist after a conflict.** A waitlisted customer skipped because of an overlapping booking is promoted at the next change in that session, not immediately when the conflict disappears.
 - **GitHub and existing accounts.** GitHub sign-in never links to an existing account with the same email, because sign-up does not verify emails. An existing user cannot add GitHub to their account.
+
+## With more time
+
+1. **Browser tests in CI.** The Playwright suite runs locally but is switched off in CI until it is stable there; it would also grow to cover the organizer flow, bulk actions and the banner editor.
+2. **A paid database and an always-on API instance.** They remove the 30-day database expiry and the cold start, the two things a reviewer is most likely to hit.
+3. **A shared secret between the Vercel rewrite and the API**, so direct calls to Render are refused and per-IP limits cannot be bypassed.
+4. **Email** through a provider: verified sign-ups (which would allow linking GitHub to an existing account), password reset and a message when a waitlisted customer gets a seat.
+5. **At 10x traffic:** cache the public catalog for a few seconds, move the waitlist promotion to a queue so a cancellation answers at once, and add read replicas for the heavy lists. The seat counter is already a single conditional `UPDATE`, so bookings themselves do not need locks that grow with traffic.

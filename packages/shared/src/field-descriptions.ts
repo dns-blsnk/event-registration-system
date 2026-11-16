@@ -1,6 +1,14 @@
 import { APP_LOG_RETENTION_DAYS, type AppLogCategory, type AppLogLevel } from './app-logs.js';
 import { PASSWORD_MIN_LENGTH } from './auth.js';
 import { ALMOST_FULL_RATIO, type EventStatus, type RegistrationStatus } from './domain.js';
+import {
+  BANNER_HEIGHT,
+  BANNER_MIN_HEIGHT,
+  BANNER_MIN_WIDTH,
+  BANNER_SOURCE_MAX_MEBIBYTES,
+  BANNER_TYPE_LABELS,
+  BANNER_WIDTH,
+} from './files.js';
 import { formatPercent } from './format.js';
 
 import type { Role } from './roles.js';
@@ -20,6 +28,10 @@ export const EVENT_FIELDS = {
     label: 'Description',
     help: 'What the event is about; plain text, shown on the event page.',
   },
+  banner: {
+    label: 'Banner',
+    help: `Wide 2:1 picture at the top of the event page and in the catalog; needed to publish. Best ${String(BANNER_WIDTH)} × ${String(BANNER_HEIGHT)}, at least ${String(BANNER_MIN_WIDTH)} × ${String(BANNER_MIN_HEIGHT)}; a ${Object.values(BANNER_TYPE_LABELS).join(', ')} photo up to ${String(BANNER_SOURCE_MAX_MEBIBYTES)} MB, framed here before upload. The title is written over its lower part.`,
+  },
   city: { label: 'City', help: 'City where the event takes place; used by the city filter.' },
   venue: { label: 'Venue', help: 'Address or name of the place inside the city.' },
   startsAt: {
@@ -32,7 +44,7 @@ export const EVENT_FIELDS = {
   },
   status: {
     label: 'Status',
-    help: 'Draft is hidden from customers; Published takes bookings; Completed and Cancelled are final.',
+    help: 'Draft is hidden from customers; publishing needs a banner and a session. Published takes bookings; Completed and Cancelled are final.',
   },
   organizer: {
     label: 'Organizer',

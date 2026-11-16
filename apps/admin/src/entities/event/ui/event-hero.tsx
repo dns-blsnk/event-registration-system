@@ -1,3 +1,4 @@
+import { BANNER_HEIGHT, BANNER_WIDTH } from '@ers/shared';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
@@ -5,7 +6,8 @@ import { useState } from 'react';
 
 import { BRAND } from '@/shared/theme';
 
-const HERO_MIN_HEIGHT = 220;
+/** The stored banner's own shape, so the whole picture shows on every screen, nothing cut off. */
+const HERO_ASPECT_RATIO = `${String(BANNER_WIDTH)} / ${String(BANNER_HEIGHT)}`;
 /** A long title wraps to at most this many lines before it is cut with an ellipsis. */
 const TITLE_MAX_LINES = 3;
 /** Darkens the lower part of a banner so the white title on it stays readable. */
@@ -35,7 +37,9 @@ export function EventHero({
     <Box
       sx={{
         position: 'relative',
-        minHeight: HERO_MIN_HEIGHT,
+        aspectRatio: HERO_ASPECT_RATIO,
+        // Lets a long title on a narrow screen make the box taller instead of being cut off.
+        minHeight: 'min-content',
         display: 'flex',
         borderRadius: 2,
         overflow: 'hidden',

@@ -5,14 +5,14 @@ import {
   S3Client,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { BANNER_MAX_BYTES, BANNER_MIME_TYPES, ErrorCode, type BannerMimeType } from '@ers/shared';
+import { BANNER_MAX_BYTES, ErrorCode, type BannerMimeType } from '@ers/shared';
 import { Injectable, type OnModuleDestroy } from '@nestjs/common';
 
 import { DomainError } from '../../common/errors/domain-error.js';
 import { MINUTE_MS, SECOND_MS } from '../../common/time.js';
 import { InjectConfig } from '../../config/config.module.js';
 
-import { detectImageType } from './image-type.js';
+import { detectImageType, unsupportedImageError } from './image-type.js';
 
 import type { Config } from '../../config/config.schema.js';
 
@@ -61,10 +61,7 @@ export class StorageService implements OnModuleDestroy {
     }
     const contentType = detectImageType(body);
     if (contentType === undefined) {
-      throw new DomainError(
-        ErrorCode.UNSUPPORTED_MEDIA_TYPE,
-        `The image must be one of: ${BANNER_MIME_TYPES.join(', ')}`,
-      );
+      throw unsupportedImageError();
     }
     await this.client.send(
       new PutObjectCommand({ Bucket: this.bucket, Key: key, Body: body, ContentType: contentType }),

@@ -10,6 +10,8 @@ import { createEvent, createRegistration, createSession } from '../helpers/facto
 import type { INestApplication } from '@nestjs/common';
 
 const DAY_MS = 86_400_000;
+/** A stored banner is only a key here: publishing checks that the event has one. */
+const BANNER_KEY = 'events/test/banner';
 
 describe('event actions', () => {
   let app: INestApplication;
@@ -36,7 +38,11 @@ describe('event actions', () => {
 
   describe('POST /api/events/:id/publish', () => {
     it('publishes a draft that has a session', async () => {
-      const event = await createEvent(prisma, { organizerId: organizer.userId, status: 'DRAFT' });
+      const event = await createEvent(prisma, {
+        organizerId: organizer.userId,
+        status: 'DRAFT',
+        bannerKey: BANNER_KEY,
+      });
       await createSession(prisma, event);
 
       const response = await post(organizer, `/api/events/${event.id}/publish`).expect(200);
@@ -45,11 +51,27 @@ describe('event actions', () => {
     });
 
     it('refuses a draft without sessions', async () => {
-      const event = await createEvent(prisma, { organizerId: organizer.userId, status: 'DRAFT' });
+      const event = await createEvent(prisma, {
+        organizerId: organizer.userId,
+        status: 'DRAFT',
+        bannerKey: BANNER_KEY,
+      });
 
       const response = await post(organizer, `/api/events/${event.id}/publish`).expect(409);
 
       expect(response.body.message).toBe('Add at least one session before publishing the event');
+    });
+
+    it('refuses a draft without a banner', async () => {
+      const event = await createEvent(prisma, { organizerId: organizer.userId, status: 'DRAFT' });
+      await createSession(prisma, event);
+
+      const response = await post(organizer, `/api/events/${event.id}/publish`).expect(409);
+
+      expect(response.body.message).toBe('Add a banner before publishing the event');
+      expect((await prisma.event.findUniqueOrThrow({ where: { id: event.id } })).status).toBe(
+        'DRAFT',
+      );
     });
 
     it('refuses an event that has already started', async () => {
@@ -57,6 +79,7 @@ describe('event actions', () => {
       const event = await createEvent(prisma, {
         organizerId: organizer.userId,
         status: 'DRAFT',
+        bannerKey: BANNER_KEY,
         startsAt,
         endsAt: new Date(Date.now() + DAY_MS),
       });
@@ -82,6 +105,7 @@ describe('event actions', () => {
       const event = await createEvent(prisma, {
         organizerId: otherOrganizer.userId,
         status: 'DRAFT',
+        bannerKey: BANNER_KEY,
       });
       await createSession(prisma, event);
 
@@ -256,6 +280,7 @@ describe('event actions', () => {
     const event = await createEvent(prisma, {
       organizerId: otherOrganizer.userId,
       status: 'DRAFT',
+      bannerKey: BANNER_KEY,
     });
     await createSession(prisma, event);
 

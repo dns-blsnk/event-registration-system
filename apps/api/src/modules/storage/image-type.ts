@@ -1,4 +1,6 @@
-import type { BannerMimeType } from '@ers/shared';
+import { BANNER_MIME_TYPES, ErrorCode, type BannerMimeType } from '@ers/shared';
+
+import { DomainError } from '../../common/errors/domain-error.js';
 
 const JPEG_SIGNATURE = Buffer.from('ffd8ff', 'hex');
 const PNG_SIGNATURE = Buffer.from('89504e470d0a1a0a', 'hex');
@@ -29,4 +31,14 @@ export function detectImageType(bytes: Uint8Array): BannerMimeType | undefined {
     return 'image/webp';
   }
   return undefined;
+}
+
+/** The answer to anything that is not a readable JPEG, PNG or WebP. */
+export function unsupportedImageError(cause?: unknown): DomainError {
+  const error = new DomainError(
+    ErrorCode.UNSUPPORTED_MEDIA_TYPE,
+    `The image must be one of: ${BANNER_MIME_TYPES.join(', ')}`,
+  );
+  error.cause = cause;
+  return error;
 }
