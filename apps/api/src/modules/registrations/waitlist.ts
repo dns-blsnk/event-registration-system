@@ -47,6 +47,13 @@ export async function waitlistPositions(
   return places;
 }
 
+/** What the schedule-conflict rule needs of a session; booking and promotion read the same. */
+const SCHEDULE_SELECT = {
+  id: true,
+  startsAt: true,
+  endsAt: true,
+} as const satisfies Prisma.SessionSelect;
+
 /** Confirmed sessions of a customer, used for the schedule-conflict rule. */
 export async function confirmedSessionsOf(
   tx: Prisma.TransactionClient,
@@ -54,15 +61,43 @@ export async function confirmedSessionsOf(
 ): Promise<ScheduledSession[]> {
   const rows = await tx.registration.findMany({
     where: { customerId, status: RegistrationStatus.CONFIRMED },
-    select: { session: { select: { id: true, startsAt: true, endsAt: true } } },
+    select: { session: { select: SCHEDULE_SELECT } },
   });
   return rows.map((row) => row.session);
 }
 
 /**
+ * The confirmed sessions of several customers that overlap `session`, in one query, grouped by
+ * customer (those with none are absent). The filter mirrors `overlaps` (half-open ranges) only to
+ * keep the rows few; `hasScheduleConflict` still makes the decision.
+ */
+async function overlappingSessionsByCustomer(
+  tx: Prisma.TransactionClient,
+  customerIds: readonly string[],
+  session: ScheduledSession,
+): Promise<Map<string, ScheduledSession[]>> {
+  const rows = await tx.registration.findMany({
+    where: {
+      customerId: { in: [...customerIds] },
+      status: RegistrationStatus.CONFIRMED,
+      session: { startsAt: { lt: session.endsAt }, endsAt: { gt: session.startsAt } },
+    },
+    select: { customerId: true, session: { select: SCHEDULE_SELECT } },
+  });
+  const byCustomer = new Map<string, ScheduledSession[]>();
+  for (const { customerId, session: confirmed } of rows) {
+    const sessions = byCustomer.get(customerId) ?? [];
+    if (sessions.length === 0) byCustomer.set(customerId, sessions);
+    sessions.push(confirmed);
+  }
+  return byCustomer;
+}
+
+/**
  * Fills free seats from the waitlist, oldest first. Someone whose confirmed sessions would overlap
- * is skipped (they stay waitlisted). Caller must hold the session row lock; this locks the waiting
- * customers plus `alsoLock` (a booker who is not on the waitlist) in one ordered statement.
+ * is skipped (they stay waitlisted). Caller must hold the session row lock, so its seat count
+ * cannot change here. `alsoLock` (a booker who is not on the waitlist) is always locked; the
+ * waiting customers are locked with it, in one ordered statement, only when a seat is free.
  * Nobody is promoted into a session that has already started. Returns how many were promoted.
  */
 export async function promoteFromWaitlist(
@@ -71,19 +106,28 @@ export async function promoteFromWaitlist(
   now: Date,
   alsoLock: readonly string[] = [],
 ): Promise<number> {
+  const session = await tx.session.findUniqueOrThrow({ where: { id: sessionId } });
+  const hasStarted = session.startsAt.getTime() <= now.getTime();
+  // Most bookings land in a full session: then nobody is promoted, so the waitlist is neither read
+  // nor locked, which would hold up those customers' bookings elsewhere.
+  if (hasStarted || session.confirmedCount >= session.capacity) {
+    await lockCustomers(tx, alsoLock);
+    return 0;
+  }
   const waitlist = await tx.registration.findMany({
     where: { sessionId, status: RegistrationStatus.WAITLISTED },
     orderBy: [...WAITLIST_ORDER],
     select: { id: true, customerId: true, status: true },
   });
-  await lockCustomers(tx, [...waitlist.map((entry) => entry.customerId), ...alsoLock]);
-  const session = await tx.session.findUniqueOrThrow({ where: { id: sessionId } });
-  if (session.startsAt.getTime() <= now.getTime()) {
-    return 0;
-  }
+  const waiting = waitlist.map((entry) => entry.customerId);
+  await lockCustomers(tx, [...waiting, ...alsoLock]);
+  if (waitlist.length === 0) return 0;
+  // One query for everyone waiting instead of one per candidate. Promoting one candidate never
+  // changes another's conflicts: a customer is on a session's waitlist at most once.
+  const conflicts = await overlappingSessionsByCustomer(tx, waiting, session);
   let promoted = 0;
   for (const candidate of waitlist) {
-    if (hasScheduleConflict(session, await confirmedSessionsOf(tx, candidate.customerId))) {
+    if (hasScheduleConflict(session, conflicts.get(candidate.customerId) ?? [])) {
       continue;
     }
     assertRegistrationTransition(candidate.status, RegistrationStatus.CONFIRMED, {
