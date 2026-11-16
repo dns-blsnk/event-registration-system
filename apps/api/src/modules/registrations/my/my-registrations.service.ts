@@ -10,6 +10,7 @@ import {
 import { containsInsensitive } from '../../../common/pagination/search.js';
 import { PrismaService } from '../../../prisma/prisma.service.js';
 import { BookingService } from '../booking.service.js';
+import { waitlistPositions } from '../waitlist.js';
 
 import { MY_REGISTRATION_INCLUDE, toMyRegistration } from './my-registration-view.js';
 
@@ -107,7 +108,7 @@ export class MyRegistrationsService {
       }),
       this.prisma.registration.count({ where }),
     ]);
-    const positions = await this.waitlistPositions(rows);
+    const positions = await waitlistPositions(this.prisma, rows);
     const items = rows.map((row) => toMyRegistration(row, positions.get(row.id) ?? null));
     return { items, total };
   }
@@ -120,26 +121,6 @@ export class MyRegistrationsService {
     if (row === null) {
       return null;
     }
-    return toMyRegistration(row, (await this.waitlistPositions([row])).get(row.id) ?? null);
-  }
-
-  /** 1-based queue position of each waitlisted row among its session's waitlist, in one query. */
-  private async waitlistPositions(
-    rows: readonly { id: string; status: RegistrationStatus }[],
-  ): Promise<Map<string, number>> {
-    const ids = rows
-      .filter((row) => row.status === RegistrationStatus.WAITLISTED)
-      .map((row) => row.id);
-    if (ids.length === 0) {
-      return new Map();
-    }
-    const positions = await this.prisma.$queryRaw<{ id: string; position: number }[]>`
-      SELECT r.id::text AS id, (
-        SELECT count(*)::int FROM registrations w
-        WHERE w.session_id = r.session_id AND w.status = 'WAITLISTED'
-          AND (w.created_at, w.id) < (r.created_at, r.id)
-      ) + 1 AS position
-      FROM registrations r WHERE r.id = ANY(${ids}::uuid[])`;
-    return new Map(positions.map((entry) => [entry.id, entry.position]));
+    return toMyRegistration(row, (await waitlistPositions(this.prisma, [row])).get(row.id) ?? null);
   }
 }

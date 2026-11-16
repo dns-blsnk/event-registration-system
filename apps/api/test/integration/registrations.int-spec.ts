@@ -283,6 +283,68 @@ describe('customer registrations API', () => {
       expect(await seatsOf(session)).toBe(1);
     });
 
+    it('numbers waitlist places in the order the waitlist is served, ties broken the same way', async () => {
+      const holder = await signedInAgent(app);
+      const waiting = await Promise.all([signedInAgent(app), signedInAgent(app)]);
+      const session = await createSession(prisma, await createEvent(prisma), {
+        capacity: 1,
+        confirmedCount: 1,
+      });
+      const seat = await createRegistration(prisma, session, { customerId: holder.userId });
+      const sameMoment = new Date(Date.now() - HOUR_MS);
+      const queued = await Promise.all(
+        waiting.map((customer) =>
+          createRegistration(prisma, session, {
+            customerId: customer.userId,
+            status: 'WAITLISTED',
+            createdAt: sameMoment,
+          }),
+        ),
+      );
+      const places = await Promise.all(
+        waiting.map(async (customer, index) => {
+          const response = await customer.agent
+            .get(`/api/my-registrations/${queued[index]?.id ?? ''}`)
+            .expect(200);
+          return response.body.waitlistPosition as number;
+        }),
+      );
+
+      await cancel(holder, seat.id, 200);
+
+      const firstInLine = queued[places.indexOf(1)];
+      const promoted = await prisma.registration.findMany({
+        where: { sessionId: session.id, status: 'CONFIRMED' },
+      });
+      expect([...places].sort((a, b) => a - b)).toEqual([1, 2]);
+      expect(promoted.map((registration) => registration.id)).toEqual([firstInLine?.id]);
+    });
+
+    it('keeps the first place for a customer skipped over a schedule conflict', async () => {
+      const holder = await signedInAgent(app);
+      const [busy, free] = await Promise.all([signedInAgent(app), signedInAgent(app)]);
+      const event = await createEvent(prisma);
+      const session = await createSession(prisma, event, { capacity: 1, confirmedCount: 1 });
+      const parallel = await createSession(prisma, event, { confirmedCount: 1 });
+      await createRegistration(prisma, parallel, { customerId: busy.userId });
+      const seat = await createRegistration(prisma, session, { customerId: holder.userId });
+      const skipped = await createRegistration(prisma, session, {
+        customerId: busy.userId,
+        status: 'WAITLISTED',
+        createdAt: new Date(Date.now() - 2 * HOUR_MS),
+      });
+      await createRegistration(prisma, session, {
+        customerId: free.userId,
+        status: 'WAITLISTED',
+        createdAt: new Date(Date.now() - HOUR_MS),
+      });
+
+      await cancel(holder, seat.id, 200);
+
+      const response = await busy.agent.get(`/api/my-registrations/${skipped.id}`).expect(200);
+      expect(response.body).toMatchObject({ status: 'WAITLISTED', waitlistPosition: 1 });
+    });
+
     it('skips a waitlisted customer whose confirmed sessions would overlap', async () => {
       const customer = await signedInAgent(app);
       const event = await createEvent(prisma);
