@@ -96,6 +96,17 @@ describe('EventEdit', () => {
     expect(bodyOf(calls.find((call) => call.method === 'patch'))).toEqual({ title: 'Renamed' });
   });
 
+  it('raises the labels of the fields the loaded event fills, so they do not cover the text', async () => {
+    mockHttp([signedIn, tags, { method: 'get', url: '/events/e1', status: 200, body: event }]);
+    renderEdit();
+
+    await screen.findByDisplayValue('Kyiv Frontend Summit');
+    for (const value of ['Kyiv Frontend Summit', 'Two days of talks.', 'Kyiv', 'Main Hall']) {
+      const input = screen.getByDisplayValue<HTMLInputElement>(value);
+      expect(input.labels?.[0]).toHaveAttribute('data-shrink', 'true');
+    }
+  });
+
   it('shows completed events as read-only', async () => {
     mockHttp([
       signedIn,

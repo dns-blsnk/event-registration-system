@@ -59,19 +59,15 @@ jobs:
         run: pnpm build
 
       # Browser tests: a fresh database is seeded, then the built API and the admin run against it.
-      # Off until the repository variable RUN_E2E is "true": they are flaky in CI and are being
-      # fixed; run them locally with `pnpm test:e2e` meanwhile.
       - name: Install the browser for end-to-end tests
-        if: vars.RUN_E2E == 'true'
         run: pnpm --filter @ers/e2e exec playwright install --with-deps chromium
 
       # The Build step above already built the API.
       - name: End-to-end tests
-        if: vars.RUN_E2E == 'true'
         run: pnpm --filter @ers/e2e test:e2e
 
       - name: Keep the end-to-end report on failure
-        if: failure() && vars.RUN_E2E == 'true'
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report

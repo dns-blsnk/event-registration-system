@@ -179,7 +179,7 @@ In production the socket connects to the API host directly (`VITE_CHAT_URL`), be
 
 ## Deployment
 
-CI (`.github/workflows/ci.yml`) runs lint, format check, typecheck, all tests against Postgres, Redis and S3 containers and the build on pushes to `main` and `dev` and on every pull request. The Playwright browser tests run there only when the repository variable `RUN_E2E` is `true` (off for now while they are made stable in CI); locally, `pnpm test:e2e` runs them. Deploy (`.github/workflows/deploy.yml`) runs only after a green CI run of a push to `main`:
+CI (`.github/workflows/ci.yml`) runs lint, format check, typecheck, all tests against Postgres, Redis and S3 containers, the build and then the Playwright browser tests against a freshly seeded database, on pushes to `main` and `dev` and on every pull request. Locally, `pnpm test:e2e` runs the browser tests. Deploy (`.github/workflows/deploy.yml`) runs only after a green CI run of a push to `main`:
 
 1. It asks Render to deploy that exact commit.
 2. It waits until `/api/health` reports that commit with the database and Redis up.
@@ -239,7 +239,7 @@ The tests target what would hurt most if it broke: who may see and change what (
 
 ## With more time
 
-1. **Browser tests in CI.** The Playwright suite runs locally but is switched off in CI until it is stable there; it would also grow to cover the organizer flow, bulk actions and the banner editor.
+1. **More browser tests.** The Playwright suite covers sign-in, roles and booking; it would grow to cover the organizer flow, bulk actions and the banner editor.
 2. **A paid database and an always-on API instance.** They remove the 30-day database expiry and the cold start, the two things a reviewer is most likely to hit.
 3. **A shared secret between the Vercel rewrite and the API**, so direct calls to Render are refused and per-IP limits cannot be bypassed.
 4. **Email** through a provider: verified sign-ups (which would allow linking GitHub to an existing account), password reset and a message when a waitlisted customer gets a seat.
