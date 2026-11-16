@@ -72,18 +72,20 @@ export function EventBannerField({
       setPickError(cause instanceof Error ? cause.message : 'The image could not be read');
     }
   };
+  // The dialog closes only once the preview is ready, so the form never shows a stale banner.
   const use = async (image: Blob): Promise<void> => {
-    setPicked(undefined);
-    if (image.size > BANNER_MAX_BYTES) {
-      setPickError(
-        `The framed image is over ${String(BANNER_MAX_MEBIBYTES)} MB: try another photo`,
-      );
-      return;
-    }
     try {
-      banner.setDraft({ kind: 'replace', image, previewUrl: await toDataUrl(image) });
+      if (image.size > BANNER_MAX_BYTES) {
+        setPickError(
+          `The framed image is over ${String(BANNER_MAX_MEBIBYTES)} MB: try another photo`,
+        );
+      } else {
+        banner.setDraft({ kind: 'replace', image, previewUrl: await toDataUrl(image) });
+      }
     } catch (cause) {
       setPickError(cause instanceof Error ? cause.message : 'The image could not be read');
+    } finally {
+      setPicked(undefined);
     }
   };
   const error = pickError ?? banner.error;
