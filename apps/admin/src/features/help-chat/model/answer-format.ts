@@ -1,11 +1,11 @@
 /**
  * A small subset of Markdown, the formatting the model writes: paragraphs with line breaks, bullet
- * and numbered lists, headings, fenced code, **bold** and `code`. Everything else stays plain
+ * and numbered lists, headings, fenced code, **bold**, *emphasis* and `code`. Everything else stays plain
  * text, HTML included: the result is rendered as React text, never as markup.
  */
 
 export interface InlinePart {
-  kind: 'text' | 'strong' | 'code';
+  kind: 'text' | 'strong' | 'emphasis' | 'code';
   text: string;
 }
 
@@ -23,20 +23,28 @@ const RULE = /^\s{0,3}(?:-{3,}|\*{3,}|_{3,})\s*$/;
 const FENCE = /^\s{0,3}```/;
 /** A line indented under a list item continues that item. */
 const INDENTED = /^\s{2,}\S/;
-/** `**bold**` or `code`, the only inline formatting kept; unclosed markers stay as typed. */
-const INLINE = /\*\*([^*\n]+)\*\*|`([^`\n]+)`/g;
+/**
+ * `**bold**` (`***bold***` too), `*emphasis*` or `code`, the only inline formatting kept. Emphasis
+ * needs text right inside its asterisks and no word right outside them, so `2 * 3` and `5*3=15`
+ * stay as typed, and it never reaches into a code span; unclosed markers stay as typed too.
+ */
+const INLINE =
+  /\*\*\*?([^*\n]+)\*?\*\*|(?<![\w*])\*([^*`\s](?:[^*`\n]*[^*`\s])?)\*(?![\w*])|`([^`\n]+)`/g;
 
-/** A line's text split into plain, bold and code parts. */
+function toInlinePart([, strong, emphasis, code]: RegExpMatchArray): InlinePart {
+  if (strong !== undefined) return { kind: 'strong', text: strong };
+  if (emphasis !== undefined) return { kind: 'emphasis', text: emphasis };
+  return { kind: 'code', text: code ?? '' };
+}
+
+/** A line's text split into plain, bold, emphasised and code parts. */
 export function parseInline(line: string): InlinePart[] {
   const parts: InlinePart[] = [];
   let rest = 0;
   for (const match of line.matchAll(INLINE)) {
     if (match.index > rest) parts.push({ kind: 'text', text: line.slice(rest, match.index) });
-    const [whole, strong, code] = match;
-    parts.push(
-      strong === undefined ? { kind: 'code', text: code ?? '' } : { kind: 'strong', text: strong },
-    );
-    rest = match.index + whole.length;
+    parts.push(toInlinePart(match));
+    rest = match.index + match[0].length;
   }
   if (rest < line.length) parts.push({ kind: 'text', text: line.slice(rest) });
   return parts;

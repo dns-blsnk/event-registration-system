@@ -27,6 +27,12 @@ function Inline({ parts }: { parts: readonly InlinePart[] }): React.JSX.Element 
                 {part.text}
               </Box>
             );
+          case 'emphasis':
+            return (
+              <Box key={key} component="em">
+                {part.text}
+              </Box>
+            );
           case 'code':
             return (
               <Box key={key} component="code" sx={CODE_SX}>

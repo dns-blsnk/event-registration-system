@@ -13,6 +13,29 @@ describe('parseInline', () => {
     ]);
   });
 
+  it('reads single asterisks around text as emphasis', () => {
+    expect(parseInline('*(and one more)*')).toEqual([{ kind: 'emphasis', text: '(and one more)' }]);
+  });
+
+  it('leaves asterisks with spaces inside as typed, as in arithmetic', () => {
+    expect(parseInline('2 * 3 * 4')).toEqual([{ kind: 'text', text: '2 * 3 * 4' }]);
+  });
+
+  it('leaves asterisks between words as typed', () => {
+    expect(parseInline('5*3=15 and 2*4=8')).toEqual([{ kind: 'text', text: '5*3=15 and 2*4=8' }]);
+  });
+
+  it('never lets emphasis reach into a code span', () => {
+    expect(parseInline('Try *x and `a*b`')).toEqual([
+      { kind: 'text', text: 'Try *x and ' },
+      { kind: 'code', text: 'a*b' },
+    ]);
+  });
+
+  it('shows triple asterisks as bold, without stray markers', () => {
+    expect(parseInline('***Note***')).toEqual([{ kind: 'strong', text: 'Note' }]);
+  });
+
   it('leaves an unclosed marker as typed, as in a half-streamed answer', () => {
     expect(parseInline('Two **events')).toEqual([{ kind: 'text', text: 'Two **events' }]);
   });
