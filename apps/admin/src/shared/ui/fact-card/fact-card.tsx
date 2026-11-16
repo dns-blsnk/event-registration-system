@@ -6,13 +6,11 @@ import Typography from '@mui/material/Typography';
 
 import { TINT } from '@/shared/theme';
 
-/** Keeps the detail line's room when a card has no detail, so every card in a row lines up. */
-const EMPTY_LINE = ' ';
-
 /**
  * One fact about a record (when, where, who, how full) for detail pages. Every card has the same
- * shape: the label, the main value on one line, a detail line under it, and optional extra content
- * (such as a bar) at the bottom, so a row of cards reads as one set.
+ * shape: the label, the main value on one line, an optional detail line under it and optional extra
+ * content (such as a bar) at the bottom. Cards of a row share its height, and the icon and text sit
+ * in the middle of each, so a card with fewer lines does not look shifted against its neighbours.
  */
 export function FactCard({
   icon,
@@ -28,8 +26,11 @@ export function FactCard({
   children?: React.ReactNode;
 }): React.JSX.Element {
   return (
-    <Paper variant="outlined" sx={{ p: 2, flex: '1 1 220px', minWidth: 0 }}>
-      <Stack direction="row" spacing={1.5} alignItems="flex-start">
+    <Paper
+      variant="outlined"
+      sx={{ p: 2, flex: '1 1 220px', minWidth: 0, display: 'flex', alignItems: 'center' }}
+    >
+      <Stack direction="row" spacing={1.5} alignItems="center" sx={{ flexGrow: 1, minWidth: 0 }}>
         <Box
           sx={(theme) => ({
             display: 'flex',
@@ -49,9 +50,11 @@ export function FactCard({
           <Typography variant="subtitle1" fontWeight={600} noWrap title={value}>
             {value}
           </Typography>
-          <Typography variant="body2" color="text.secondary" noWrap title={detail}>
-            {detail ?? EMPTY_LINE}
-          </Typography>
+          {detail !== undefined && (
+            <Typography variant="body2" color="text.secondary" noWrap title={detail}>
+              {detail}
+            </Typography>
+          )}
           {children !== undefined && <Box sx={{ mt: 1 }}>{children}</Box>}
         </Box>
       </Stack>

@@ -12,9 +12,9 @@ describe('FactCard', () => {
     expect(screen.getByText('Main Hall')).toBeInTheDocument();
   });
 
-  it('keeps the detail line without a detail, so cards in a row stay the same height', () => {
+  it('leaves out the detail line without a detail, instead of an empty one under the value', () => {
     const { container } = render(<FactCard icon={null} label="Organizer" value="Olena" />);
 
-    expect(container.querySelectorAll('p, h6, span.MuiTypography-root')).toHaveLength(3);
+    expect(container.querySelectorAll('p, h6, span.MuiTypography-root')).toHaveLength(2);
   });
 });
