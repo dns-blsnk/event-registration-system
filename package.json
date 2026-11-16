@@ -18,6 +18,7 @@
     "prepare": "husky && pnpm codegen",
     "db:reset": "pnpm --filter @ers/api db:reset",
     "db:seed": "pnpm --filter @ers/api db:seed",
+    "db:seed:banners": "pnpm --filter @ers/api db:seed:banners",
     "codegen": "pnpm --filter @ers/shared build && pnpm --filter @ers/api db:generate"
   },
   "devDependencies": {

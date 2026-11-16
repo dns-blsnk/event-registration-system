@@ -21,6 +21,7 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:seed": "NODE_ENV=${NODE_ENV:-development} tsx prisma/seed/main.ts",
+    "db:seed:banners": "NODE_ENV=${NODE_ENV:-development} tsx prisma/seed/refresh-banners.ts",
     "db:reset": "prisma migrate reset --force && pnpm db:seed"
   },
   "devDependencies": {
