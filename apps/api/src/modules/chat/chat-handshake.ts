@@ -3,8 +3,8 @@ import { Injectable } from '@nestjs/common';
 
 import { DomainError } from '../../common/errors/domain-error.js';
 import { InjectConfig } from '../../config/config.module.js';
-import { AppLogService } from '../app-logs/app-log.service.js';
-import { SessionService } from '../identity/session.service.js';
+import { AppLogService } from '../app-logs/index.js';
+import { SessionService } from '../identity/index.js';
 
 import { ChatTicketStore } from './chat-tickets.js';
 

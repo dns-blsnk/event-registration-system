@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 
-import { tokensMatch } from '../../identity/session-tokens.js';
+import { tokensMatch } from '../../identity/index.js';
 
 const AUTHORIZE_URL = 'https://github.com/login/oauth/authorize';
 const RANDOM_BYTES = 32;

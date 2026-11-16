@@ -6,8 +6,7 @@ import { Prisma } from '../../generated/prisma/client.js';
 
 import { ChatFailures } from './chat-failures.js';
 
-import type { AppLogEntry } from '../app-logs/app-log-entry.js';
-import type { AppLogService } from '../app-logs/app-log.service.js';
+import type { AppLogEntry, AppLogService } from '../app-logs/index.js';
 import type { PinoLogger } from 'nestjs-pino';
 
 function failures(): { service: ChatFailures; entries: AppLogEntry[] } {

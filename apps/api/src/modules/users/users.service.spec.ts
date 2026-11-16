@@ -6,8 +6,8 @@ import { UsersService } from './users.service.js';
 
 import type { User } from '../../generated/prisma/client.js';
 import type { PrismaService } from '../../prisma/prisma.service.js';
-import type { PasswordService } from '../auth/local/password.service.js';
-import type { SessionService } from '../identity/session.service.js';
+import type { PasswordService } from '../auth/index.js';
+import type { SessionService } from '../identity/index.js';
 
 function user(id: string, role: User['role']): User {
   return { id, role, email: `${id}@x.co`, name: id } as User;

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { AllExceptionsFilter } from './all-exceptions.filter.js';
 
-import type { AppLogService } from '../../modules/app-logs/app-log.service.js';
+import type { AppLogService } from '../../modules/app-logs/index.js';
 import type { ArgumentsHost } from '@nestjs/common';
 import type { PinoLogger } from 'nestjs-pino';
 

@@ -9,8 +9,7 @@ import { Injectable } from '@nestjs/common';
 import { DomainError } from '../../common/errors/domain-error.js';
 import { orderByOf, type DateRange, type ListQuery } from '../../common/pagination/list-query.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
-import { EventBannerService } from '../events/banner/event-banner.service.js';
-import { eventTextFilters } from '../events/event-text-filters.js';
+import { EventBannerService, eventTextFilters } from '../events/index.js';
 
 import {
   CATALOG_LIST_INCLUDE,

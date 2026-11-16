@@ -1,4 +1,4 @@
-import { eventScope } from '../events/event-scope.js';
+import { eventScope } from '../events/index.js';
 
 import type { Prisma, User } from '../../generated/prisma/client.js';
 

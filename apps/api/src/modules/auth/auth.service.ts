@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PinoLogger } from 'nestjs-pino';
 
-import { SessionService, type SessionMeta } from '../identity/session.service.js';
+import { SessionService, type SessionMeta } from '../identity/index.js';
 
 import { CredentialsService } from './local/credentials.service.js';
 import { RegistrationService } from './local/registration.service.js';

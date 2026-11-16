@@ -5,7 +5,7 @@ import { pathOf } from '../logging/pino-options.js';
 
 import { DomainError } from './domain-error.js';
 
-import type { AppLogEntry } from '../../modules/app-logs/app-log-entry.js';
+import type { AppLogEntry } from '../../modules/app-logs/index.js';
 import type { Request } from 'express';
 
 /**

@@ -14,7 +14,7 @@ import {
 import { RequirePermission } from '../../common/auth/access.decorator.js';
 import { CurrentAuth } from '../../common/auth/current-user.decorator.js';
 import { sendList } from '../../common/pagination/list-result.js';
-import { toEventListItem } from '../events/event-view.js';
+import { toEventListItem } from '../events/index.js';
 
 import { PinnedEventsService } from './pinned-events.service.js';
 

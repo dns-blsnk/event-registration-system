@@ -5,7 +5,7 @@ import { PinoLogger } from 'nestjs-pino';
 import { DomainError } from '../../../common/errors/domain-error.js';
 import { PrismaErrorCode, prismaErrorCode } from '../../../common/errors/prisma-errors.js';
 import { PrismaService } from '../../../prisma/prisma.service.js';
-import { SessionService, type SessionMeta } from '../../identity/session.service.js';
+import { SessionService, type SessionMeta } from '../../identity/index.js';
 import { normalizeEmail } from '../email.js';
 
 import { GithubClient, type GithubProfile } from './github-client.js';

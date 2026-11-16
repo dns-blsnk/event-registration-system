@@ -1,7 +1,7 @@
 import { SessionPhase, sessionPhase } from '@ers/shared';
 
 import { fillRate, seatsLeft } from '../../domain/capacity.js';
-import { EVENT_TAGS_INCLUDE } from '../events/event-view.js';
+import { EVENT_TAGS_INCLUDE } from '../events/index.js';
 
 import type { Prisma } from '../../generated/prisma/client.js';
 import type { CatalogEventDetail, CatalogEventListItem } from '@ers/shared';

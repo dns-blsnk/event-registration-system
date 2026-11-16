@@ -3,8 +3,7 @@ import { Injectable } from '@nestjs/common';
 
 import { DomainError } from '../../common/errors/domain-error.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
-import { eventScope } from '../events/event-scope.js';
-import { EVENT_INCLUDE, type EventWithRelations } from '../events/event-view.js';
+import { eventScope, EVENT_INCLUDE, type EventWithRelations } from '../events/index.js';
 
 import type { User } from '../../generated/prisma/client.js';
 

@@ -7,7 +7,7 @@ import { PinoLogger } from 'nestjs-pino';
 import { DomainError } from '../../../common/errors/domain-error.js';
 import { assertEventEditable } from '../../../domain/status-transitions.js';
 import { PrismaService } from '../../../prisma/prisma.service.js';
-import { StorageService } from '../../storage/storage.service.js';
+import { StorageService } from '../../storage/index.js';
 import { EVENT_NOT_FOUND_MESSAGE, lockScopedEvent } from '../event-lock.js';
 import { eventScope } from '../event-scope.js';
 

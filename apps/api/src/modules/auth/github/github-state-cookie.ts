@@ -1,5 +1,5 @@
 import { MINUTE_MS } from '../../../common/time.js';
-import { clearSessionCookieOptions } from '../../identity/session-cookie.js';
+import { clearSessionCookieOptions } from '../../identity/index.js';
 
 import type { Config } from '../../../config/config.schema.js';
 import type { CookieOptions } from 'express';

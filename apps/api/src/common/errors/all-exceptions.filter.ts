@@ -1,7 +1,7 @@
 import { Catch, type ArgumentsHost, type ExceptionFilter } from '@nestjs/common';
 import { PinoLogger } from 'nestjs-pino';
 
-import { AppLogService } from '../../modules/app-logs/app-log.service.js';
+import { AppLogService } from '../../modules/app-logs/index.js';
 import { requestIdOf } from '../logging/request-id.js';
 
 import { errorLogEntry } from './error-log-entry.js';

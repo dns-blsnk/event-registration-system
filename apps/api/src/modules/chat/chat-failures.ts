@@ -4,7 +4,7 @@ import { PinoLogger } from 'nestjs-pino';
 
 import { DomainError } from '../../common/errors/domain-error.js';
 import { toErrorResponse } from '../../common/errors/to-error-response.js';
-import { AppLogService } from '../app-logs/app-log.service.js';
+import { AppLogService } from '../app-logs/index.js';
 
 /** Socket messages have no HTTP request id; the public body's id is not used here. */
 const NO_REQUEST_ID = '';

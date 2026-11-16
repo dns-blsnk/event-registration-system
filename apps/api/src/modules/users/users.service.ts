@@ -16,9 +16,8 @@ import { DomainError } from '../../common/errors/domain-error.js';
 import { orderByOf, type ListQuery } from '../../common/pagination/list-query.js';
 import { personSearch } from '../../common/pagination/search.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
-import { normalizeEmail } from '../auth/email.js';
-import { PasswordService } from '../auth/local/password.service.js';
-import { SessionService } from '../identity/session.service.js';
+import { normalizeEmail, PasswordService } from '../auth/index.js';
+import { SessionService } from '../identity/index.js';
 
 import type { ListResult } from '../../common/pagination/list-result.js';
 import type { Prisma, User } from '../../generated/prisma/client.js';

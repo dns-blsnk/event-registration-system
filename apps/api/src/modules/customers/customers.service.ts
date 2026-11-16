@@ -5,8 +5,8 @@ import { DomainError } from '../../common/errors/domain-error.js';
 import { orderByOf, type ListQuery } from '../../common/pagination/list-query.js';
 import { personSearch } from '../../common/pagination/search.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
-import { eventScope } from '../events/event-scope.js';
-import { registrationScope } from '../registrations/registration-scope.js';
+import { eventScope } from '../events/index.js';
+import { registrationScope } from '../registrations/index.js';
 
 import type { ListResult } from '../../common/pagination/list-result.js';
 import type { Prisma, User } from '../../generated/prisma/client.js';

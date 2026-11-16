@@ -17,8 +17,8 @@ import { containsInsensitive } from '../../common/pagination/search.js';
 import { isValidRange, isWithin, type TimeRange } from '../../domain/schedule.js';
 import { Prisma, type Event, type Session, type User } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
-import { lockScopedEvent } from '../events/event-lock.js';
-import { promoteFromWaitlist } from '../registrations/waitlist.js';
+import { lockScopedEvent } from '../events/index.js';
+import { promoteFromWaitlist } from '../registrations/index.js';
 
 import { sessionScope } from './session-scope.js';
 import { SESSION_INCLUDE, type SessionWithRelations } from './session-view.js';

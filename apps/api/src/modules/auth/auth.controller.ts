@@ -11,7 +11,8 @@ import {
   readSessionToken,
   sessionCookieName,
   sessionCookieOptions,
-} from '../identity/session-cookie.js';
+  type SessionMeta,
+} from '../identity/index.js';
 
 import { AuthService } from './auth.service.js';
 import { LoginDto } from './dto/login.dto.js';
@@ -20,7 +21,6 @@ import { toPublicUser } from './public-user.js';
 
 import type { AuthContext } from '../../common/auth/auth-context.js';
 import type { Config } from '../../config/config.schema.js';
-import type { SessionMeta } from '../identity/session.service.js';
 import type { SignInResult } from './sign-in-result.js';
 import type { AuthResponse, SessionResponse } from '@ers/shared';
 import type { Request, Response } from 'express';
