@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { signIn } from './sign-in.ts';
+import { signIn, signOut } from './sign-in.ts';
 
 test('an admin signs in and sees the events from the database', async ({ page }) => {
   await signIn(page, 'admin@demo.test');
@@ -24,8 +24,7 @@ test('only the super admin can change or delete an admin', async ({ page }) => {
   // An admin can rename their own account, but never delete it or another admin.
   await expect(page.getByRole('button', { name: /^Delete / })).toHaveCount(0);
 
-  await page.getByRole('button', { name: /^Account menu/ }).click();
-  await page.getByRole('menuitem', { name: 'Logout' }).click();
+  await signOut(page);
   await signIn(page, 'owner@demo.test');
   await page.goto(admins);
 

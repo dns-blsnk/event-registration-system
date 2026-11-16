@@ -9,3 +9,13 @@ export async function signIn(page: Page, email: string, password = DEMO_PASSWORD
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page).not.toHaveURL(/\/login/);
 }
+
+/**
+ * Signs out through the account menu and waits for the sign-in page. Opening /login before the
+ * logout request ends would find the session still alive and be sent straight back into the app.
+ */
+export async function signOut(page: Page): Promise<void> {
+  await page.getByRole('button', { name: /^Account menu/ }).click();
+  await page.getByRole('menuitem', { name: 'Logout' }).click();
+  await expect(page).toHaveURL(/\/login/);
+}
