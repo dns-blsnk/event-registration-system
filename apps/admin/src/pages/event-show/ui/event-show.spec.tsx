@@ -133,6 +133,63 @@ describe('EventShow', () => {
     expect(screen.queryByRole('button', { name: 'Publish' })).not.toBeInTheDocument();
   });
 
+  it('offers to publish a draft as soon as its first session is added', async () => {
+    const dates = { startsAt: '2099-01-01T09:00:00Z', endsAt: '2099-01-02T09:00:00Z' };
+    show(
+      'DRAFT',
+      [
+        { method: 'post', url: '/sessions', status: 201, body: session },
+        {
+          method: 'get',
+          url: '/events/e1',
+          status: 200,
+          body: detail('DRAFT', null, { ...dates, sessionsCount: 1 }),
+        },
+        { method: 'get', url: '/sessions', status: 200, body: [session] },
+      ],
+      null,
+      { ...dates, sessionsCount: 0 },
+    );
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Add session' }));
+    expect(screen.queryByRole('button', { name: 'Publish' })).not.toBeInTheDocument();
+    const dialog = await screen.findByRole('dialog');
+    await userEvent.type(within(dialog).getByRole('textbox', { name: 'Title' }), 'Workshop');
+    await userEvent.type(within(dialog).getByLabelText(/^Starts/), '2099-01-01T12:00');
+    await userEvent.type(within(dialog).getByLabelText(/^Ends/), '2099-01-01T13:00');
+    await userEvent.type(within(dialog).getByRole('spinbutton', { name: 'Capacity' }), '30');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByRole('button', { name: 'Publish' })).toBeInTheDocument();
+  });
+
+  it('stops offering to publish a draft once its only session is deleted', async () => {
+    const dates = { startsAt: '2099-01-01T09:00:00Z', endsAt: '2099-01-02T09:00:00Z' };
+    const empty = { ...session, confirmedCount: 0, seatsLeft: 50, fillRate: 0, waitlistCount: 0 };
+    mockHttp([
+      signedIn,
+      { method: 'get', url: '/events/e1', status: 200, body: detail('DRAFT', null, dates) },
+      { method: 'get', url: '/sessions', status: 200, body: [empty] },
+      { method: 'delete', url: '/sessions/s1', status: 204 },
+      {
+        method: 'get',
+        url: '/events/e1',
+        status: 200,
+        body: detail('DRAFT', null, { ...dates, sessionsCount: 0 }),
+      },
+      { method: 'get', url: '/sessions', status: 200, body: [] },
+    ]);
+    renderAdminPage({ path: '/events/e1', route: '/events/:id', element: <EventShow /> });
+
+    expect(await screen.findByRole('button', { name: 'Publish' })).toBeInTheDocument();
+    await userEvent.click(await screen.findByRole('button', { name: 'Delete State of React' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Delete' }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: 'Publish' })).not.toBeInTheDocument();
+    });
+  });
+
   it('explains when the event cannot be loaded', async () => {
     mockHttp([
       signedIn,

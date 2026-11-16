@@ -15,6 +15,8 @@ import DialogTitle from '@mui/material/DialogTitle';
 import { useCan, useCustomMutation, useInvalidate } from '@refinedev/core';
 import { useState } from 'react';
 
+import { useRefreshEvent } from '../model/use-refresh-event';
+
 type LifecycleAction = typeof Action.PUBLISH | typeof Action.COMPLETE | typeof Action.CANCEL;
 
 const TARGET_STATUS: Readonly<Record<LifecycleAction, EventStatus>> = {
@@ -134,6 +136,7 @@ export function EventActions({ event }: { event: EventDetail }): React.JSX.Eleme
   // One mutation for all three, so a second action cannot start while the first is running.
   const { mutate, mutation } = useCustomMutation();
   const invalidate = useInvalidate();
+  const refreshEvent = useRefreshEvent(event.id);
   const run = (action: LifecycleAction): void => {
     mutate(
       {
@@ -144,11 +147,7 @@ export function EventActions({ event }: { event: EventDetail }): React.JSX.Eleme
       },
       {
         onSuccess: () => {
-          void invalidate({
-            resource: Resource.EVENTS,
-            id: event.id,
-            invalidates: ['detail', 'list'],
-          });
+          refreshEvent();
           // Cancelling frees seats and empties waitlists, so the sessions table changes too.
           void invalidate({ resource: Resource.SESSIONS, invalidates: ['list'] });
         },
