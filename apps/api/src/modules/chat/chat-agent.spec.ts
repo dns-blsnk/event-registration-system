@@ -16,6 +16,7 @@ interface Reply {
   finishReason?: 'stop' | 'length' | 'content_filter' | null;
   failWith?: Error;
   hangUntilAbort?: boolean;
+  usage?: { prompt: number; completion: number; cached?: number };
 }
 
 const user = { id: 'u1', role: 'ADMIN' } as User;
@@ -46,6 +47,20 @@ function fakeClient(replies: Reply[]) {
               }
               if (reply.finishReason === null) return;
               yield { choices: [{ delta: {}, finish_reason: reply.finishReason ?? 'stop' }] };
+              if (reply.usage !== undefined) {
+                const { prompt, completion, cached } = reply.usage;
+                yield {
+                  choices: [],
+                  usage: {
+                    prompt_tokens: prompt,
+                    completion_tokens: completion,
+                    total_tokens: prompt + completion,
+                    ...(cached === undefined
+                      ? {}
+                      : { prompt_tokens_details: { cached_tokens: cached } }),
+                  },
+                };
+              }
             },
           });
         },
@@ -67,13 +82,13 @@ function fakeToolbox(outcome: ToolOutcome = { data: { total: 0 } }) {
   return { toolbox, run };
 }
 
-const logger = { setContext: vi.fn(), info: vi.fn() } as unknown as PinoLogger;
-
 function agentWith(replies: Reply[], outcome?: ToolOutcome) {
   const { client, requests } = fakeClient(replies);
   const { toolbox, run } = fakeToolbox(outcome);
+  const info = vi.fn();
+  const logger = { setContext: vi.fn(), info } as unknown as PinoLogger;
   const agent = new ChatAgent(client, { model: 'm', reasoningEffort: 'low' }, toolbox, logger);
-  return { agent, requests, run };
+  return { agent, requests, run, info };
 }
 
 async function ask(agent: ChatAgent, signal = new AbortController().signal) {
@@ -113,8 +128,31 @@ describe('ChatAgent', () => {
       model: 'm',
       reasoning_effort: 'low',
       stream: true,
+      stream_options: { include_usage: true },
     });
     expect(requests[0]?.params.tools).toHaveLength(1);
+  });
+
+  it('logs the tokens of every round of an answer, cached ones apart', async () => {
+    const { agent, info } = agentWith([
+      {
+        call: { name: 'search_events', arguments: '{}' },
+        usage: { prompt: 2700, completion: 20, cached: 2048 },
+      },
+      { texts: ['None.'], usage: { prompt: 3100, completion: 15 } },
+    ]);
+
+    await ask(agent);
+
+    expect(info).toHaveBeenCalledWith(
+      expect.objectContaining({
+        rounds: 2,
+        promptTokens: 5800,
+        completionTokens: 35,
+        cachedTokens: 2048,
+      }),
+      'assistant answered',
+    );
   });
 
   it('runs a tool the model asks for, then answers with its result', async () => {
@@ -244,6 +282,25 @@ describe('ChatAgent', () => {
     expect(await pending).toMatchObject({ outcome: 'cancelled', entries: [] });
   });
 
+  it('logs the tokens of finished rounds when the user cancels later', async () => {
+    const { agent, info } = agentWith([
+      { call: { name: 'search_events', arguments: '{}' }, usage: { prompt: 2700, completion: 20 } },
+      { texts: ['Part'], hangUntilAbort: true },
+    ]);
+    const controller = new AbortController();
+
+    const pending = ask(agent, controller.signal);
+    setTimeout(() => {
+      controller.abort();
+    }, 0);
+    await pending;
+
+    expect(info).toHaveBeenCalledWith(
+      expect.objectContaining({ rounds: 1, toolCalls: 1, promptTokens: 2700 }),
+      'assistant stopped',
+    );
+  });
+
   it('gives a clear error when the answer takes too long', async () => {
     const timeout = new AbortController();
     vi.spyOn(AbortSignal, 'timeout').mockReturnValue(timeout.signal);
@@ -299,6 +356,7 @@ describe('ChatAgent', () => {
 
   it('is unavailable without an API key', async () => {
     const { toolbox } = fakeToolbox();
+    const logger = { setContext: vi.fn(), info: vi.fn() } as unknown as PinoLogger;
     const agent = new ChatAgent(undefined, { model: 'm', reasoningEffort: 'low' }, toolbox, logger);
 
     expect(agent.isAvailable).toBe(false);
