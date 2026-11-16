@@ -17,6 +17,8 @@ export interface ToolContext {
 export interface AssistantTool<TSchema extends z.ZodType = z.ZodType> {
   readonly name: string;
   readonly description: string;
+  /** What the user sees while it runs, e.g. "Searching events…". */
+  readonly progress: string;
   readonly parameters: TSchema;
   readonly permission: { resource: Resource; action: Action };
   /**

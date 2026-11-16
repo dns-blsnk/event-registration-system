@@ -25,6 +25,7 @@ const searchCatalogArgs = searchWithDaysArgs(
 @Injectable()
 export class SearchCatalogTool implements AssistantTool<typeof searchCatalogArgs> {
   readonly name = 'search_catalog';
+  readonly progress = 'Searching the catalog…';
   readonly description = `Search the events open for booking, soonest first, with seats left in their upcoming sessions. ${UP_TO_A_PAGE}`;
   readonly parameters = searchCatalogArgs;
   readonly permission = { resource: Resource.CATALOG, action: Action.LIST };
@@ -65,6 +66,7 @@ const searchMyRegistrationsArgs = searchWithDaysArgs(
 @Injectable()
 export class SearchMyRegistrationsTool implements AssistantTool<typeof searchMyRegistrationsArgs> {
   readonly name = 'search_my_registrations';
+  readonly progress = 'Searching your bookings…';
   readonly description = `Search the user's own bookings, newest first, with their place on the waitlist. ${UP_TO_A_PAGE}`;
   readonly parameters = searchMyRegistrationsArgs;
   readonly permission = { resource: Resource.MY_REGISTRATIONS, action: Action.LIST };

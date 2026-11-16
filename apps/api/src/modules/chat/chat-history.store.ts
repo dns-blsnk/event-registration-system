@@ -130,16 +130,34 @@ function parseEntries(raw: readonly string[]): ChatEntry[] | undefined {
   }
 }
 
-/** The chat as the user sees it: their questions and the final answers, no tool traffic. */
+/** How the texts of one answer's rounds are joined, as the user saw them stream. */
+const ROUND_SEPARATOR = '\n\n';
+
+/**
+ * The chat as the user saw it: each question, then everything the assistant wrote in answer to it
+ * across its rounds, as one message. Tool calls and results are left out.
+ */
 export function toDisplayMessages(entries: readonly ChatEntry[]): ChatHistoryMessage[] {
-  return entries.flatMap((entry): ChatHistoryMessage[] => {
+  const messages: ChatHistoryMessage[] = [];
+  let answer: string[] = [];
+  const closeAnswer = () => {
+    if (answer.length > 0) messages.push({ role: 'assistant', text: answer.join(ROUND_SEPARATOR) });
+    answer = [];
+  };
+  for (const entry of entries) {
     if (entry.role === 'user' && typeof entry.content === 'string') {
-      return [{ role: 'user', text: entry.content }];
+      closeAnswer();
+      messages.push({ role: 'user', text: entry.content });
+    } else if (
+      entry.role === 'assistant' &&
+      typeof entry.content === 'string' &&
+      entry.content !== ''
+    ) {
+      answer.push(entry.content);
     }
-    if (entry.role !== 'assistant' || (entry.tool_calls ?? []).length > 0) return [];
-    const text = entry.content;
-    return typeof text === 'string' && text !== '' ? [{ role: 'assistant', text }] : [];
-  });
+  }
+  closeAnswer();
+  return messages;
 }
 
 /**

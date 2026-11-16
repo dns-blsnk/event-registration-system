@@ -20,10 +20,21 @@ export function fieldOf(payload: unknown, key: string): unknown {
  */
 export function parseChatQuestion(
   payload: unknown,
-): (Omit<ChatQuestion, 'resource'> & { resource: string }) | undefined {
+): (Omit<ChatQuestion, 'resource'> & { resource?: string }) | undefined {
   if (typeof payload !== 'object' || payload === null) return undefined;
-  const { id, resource, field, question } = payload as Record<string, unknown>;
-  if (!isShortText(id) || !isShortText(resource) || typeof question !== 'string') return undefined;
-  if (field !== undefined && !isShortText(field)) return undefined;
-  return { id, resource, question, ...(field === undefined ? {} : { field }) };
+  const { id, resource, field, question, chatId, timeZone } = payload as Record<string, unknown>;
+  if (!isShortText(id) || typeof question !== 'string') return undefined;
+  if (
+    ![resource, field, chatId, timeZone].every((value) => value === undefined || isShortText(value))
+  ) {
+    return undefined;
+  }
+  return {
+    id,
+    question,
+    ...(isShortText(resource) ? { resource } : {}),
+    ...(isShortText(field) ? { field } : {}),
+    ...(isShortText(chatId) ? { chatId } : {}),
+    ...(isShortText(timeZone) ? { timeZone } : {}),
+  };
 }

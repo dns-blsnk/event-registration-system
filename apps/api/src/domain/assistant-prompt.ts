@@ -92,13 +92,19 @@ export interface AssistantScreen {
  * those lists, today's date in their zone and the screen they are on. A role is only told about
  * lists it may open, so the assistant never describes another role's pages.
  */
+/** The user's time zone if the browser sent one the runtime knows; UTC otherwise. */
+export function resolveTimeZone(raw: unknown): string {
+  return isTimeZone(raw) ? raw : FALLBACK_TIME_ZONE;
+}
+
 export function buildAssistantInstructions(input: {
   role: Role;
   now: Date;
-  timeZone?: unknown;
+  /** Already resolved with resolveTimeZone, so the prompt and the tools use the same zone. */
+  timeZone: string;
   screen?: AssistantScreen | undefined;
 }): string {
-  const timeZone = isTimeZone(input.timeZone) ? input.timeZone : FALLBACK_TIME_ZONE;
+  const { timeZone } = input;
   const lists = listsOf(input.role);
   const rules = [...new Set(lists.flatMap((resource) => CHAT_FORM_RULES[resource] ?? []))];
   const screen = screenLine(input.role, input.screen);

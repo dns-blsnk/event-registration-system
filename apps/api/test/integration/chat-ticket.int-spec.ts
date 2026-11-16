@@ -1,7 +1,7 @@
 import { CSRF_HEADER } from '@ers/shared';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { AI_CLIENT } from '../../src/modules/chat/chat-answer.service.js';
+import { AI_CLIENT } from '../../src/modules/chat/chat-agent.js';
 import { signedInAgent } from '../helpers/auth.js';
 import { createTestApp } from '../helpers/create-test-app.js';
 

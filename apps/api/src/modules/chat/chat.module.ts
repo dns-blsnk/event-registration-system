@@ -11,12 +11,7 @@ import { SessionsModule } from '../sessions/sessions.module.js';
 import { TagsModule } from '../tags/tags.module.js';
 
 import { ChatAdmission } from './chat-admission.js';
-import {
-  AI_CLIENT,
-  CHAT_MODEL,
-  CHAT_REASONING_EFFORT,
-  ChatAnswerService,
-} from './chat-answer.service.js';
+import { AI_CLIENT, CHAT_MODEL_SETTINGS, ChatAgent } from './chat-agent.js';
 import { ChatConversations } from './chat-conversations.js';
 import { ChatFailures } from './chat-failures.js';
 import { ChatHandshake } from './chat-handshake.js';
@@ -53,7 +48,7 @@ const ANSWER_MAX_RETRIES = 0;
     ChatToolbox,
     ...TOOL_CLASSES,
     ChatAdmission,
-    ChatAnswerService,
+    ChatAgent,
     ChatFailures,
     ChatGateway,
     ChatHandshake,
@@ -70,11 +65,13 @@ const ANSWER_MAX_RETRIES = 0;
               maxRetries: ANSWER_MAX_RETRIES,
             }),
     },
-    { provide: CHAT_MODEL, inject: [APP_CONFIG], useFactory: (config: Config) => config.ai.model },
     {
-      provide: CHAT_REASONING_EFFORT,
+      provide: CHAT_MODEL_SETTINGS,
       inject: [APP_CONFIG],
-      useFactory: (config: Config) => config.ai.reasoningEffort,
+      useFactory: (config: Config) => ({
+        model: config.ai.model,
+        reasoningEffort: config.ai.reasoningEffort,
+      }),
     },
   ],
 })

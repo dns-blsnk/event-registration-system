@@ -1,4 +1,13 @@
-import type { ChatChunk, ChatDone, ChatError, ChatEvent, ChatHistory, Role } from '@ers/shared';
+import type {
+  ChatChunk,
+  ChatDone,
+  ChatError,
+  ChatEvent,
+  ChatHistory,
+  ChatNavigation,
+  ChatProgress,
+  Role,
+} from '@ers/shared';
 import type { Socket } from 'socket.io';
 
 /** Who a connected socket acts as, set once at the handshake. */
@@ -12,6 +21,8 @@ export interface ChatSocketData {
 export interface ChatServerEvents {
   [ChatEvent.HISTORY]: (history: ChatHistory) => void;
   [ChatEvent.CHUNK]: (chunk: ChatChunk) => void;
+  [ChatEvent.PROGRESS]: (progress: ChatProgress) => void;
+  [ChatEvent.NAVIGATE]: (list: ChatNavigation) => void;
   [ChatEvent.DONE]: (done: ChatDone) => void;
   [ChatEvent.ERROR]: (error: ChatError) => void;
 }

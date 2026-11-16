@@ -31,6 +31,15 @@ describe('toDisplayMessages', () => {
     ]);
   });
 
+  it('joins the text of every round of one answer, as the user saw it stream', () => {
+    const lookingUp: ChatEntry = { ...toolCall, content: 'Let me look.' };
+
+    expect(toDisplayMessages([question('q'), lookingUp, toolResult, answer('None.')])).toEqual([
+      { role: 'user', text: 'q' },
+      { role: 'assistant', text: 'Let me look.\n\nNone.' },
+    ]);
+  });
+
   it('skips an empty answer and the system prompt', () => {
     expect(
       toDisplayMessages([{ role: 'system', content: 'rules' }, question('q'), answer('')]),

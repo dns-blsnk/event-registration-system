@@ -12,6 +12,7 @@ function toolboxWith(tool: Partial<AssistantTool>): ChatToolbox {
   const complete: AssistantTool = {
     name: 'probe',
     description: 'probe',
+    progress: 'Probing…',
     parameters: z.object({}),
     permission: { resource: Resource.EVENTS, action: Action.LIST },
     run: () => Promise.resolve(null),

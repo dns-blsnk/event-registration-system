@@ -21,11 +21,7 @@ import {
 
 import { DomainError } from '../../common/errors/domain-error.js';
 import { MINUTE_MS } from '../../common/time.js';
-import {
-  buildChatPrompt,
-  type ChatPrompt,
-  type ChatPromptRefusal,
-} from '../../domain/chat-prompt.js';
+import { assistantQuestion, type AssistantQuestionRefusal } from '../../domain/assistant-prompt.js';
 
 import { ChatAdmission } from './chat-admission.js';
 import { ChatConversations } from './chat-conversations.js';
@@ -38,15 +34,12 @@ import type { ValidSession } from '../identity/index.js';
 import type { ChatSocket } from './chat-socket.js';
 import type { Namespace } from 'socket.io';
 
-const REFUSALS: Readonly<Record<ChatPromptRefusal, { code: ErrorCode; message: string }>> = {
-  'empty-question': { code: ErrorCode.VALIDATION_FAILED, message: 'Type a question first.' },
-  'question-too-long': { code: ErrorCode.VALIDATION_FAILED, message: 'The question is too long.' },
-  'unknown-form': { code: ErrorCode.VALIDATION_FAILED, message: 'This screen has no help.' },
-  'form-not-allowed': {
-    code: ErrorCode.FORBIDDEN,
-    message: 'You cannot get help with this screen.',
-  },
+const REFUSALS: Readonly<Record<AssistantQuestionRefusal, string>> = {
+  'empty-question': 'Type a question first.',
+  'question-too-long': 'The question is too long.',
 };
+
+type ParsedQuestion = NonNullable<ReturnType<typeof parseChatQuestion>>;
 
 /**
  * The help chat over Socket.IO. The browser connects to the API host directly (the admin's host
@@ -135,12 +128,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayDisconnect {
     const controller = new AbortController();
     this.answers.set(socket.id, controller);
     try {
-      const prompt = await this.promptFor(socket, question);
-      if (prompt !== undefined && !controller.signal.aborted) {
-        await this.stream(socket, question.id, prompt, controller.signal);
-      } else if (prompt !== undefined) {
-        socket.emit(ChatEvent.DONE, { id: question.id, cancelled: true } satisfies ChatDone);
-      }
+      await this.answer(socket, question, controller.signal);
     } catch (error) {
       this.report(socket, question.id, error);
     } finally {
@@ -160,35 +148,46 @@ export class ChatGateway implements OnGatewayInit, OnGatewayDisconnect {
     }
   }
 
-  /** The prompt for a question, or undefined after telling the client why there is none. */
-  private async promptFor(
-    socket: ChatSocket,
-    question: NonNullable<ReturnType<typeof parseChatQuestion>>,
-  ): Promise<ChatPrompt | undefined> {
-    const live = await this.liveSession(socket, question.id);
-    if (live === undefined) return undefined;
-    // The current role, not the one at connect time: what the user may see can change.
-    const prompt = buildChatPrompt({ role: live.user.role, ...question });
-    if (typeof prompt === 'string') {
-      this.fail(socket, question.id, REFUSALS[prompt].code, REFUSALS[prompt].message);
-      return undefined;
+  /**
+   * Answers a question after checking it and the session, with the user's current role: what the
+   * user may see can change while the socket is open.
+   */
+  private async answer(socket: ChatSocket, question: ParsedQuestion, signal: AbortSignal) {
+    const { id } = question;
+    const text = assistantQuestion(question.question);
+    if (typeof text !== 'string') {
+      this.fail(socket, id, ErrorCode.VALIDATION_FAILED, REFUSALS[text.refusal]);
+      return;
     }
-    return prompt;
-  }
-
-  private async stream(
-    socket: ChatSocket,
-    id: string,
-    prompt: ChatPrompt,
-    signal: AbortSignal,
-  ): Promise<void> {
-    const outcome = await this.conversations.answer(prompt, {
-      signal,
-      onText: (text) => {
-        socket.emit(ChatEvent.CHUNK, { id, text } satisfies ChatChunk);
+    const live = await this.liveSession(socket, id);
+    if (live === undefined) return;
+    if (signal.aborted) {
+      socket.emit(ChatEvent.DONE, { id, cancelled: true } satisfies ChatDone);
+      return;
+    }
+    const { outcome, chatId } = await this.conversations.answer(
+      {
+        user: live.user,
+        question: text,
+        chatId: question.chatId,
+        timeZone: question.timeZone,
+        screen:
+          question.resource === undefined
+            ? undefined
+            : { resource: question.resource, field: question.field },
       },
-    });
-    socket.emit(ChatEvent.DONE, { id, cancelled: outcome === 'cancelled' } satisfies ChatDone);
+      {
+        signal,
+        onText: (chunk) => socket.emit(ChatEvent.CHUNK, { id, text: chunk } satisfies ChatChunk),
+        onProgress: (progress) => socket.emit(ChatEvent.PROGRESS, { id, text: progress }),
+        onNavigate: (list) => socket.emit(ChatEvent.NAVIGATE, { id, ...list }),
+      },
+    );
+    socket.emit(ChatEvent.DONE, {
+      id,
+      cancelled: outcome === 'cancelled',
+      ...(chatId === undefined ? {} : { chatId }),
+    } satisfies ChatDone);
   }
 
   /**

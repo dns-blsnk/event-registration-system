@@ -3,7 +3,7 @@ import { io, type Socket } from 'socket.io-client';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { AppLogService } from '../../src/modules/app-logs/app-log.service.js';
-import { AI_CLIENT } from '../../src/modules/chat/chat-answer.service.js';
+import { AI_CLIENT } from '../../src/modules/chat/chat-agent.js';
 import { ChatHistoryStore } from '../../src/modules/chat/chat-history.store.js';
 import { ChatGateway } from '../../src/modules/chat/chat.gateway.js';
 import { PrismaService } from '../../src/prisma/prisma.service.js';
@@ -11,30 +11,67 @@ import { signedInAgent, type SignedInAgent } from '../helpers/auth.js';
 import { createTestApp } from '../helpers/create-test-app.js';
 import { TEST_ENV } from '../helpers/test-env.js';
 
-import type { Role, ChatChunk, ChatDone, ChatError, ChatHistory } from '@ers/shared';
+import type {
+  Role,
+  ChatChunk,
+  ChatDone,
+  ChatError,
+  ChatHistory,
+  ChatNavigation,
+  ChatProgress,
+} from '@ers/shared';
 import type { INestApplication } from '@nestjs/common';
 
 const ADMIN_ORIGIN = TEST_ENV.ADMIN_ORIGIN ?? '';
 const WAIT_MS = 2000;
 
-/** A fake model: streams fixed words, or waits until the answer is cancelled. */
+interface FakeRequest {
+  messages: { role: string; content: string | null; tool_calls?: unknown[] }[];
+  tools?: { function: { name: string } }[];
+}
+
+/** One scripted reply: a tool call (with a Gemini thought signature) instead of words. */
+interface ScriptedCall {
+  name: string;
+  args: Record<string, unknown>;
+}
+
+/**
+ * A fake model: answers each request with the next scripted tool call, then streams fixed words;
+ * or waits until the answer is cancelled. It records every request it gets.
+ */
 const model = {
   words: ['Seats ', 'left.'],
+  script: [] as ScriptedCall[],
   hang: false,
   isDown: false,
-  prompts: [] as { system: string }[],
+  requests: [] as FakeRequest[],
 };
+
+function systemOf(request: FakeRequest | undefined): string {
+  return request?.messages[0]?.content ?? '';
+}
+
 const fakeAiClient = {
   chat: {
     completions: {
-      create: (
-        params: { messages: { role: string; content: string }[] },
-        options: { signal: AbortSignal },
-      ) => {
-        model.prompts.push({ system: params.messages[0]?.content ?? '' });
+      create: (params: FakeRequest, options: { signal: AbortSignal }) => {
+        model.requests.push(params);
+        const call = model.script.shift();
         return Promise.resolve({
           async *[Symbol.asyncIterator]() {
             if (model.isDown) throw new Error('provider is down');
+            if (call !== undefined) {
+              const toolCall = {
+                index: 0,
+                id: `call-${call.name}`,
+                type: 'function',
+                function: { name: call.name, arguments: JSON.stringify(call.args) },
+                extra_content: { google: { thought_signature: 'signature' } },
+              };
+              yield { choices: [{ delta: { tool_calls: [toolCall] }, finish_reason: 'stop' }] };
+              return;
+            }
             for (const text of model.words) {
               yield { choices: [{ delta: { content: text }, finish_reason: null }] };
             }
@@ -70,7 +107,8 @@ describe('chat gateway', () => {
     model.words = ['Seats ', 'left.'];
     model.hang = false;
     model.isDown = false;
-    model.prompts = [];
+    model.script = [];
+    model.requests = [];
   });
 
   afterAll(async () => {
@@ -154,8 +192,11 @@ describe('chat gateway', () => {
       question: 'What is this?',
     });
 
-    expect(await result).toEqual({ text: 'Seats left.', done: { id: 'q1', cancelled: false } });
-    expect(model.prompts[0]?.system).toContain('(the field in focus)');
+    expect(await result).toMatchObject({
+      text: 'Seats left.',
+      done: { id: 'q1', cancelled: false },
+    });
+    expect(systemOf(model.requests[0])).toContain('the sessions screen open, in the field');
   });
 
   it('refuses a socket without a ticket', async () => {
@@ -208,14 +249,82 @@ describe('chat gateway', () => {
     await disconnected;
   });
 
-  it('refuses help with a screen the role may not open', async () => {
+  it('answers without describing a screen the role may not open', async () => {
     const { socket } = await connectAs('CUSTOMER');
 
     const result = answer(socket, 'q1');
     socket.emit(ChatEvent.ASK, { id: 'q1', resource: 'users', question: 'Roles?' });
 
-    expect((await result).error).toMatchObject({ id: 'q1', code: 'FORBIDDEN' });
-    expect(model.prompts).toHaveLength(0);
+    expect((await result).done).toMatchObject({ id: 'q1', cancelled: false });
+    expect(systemOf(model.requests[0])).not.toContain('users screen');
+  });
+
+  it('answers a question asked from no screen at all', async () => {
+    const { socket } = await connectAs('CUSTOMER');
+
+    const result = answer(socket, 'q1');
+    socket.emit(ChatEvent.ASK, { id: 'q1', question: 'What can I book?' });
+
+    expect(await result).toMatchObject({
+      text: 'Seats left.',
+      done: { id: 'q1', cancelled: false },
+    });
+  });
+
+  it('searches with a tool, opens the list and answers, keeping the chat', async () => {
+    const { socket } = await connectAs('ADMIN');
+    const { chatId } = await historyAfter(socket, ChatEvent.RESUME, {});
+    model.script = [{ name: 'search_events', args: { city: 'Tallinn', show: true } }];
+    const progress = new Promise<ChatProgress>((resolve) =>
+      socket.once(ChatEvent.PROGRESS, resolve),
+    );
+    const navigation = new Promise<ChatNavigation>((resolve) =>
+      socket.once(ChatEvent.NAVIGATE, resolve),
+    );
+
+    const result = answer(socket, 'q1');
+    socket.emit(ChatEvent.ASK, {
+      id: 'q1',
+      question: 'Events in Tallinn?',
+      chatId,
+      timeZone: 'Europe/Tallinn',
+    });
+
+    expect(await result).toMatchObject({
+      text: 'Seats left.',
+      done: { id: 'q1', cancelled: false },
+    });
+    expect(await progress).toEqual({ id: 'q1', text: 'Searching events…' });
+    expect(await navigation).toMatchObject({
+      id: 'q1',
+      resource: 'events',
+      filters: { city: 'Tallinn', startsFrom: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/) },
+    });
+    const second = model.requests[1];
+    expect(second?.messages.map((message) => message.role)).toEqual([
+      'system',
+      'user',
+      'assistant',
+      'tool',
+    ]);
+    expect(JSON.stringify(second?.messages[2])).toContain('thought_signature');
+    expect((await historyAfter(socket, ChatEvent.RESUME, { chatId })).messages).toEqual([
+      { role: 'user', text: 'Events in Tallinn?' },
+      { role: 'assistant', text: 'Seats left.' },
+    ]);
+  });
+
+  it('offers a customer only the customer tools', async () => {
+    const { socket } = await connectAs('CUSTOMER');
+
+    const result = answer(socket, 'q1');
+    socket.emit(ChatEvent.ASK, { id: 'q1', question: 'What can I book?' });
+    await result;
+
+    expect(model.requests[0]?.tools?.map((tool) => tool.function.name)).toEqual([
+      'search_catalog',
+      'search_my_registrations',
+    ]);
   });
 
   it.each([
@@ -230,7 +339,7 @@ describe('chat gateway', () => {
     socket.emit(ChatEvent.ASK, payload);
 
     expect((await error).code).toBe('VALIDATION_FAILED');
-    expect(model.prompts).toHaveLength(0);
+    expect(model.requests).toHaveLength(0);
   });
 
   it('tells the user the assistant is unavailable and journals the provider failure for admins', async () => {
@@ -309,6 +418,24 @@ describe('chat gateway', () => {
 
     expect(history.chatId).toMatch(/^[\da-f-]{36}$/);
     expect(history.messages).toEqual([]);
+  });
+
+  it('keeps an answer in a new chat when the browser’s chat has expired, and says which', async () => {
+    const { socket } = await connectAs('CUSTOMER');
+    const gone = '00000000-0000-4000-8000-000000000000';
+
+    const result = answer(socket, 'q1');
+    socket.emit(ChatEvent.ASK, { id: 'q1', question: 'What can I book?', chatId: gone });
+    const { done } = await result;
+
+    expect(done?.chatId).toMatch(/^[0-9a-f-]{36}$/);
+    expect(done?.chatId).not.toBe(gone);
+    expect(
+      (await historyAfter(socket, ChatEvent.RESUME, { chatId: done?.chatId })).messages,
+    ).toEqual([
+      { role: 'user', text: 'What can I book?' },
+      { role: 'assistant', text: 'Seats left.' },
+    ]);
   });
 
   it('resumes the user’s own chat with what they see, not the tool traffic', async () => {

@@ -56,7 +56,8 @@ export type ChatEvent = (typeof ChatEvent)[keyof typeof ChatEvent];
 /** A question about one screen; `id` is chosen by the client to match the answer to it. */
 export interface ChatQuestion {
   id: string;
-  resource: Resource;
+  /** The screen the user is on, a hint for the assistant; questions are not limited to it. */
+  resource?: Resource;
   field?: string;
   question: string;
   /**
@@ -104,6 +105,8 @@ export interface ChatChunk {
 export interface ChatDone {
   id: string;
   cancelled: boolean;
+  /** The chat the answer was kept in: a new one when the chat the question named had expired. */
+  chatId?: string;
 }
 
 export interface ChatError {

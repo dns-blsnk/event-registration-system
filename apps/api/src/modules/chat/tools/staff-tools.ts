@@ -58,6 +58,7 @@ const searchSessionsArgs = searchWithDaysArgs(
 @Injectable()
 export class SearchSessionsTool implements AssistantTool<typeof searchSessionsArgs> {
   readonly name = 'search_sessions';
+  readonly progress = 'Searching sessions…';
   readonly description = `Search the sessions (talks, workshops) the user may see, soonest first. Without days, only upcoming sessions; give days to look back. ${UP_TO_A_PAGE}`;
   readonly parameters = searchSessionsArgs;
   readonly permission = { resource: Resource.SESSIONS, action: Action.LIST };
@@ -107,6 +108,7 @@ const searchRegistrationsArgs = z
 @Injectable()
 export class SearchRegistrationsTool implements AssistantTool<typeof searchRegistrationsArgs> {
   readonly name = 'search_registrations';
+  readonly progress = 'Searching bookings…';
   readonly description = `Search bookings of sessions the user may see, newest first. ${UP_TO_A_PAGE}`;
   readonly parameters = searchRegistrationsArgs;
   readonly permission = { resource: Resource.REGISTRATIONS, action: Action.LIST };
@@ -141,6 +143,7 @@ const searchCustomersArgs = z
 @Injectable()
 export class SearchCustomersTool implements AssistantTool<typeof searchCustomersArgs> {
   readonly name = 'search_customers';
+  readonly progress = 'Searching customers…';
   readonly description = `Search the customers the user may see, by name or email; returns names, not emails. ${UP_TO_A_PAGE}`;
   readonly parameters = searchCustomersArgs;
   readonly permission = { resource: Resource.CUSTOMERS, action: Action.LIST };
@@ -174,6 +177,7 @@ const listTagsArgs = z.object({ q: textArg('Part of the tag name.').optional() }
 @Injectable()
 export class ListTagsTool implements AssistantTool<typeof listTagsArgs> {
   readonly name = 'list_tags';
+  readonly progress = 'Looking up tags…';
   readonly description = `Event tags with their ids, to filter search_events by tag. ${UP_TO_A_PAGE}`;
   readonly parameters = listTagsArgs;
   readonly permission = { resource: Resource.TAGS, action: Action.LIST };

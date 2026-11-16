@@ -48,6 +48,7 @@ const searchEventsArgs = searchWithDaysArgs(
 @Injectable()
 export class SearchEventsTool implements AssistantTool<typeof searchEventsArgs> {
   readonly name = 'search_events';
+  readonly progress = 'Searching events…';
   readonly description = `Search the events the user may see. All filters are optional and combined. Without days, only upcoming events; give days to look back. Soonest first. ${UP_TO_A_PAGE}`;
   readonly parameters = searchEventsArgs;
   readonly permission = { resource: Resource.EVENTS, action: Action.LIST };
@@ -80,6 +81,7 @@ const getEventArgs = z.object({ id: idArg('The event id, from search_events.') }
 @Injectable()
 export class GetEventTool implements AssistantTool<typeof getEventArgs> {
   readonly name = 'get_event';
+  readonly progress = 'Reading the event…';
   readonly description = 'One event the user may see, with its description.';
   readonly parameters = getEventArgs;
   readonly permission = { resource: Resource.EVENTS, action: Action.SHOW };

@@ -1,25 +1,44 @@
 import { UUID_PATTERN, type ChatHistory } from '@ers/shared';
 import { Injectable } from '@nestjs/common';
 
-import { ChatAnswerService, type AnswerOutcome } from './chat-answer.service.js';
-import { ChatHistoryStore, toDisplayMessages, type ChatOwner } from './chat-history.store.js';
+import {
+  buildAssistantInstructions,
+  resolveTimeZone,
+  type AssistantScreen,
+} from '../../domain/assistant-prompt.js';
 
-import type { ChatPrompt } from '../../domain/chat-prompt.js';
+import { ChatAgent, type AgentTurn, type AnswerOutcome } from './chat-agent.js';
+import {
+  ChatHistoryStore,
+  toDisplayMessages,
+  type ChatEntry,
+  type ChatOwner,
+} from './chat-history.store.js';
+
+import type { User } from '../../generated/prisma/client.js';
 
 /** A chat id from the browser: only something the server could have issued is looked up. */
 function chatIdOf(raw: unknown): string | undefined {
   return typeof raw === 'string' && UUID_PATTERN.test(raw) ? raw : undefined;
 }
 
+export interface AssistantQuestion {
+  user: User;
+  question: string;
+  chatId?: unknown;
+  timeZone?: unknown;
+  screen?: AssistantScreen | undefined;
+}
+
 /**
  * A user's conversations with the assistant: resuming one, starting a new one, answering in it.
- * Every lookup is by the socket's own user, so another user's chat id behaves like an unknown one.
+ * Every lookup is by the user who asks, so another user's chat id behaves like an unknown one.
  */
 @Injectable()
 export class ChatConversations {
   constructor(
     private readonly history: ChatHistoryStore,
-    private readonly answers: ChatAnswerService,
+    private readonly agent: ChatAgent,
   ) {}
 
   /** The chat the browser kept, as the user sees it; a new empty one when it is gone or foreign. */
@@ -43,11 +62,37 @@ export class ChatConversations {
     return { chatId, messages: [] };
   }
 
-  /** Streams one answer. The assistant phase makes this read and extend the chat's history. */
+  /**
+   * Answers a question in the user's chat: the model sees the instructions for the user's current
+   * role, the chat so far and the question. A finished answer is added to the chat; a cancelled one
+   * is not, so the chat never holds half an answer. When the chat the browser kept is gone, a new
+   * one starts with this answer, and its id comes back for the browser to keep instead.
+   */
   async answer(
-    prompt: ChatPrompt,
-    options: { signal: AbortSignal; onText: (text: string) => void },
-  ): Promise<AnswerOutcome> {
-    return this.answers.answer(prompt, options);
+    ask: AssistantQuestion,
+    callbacks: Pick<AgentTurn, 'signal' | 'onText' | 'onProgress' | 'onNavigate'>,
+  ): Promise<{ outcome: AnswerOutcome; chatId?: string }> {
+    const owner = { userId: ask.user.id, role: ask.user.role };
+    const chatId = chatIdOf(ask.chatId);
+    const kept = chatId === undefined ? undefined : await this.history.load(owner, chatId);
+    const timeZone = resolveTimeZone(ask.timeZone);
+    const instructions = buildAssistantInstructions({
+      role: ask.user.role,
+      now: new Date(),
+      timeZone,
+      screen: ask.screen,
+    });
+    const question: ChatEntry = { role: 'user', content: ask.question };
+    const { outcome, entries } = await this.agent.run({
+      ...callbacks,
+      messages: [{ role: 'system', content: instructions }, ...(kept ?? []), question],
+      user: ask.user,
+      timeZone,
+    });
+    if (outcome === 'cancelled') return { outcome };
+    const keptIn =
+      chatId !== undefined && kept !== undefined ? chatId : await this.history.create(owner);
+    await this.history.append(owner, keptIn, [question, ...entries]);
+    return { outcome, chatId: keptIn };
   }
 }

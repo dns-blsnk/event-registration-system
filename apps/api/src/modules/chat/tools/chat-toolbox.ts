@@ -104,6 +104,11 @@ export class ChatToolbox implements OnModuleInit {
     return this.allowedFor(role).map(definitionOf);
   }
 
+  /** The progress text of a tool the role may use; undefined for any other name. */
+  progressOf(name: string, role: Role): string | undefined {
+    return this.allowedFor(role).find((tool) => tool.name === name)?.progress;
+  }
+
   async run(name: string, rawArgs: unknown, context: ToolContext): Promise<ToolOutcome> {
     const tool = this.allowedFor(context.user.role).find((candidate) => candidate.name === name);
     if (tool === undefined) return { error: `There is no tool called ${name}.` };

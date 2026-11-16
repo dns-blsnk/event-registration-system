@@ -6,14 +6,22 @@ import {
 } from '@ers/shared';
 import { describe, expect, it } from 'vitest';
 
-import { assistantQuestion, buildAssistantInstructions } from './assistant-prompt.js';
+import {
+  assistantQuestion,
+  buildAssistantInstructions,
+  resolveTimeZone,
+} from './assistant-prompt.js';
 
 /** 23:30 UTC on Sunday 15 November is already Monday 16 November in Tallinn. */
 const NOW = new Date('2026-11-15T23:30:00Z');
 
 describe('buildAssistantInstructions', () => {
   it('asks for answers in the language of the question and data only from the tools', () => {
-    const instructions = buildAssistantInstructions({ role: 'CUSTOMER', now: NOW });
+    const instructions = buildAssistantInstructions({
+      role: 'CUSTOMER',
+      now: NOW,
+      timeZone: 'UTC',
+    });
 
     expect(instructions).toContain('language of the user’s last message');
     expect(instructions).toContain('only from your tools');
@@ -21,8 +29,8 @@ describe('buildAssistantInstructions', () => {
   });
 
   it('names the role and only the lists it may open', () => {
-    const customer = buildAssistantInstructions({ role: 'CUSTOMER', now: NOW });
-    const organizer = buildAssistantInstructions({ role: 'ORGANIZER', now: NOW });
+    const customer = buildAssistantInstructions({ role: 'CUSTOMER', now: NOW, timeZone: 'UTC' });
+    const organizer = buildAssistantInstructions({ role: 'ORGANIZER', now: NOW, timeZone: 'UTC' });
 
     expect(customer).toContain('signed in as: Customer');
     expect(customer).toContain('catalog, my-registrations');
@@ -33,7 +41,7 @@ describe('buildAssistantInstructions', () => {
   });
 
   it('states each domain rule once, however many lists share it', () => {
-    const instructions = buildAssistantInstructions({ role: 'ADMIN', now: NOW });
+    const instructions = buildAssistantInstructions({ role: 'ADMIN', now: NOW, timeZone: 'UTC' });
 
     expect(instructions.split(BOOKING_RULES_TEXT)).toHaveLength(2);
   });
@@ -52,15 +60,18 @@ describe('buildAssistantInstructions', () => {
   });
 
   it.each([undefined, 'Mars/Olympus', 42])('falls back to UTC for the time zone %s', (zone) => {
-    const instructions = buildAssistantInstructions({ role: 'CUSTOMER', now: NOW, timeZone: zone });
+    expect(resolveTimeZone(zone)).toBe('UTC');
+  });
 
-    expect(instructions).toContain('(2026-11-15), time zone UTC');
+  it('keeps a time zone the runtime knows', () => {
+    expect(resolveTimeZone('Europe/Tallinn')).toBe('Europe/Tallinn');
   });
 
   it('mentions the screen and the field in focus when the role may open that screen', () => {
     const instructions = buildAssistantInstructions({
       role: 'ORGANIZER',
       now: NOW,
+      timeZone: 'UTC',
       screen: { resource: 'sessions', field: 'capacity' },
     });
 
@@ -73,6 +84,7 @@ describe('buildAssistantInstructions', () => {
     const instructions = buildAssistantInstructions({
       role: 'ADMIN',
       now: NOW,
+      timeZone: 'UTC',
       screen: { resource: 'events', field: 'constructor' },
     });
 
@@ -84,13 +96,18 @@ describe('buildAssistantInstructions', () => {
     ['a screen the role may not open', { resource: 'app-logs' }],
     ['a screen that does not exist', { resource: 'nowhere' }],
   ])('leaves out %s', (_case, screen) => {
-    const instructions = buildAssistantInstructions({ role: 'CUSTOMER', now: NOW, screen });
+    const instructions = buildAssistantInstructions({
+      role: 'CUSTOMER',
+      now: NOW,
+      timeZone: 'UTC',
+      screen,
+    });
 
     expect(instructions).not.toContain('screen open');
   });
 
   it('describes list filters as well as form fields', () => {
-    const instructions = buildAssistantInstructions({ role: 'ADMIN', now: NOW });
+    const instructions = buildAssistantInstructions({ role: 'ADMIN', now: NOW, timeZone: 'UTC' });
 
     expect(instructions).toContain(EVENT_LIST_CONTROLS.city.help);
   });
