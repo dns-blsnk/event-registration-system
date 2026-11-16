@@ -69,6 +69,8 @@ export function DateFilter({
     <TextField
       // Keyed by the active value, so the field follows filters changed elsewhere (Back, clearing).
       key={`${name}:${day}`}
+      // Named like the filter, so the help chat can tell which day field is in focus.
+      name={name}
       type="date"
       sx={isBlank ? EMPTY_DATE_SX : {}}
       onInput={(event) => {

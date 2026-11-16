@@ -9,6 +9,7 @@ import {
   EVENT_FIELDS,
   EVENT_LIST_CONTROLS,
   MY_REGISTRATION_FIELDS,
+  MY_REGISTRATION_LIST_CONTROLS,
   REGISTRATION_FIELDS,
   REGISTRATION_LIST_CONTROLS,
   SESSION_FIELDS,
@@ -37,7 +38,7 @@ export const CHAT_FORM_FIELDS: Readonly<Record<Resource, FormFields>> = {
   [Resource.USERS]: { ...USER_FIELDS, ...USER_LIST_CONTROLS },
   [Resource.APP_LOGS]: { ...APP_LOG_FIELDS, ...APP_LOG_LIST_CONTROLS },
   [Resource.CATALOG]: CATALOG_FIELDS,
-  [Resource.MY_REGISTRATIONS]: MY_REGISTRATION_FIELDS,
+  [Resource.MY_REGISTRATIONS]: { ...MY_REGISTRATION_FIELDS, ...MY_REGISTRATION_LIST_CONTROLS },
 };
 
 /** The event lifecycle in words, built from the transition table itself so it cannot drift. */

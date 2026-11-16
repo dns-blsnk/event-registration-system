@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
@@ -199,4 +199,37 @@ describe('MyRegistrationList', () => {
       expect(String(last?.url)).toContain('status=CANCELLED');
     });
   });
+
+  it('searches the event and session titles on the server', async () => {
+    const { calls } = mockHttp([signedIn, list([booking()]), list([]), list([])]);
+    renderList();
+    await screen.findByText('State of React');
+
+    await userEvent.type(screen.getByRole('textbox', { name: 'Search' }), 'react{Enter}');
+
+    await waitFor(() => {
+      expect(lastListQuery(calls)).toMatchObject({ q: 'react', _start: '0' });
+    });
+  });
+
+  it('filters by the local day the session starts', async () => {
+    const { calls } = mockHttp([signedIn, list([booking()]), list([]), list([])]);
+    renderList();
+    await screen.findByText('State of React');
+
+    const field = screen.getByLabelText('Starts from');
+    fireEvent.change(field, { target: { value: '2026-12-01' } });
+    fireEvent.blur(field);
+
+    await waitFor(() => {
+      expect(lastListQuery(calls)).toMatchObject({
+        startsFrom: new Date(2026, 11, 1).toISOString(),
+      });
+    });
+  });
 });
+
+function lastListQuery(calls: { url?: string }[]): Record<string, string> {
+  const last = calls.filter((call) => call.url?.startsWith('/my-registrations')).at(-1);
+  return Object.fromEntries(new URL(String(last?.url), 'http://admin.test').searchParams);
+}

@@ -1,11 +1,4 @@
-import {
-  isInCatalog,
-  REGISTRATION_FIELDS,
-  REGISTRATION_STATUS_LABELS,
-  REGISTRATION_STATUSES,
-  SESSION_FIELDS,
-  type MyRegistration,
-} from '@ers/shared';
+import { isInCatalog, REGISTRATION_FIELDS, SESSION_FIELDS, type MyRegistration } from '@ers/shared';
 import Stack from '@mui/material/Stack';
 import { type GridColDef } from '@mui/x-data-grid';
 import { List } from '@refinedev/mui';
@@ -15,12 +8,13 @@ import { catalogSessionAnchor } from '@/entities/session';
 import { CancelBookingButton } from '@/features/cancel-booking';
 import { formatDateTime } from '@/shared/lib/format';
 import { ACTIONS_COLUMN_HEADER } from '@/shared/lib/grid';
-import { applyFiltersFromFirstPage, SelectFilterField } from '@/shared/ui/filter-form';
+import { applyFiltersFromFirstPage } from '@/shared/ui/filter-form';
 import { ListGrid, useListGrid } from '@/shared/ui/list-grid';
 import { FILL_LIST_PROPS } from '@/shared/ui/page-fill';
 import { RowLink } from '@/shared/ui/row-link';
 
 import { canCancel } from './my-registration-cancel';
+import { MyRegistrationFilters } from './my-registration-filters';
 
 /**
  * The event in the catalog, or one of its sessions there. Only events the catalog still shows
@@ -111,16 +105,10 @@ export function MyRegistrationList(): React.JSX.Element {
   });
   return (
     <List {...FILL_LIST_PROPS} title="My registrations">
-      <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
-        <SelectFilterField
-          name="status"
-          description={REGISTRATION_FIELDS.status}
-          values={REGISTRATION_STATUSES}
-          labels={REGISTRATION_STATUS_LABELS}
-          filters={filters}
-          onChange={applyFiltersFromFirstPage({ setCurrentPage, setFilters })}
-        />
-      </Stack>
+      <MyRegistrationFilters
+        filters={filters}
+        onChange={applyFiltersFromFirstPage({ setCurrentPage, setFilters })}
+      />
       <ListGrid {...dataGridProps} columns={columns} fillsWindow />
     </List>
   );

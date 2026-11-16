@@ -71,13 +71,26 @@ export const SESSION_FIELDS = {
   },
 } as const satisfies Record<string, FieldDescription>;
 
+/**
+ * The two start-day filters of a list; `records` names what is listed ("Events", "Sessions").
+ * Both lists filter the same way: on or after the first day, on or before the last, whole day.
+ */
+function startDayControls(records: string) {
+  return {
+    startsFrom: { label: 'Starts from', help: `${records} starting on or after this day.` },
+    startsTo: {
+      label: 'Starts until',
+      help: `${records} starting on or before this day (whole day).`,
+    },
+  } as const satisfies Record<string, FieldDescription>;
+}
+
 /** Controls of the events list that are not fields of an event. */
 export const EVENT_LIST_CONTROLS = {
   search: { label: 'Search', help: 'Matches the title or venue.' },
   city: { label: 'City', help: 'Matches part of the city name.' },
   tag: { label: 'Tag', help: 'Only events with this tag.' },
-  startsFrom: { label: 'Starts from', help: 'Events starting on or after this day.' },
-  startsTo: { label: 'Starts until', help: 'Events starting on or before this day (whole day).' },
+  ...startDayControls('Events'),
   organizer: { label: 'Organizer', help: 'Only this organizer’s events.' },
 } as const satisfies Record<string, FieldDescription>;
 
@@ -264,4 +277,10 @@ export const MY_REGISTRATION_FIELDS = {
     help: 'Confirmed holds a seat; waitlisted waits for one (your place is shown); cancelled can be booked again.',
   },
   createdAt: { label: 'Booked', help: 'When you made the booking.' },
+} as const satisfies Record<string, FieldDescription>;
+
+/** Controls of "My registrations" that are not fields of a registration. */
+export const MY_REGISTRATION_LIST_CONTROLS = {
+  search: { label: 'Search', help: 'Matches the event or session title.' },
+  ...startDayControls('Sessions'),
 } as const satisfies Record<string, FieldDescription>;
