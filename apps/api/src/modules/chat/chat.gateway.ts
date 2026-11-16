@@ -31,6 +31,7 @@ import { ChatAdmission } from './chat-admission.js';
 import { ChatConversations } from './chat-conversations.js';
 import { ChatFailures } from './chat-failures.js';
 import { ChatHandshake, HANDSHAKE_REFUSED } from './chat-handshake.js';
+import { type ChatOwner } from './chat-history.store.js';
 import { fieldOf, parseChatQuestion } from './chat-question.js';
 
 import type { ValidSession } from '../identity/index.js';
@@ -99,8 +100,8 @@ export class ChatGateway implements OnGatewayInit, OnGatewayDisconnect {
     @ConnectedSocket() socket: ChatSocket,
     @MessageBody() payload: unknown,
   ): Promise<void> {
-    await this.sendHistory(socket, (userId) =>
-      this.conversations.resume(userId, fieldOf(payload, 'chatId')),
+    await this.sendHistory(socket, (owner) =>
+      this.conversations.resume(owner, fieldOf(payload, 'chatId')),
     );
   }
 
@@ -111,8 +112,8 @@ export class ChatGateway implements OnGatewayInit, OnGatewayDisconnect {
     @MessageBody() payload: unknown,
   ): Promise<void> {
     if (await this.isOverLimit(socket, CHAT_HISTORY_REQUEST_ID)) return;
-    await this.sendHistory(socket, (userId) =>
-      this.conversations.startNew(userId, fieldOf(payload, 'chatId')),
+    await this.sendHistory(socket, (owner) =>
+      this.conversations.startNew(owner, fieldOf(payload, 'chatId')),
     );
   }
 
@@ -208,12 +209,15 @@ export class ChatGateway implements OnGatewayInit, OnGatewayDisconnect {
    */
   private async sendHistory(
     socket: ChatSocket,
-    load: (userId: string) => Promise<ChatHistory>,
+    load: (owner: ChatOwner) => Promise<ChatHistory>,
   ): Promise<void> {
     this.answers.get(socket.id)?.abort();
     try {
       if ((await this.liveSession(socket, CHAT_HISTORY_REQUEST_ID)) === undefined) return;
-      socket.emit(ChatEvent.HISTORY, await load(socket.data.userId));
+      socket.emit(
+        ChatEvent.HISTORY,
+        await load({ userId: socket.data.userId, role: socket.data.role }),
+      );
     } catch (error) {
       this.report(socket, CHAT_HISTORY_REQUEST_ID, error);
     }

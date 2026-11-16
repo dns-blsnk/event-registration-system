@@ -1,11 +1,12 @@
 import { randomUUID } from 'node:crypto';
 
-import { CHAT_HISTORY_TTL_MINUTES, type ChatHistoryMessage } from '@ers/shared';
-import { Injectable } from '@nestjs/common';
+import { CHAT_HISTORY_TTL_MINUTES, ROLES, type ChatHistoryMessage, type Role } from '@ers/shared';
+import { Injectable, type OnModuleInit } from '@nestjs/common';
 
 import { MINUTE_MS } from '../../common/time.js';
 import { RedisService } from '../../redis/redis.service.js';
 import { execOrThrow } from '../../redis/transaction.js';
+import { SignOutHooks } from '../identity/index.js';
 
 import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 
@@ -20,6 +21,15 @@ export const CHATS_PER_USER = 20;
 
 /** One entry as the model saw or wrote it, extra fields included (Gemini's thought signatures). */
 export type ChatEntry = ChatCompletionMessageParam;
+
+/**
+ * Whose chats these are. The role is part of the keys: a chat holds what that role could look up,
+ * so after a role change the old chats are out of reach even if wiping them failed.
+ */
+export interface ChatOwner {
+  userId: string;
+  role: Role;
+}
 
 /**
  * The user's chats are a sorted set of chat id → the moment the chat expires. A chat is alive while
@@ -84,15 +94,30 @@ touch(KEYS[1], KEYS[2], ARGV[1], now, ttl)
 return 1
 `;
 
+/**
+ * KEYS: index. ARGV: the full name every chat key of that index starts with. Deletes the chats and
+ * the index in one step, so a chat started meanwhile cannot slip through.
+ */
+const REMOVE_ALL_SCRIPT = `
+for _, chatId in ipairs(redis.call('ZRANGE', KEYS[1], 0, -1)) do
+  redis.call('DEL', ARGV[1] .. chatId)
+end
+redis.call('DEL', KEYS[1])
+`;
+
 /** Scripts that touch a chat get two keys: the user's chat index, then the chat. */
 const CHAT_SCRIPT_KEYS = 2;
 
-function chatKey(userId: string, chatId: string): string {
-  return `chat:${userId}:${chatId}`;
+function chatKeyPrefix({ userId, role }: ChatOwner): string {
+  return `chat:${userId}:${role}:`;
 }
 
-function indexKey(userId: string): string {
-  return `chats:${userId}`;
+function chatKey(owner: ChatOwner, chatId: string): string {
+  return `${chatKeyPrefix(owner)}${chatId}`;
+}
+
+function indexKey({ userId, role }: ChatOwner): string {
+  return `chats:${userId}:${role}`;
 }
 
 /** What load() read back; a value the store did not write makes the whole chat unusable. */
@@ -124,16 +149,24 @@ export function toDisplayMessages(entries: readonly ChatEntry[]): ChatHistoryMes
  * The text is never logged.
  */
 @Injectable()
-export class ChatHistoryStore {
-  constructor(private readonly redis: RedisService) {}
+export class ChatHistoryStore implements OnModuleInit {
+  constructor(
+    private readonly redis: RedisService,
+    private readonly signOutHooks: SignOutHooks,
+  ) {}
+
+  /** A user who signs out, or loses all sessions on a role change, loses their chats too. */
+  onModuleInit(): void {
+    this.signOutHooks.register((userId) => this.removeAll(userId));
+  }
 
   /** A new, empty chat for the user; its id is what the browser keeps. */
-  async create(userId: string): Promise<string> {
+  async create(owner: ChatOwner): Promise<string> {
     const chatId = randomUUID();
     await this.redis.eval(
       CREATE_SCRIPT,
       1,
-      indexKey(userId),
+      indexKey(owner),
       chatId,
       Date.now(),
       CHAT_TTL_MS,
@@ -143,12 +176,12 @@ export class ChatHistoryStore {
   }
 
   /** The chat's entries, oldest first; undefined when the user has no such live chat. */
-  async load(userId: string, chatId: string): Promise<ChatEntry[] | undefined> {
+  async load(owner: ChatOwner, chatId: string): Promise<ChatEntry[] | undefined> {
     const raw: unknown = await this.redis.eval(
       LOAD_SCRIPT,
       CHAT_SCRIPT_KEYS,
-      indexKey(userId),
-      chatKey(userId, chatId),
+      indexKey(owner),
+      chatKey(owner, chatId),
       chatId,
       Date.now(),
       CHAT_TTL_MS,
@@ -158,13 +191,13 @@ export class ChatHistoryStore {
   }
 
   /** Adds entries to a live chat of the user; false when there is no such chat any more. */
-  async append(userId: string, chatId: string, entries: readonly ChatEntry[]): Promise<boolean> {
+  async append(owner: ChatOwner, chatId: string, entries: readonly ChatEntry[]): Promise<boolean> {
     if (entries.length === 0) return true;
     const appended: unknown = await this.redis.eval(
       APPEND_SCRIPT,
       CHAT_SCRIPT_KEYS,
-      indexKey(userId),
-      chatKey(userId, chatId),
+      indexKey(owner),
+      chatKey(owner, chatId),
       chatId,
       Date.now(),
       CHAT_TTL_MS,
@@ -174,15 +207,22 @@ export class ChatHistoryStore {
     return appended === 1;
   }
 
-  async remove(userId: string, chatId: string): Promise<void> {
-    await execOrThrow(
-      this.redis.multi().del(chatKey(userId, chatId)).zrem(indexKey(userId), chatId),
-    );
+  async remove(owner: ChatOwner, chatId: string): Promise<void> {
+    await execOrThrow(this.redis.multi().del(chatKey(owner, chatId)).zrem(indexKey(owner), chatId));
   }
 
-  /** Every chat of the user, e.g. on sign-out or when their role changes. */
+  /** Every chat of the user under every role, e.g. on sign-out or when their role changes. */
   async removeAll(userId: string): Promise<void> {
-    const chatIds = await this.redis.zrange(indexKey(userId), '0', '-1');
-    await this.redis.del(indexKey(userId), ...chatIds.map((chatId) => chatKey(userId, chatId)));
+    // A script builds the chat key names itself, so it needs the namespace the client adds.
+    const namespace = this.redis.options.keyPrefix ?? '';
+    for (const role of ROLES) {
+      const owner = { userId, role };
+      await this.redis.eval(
+        REMOVE_ALL_SCRIPT,
+        1,
+        indexKey(owner),
+        `${namespace}${chatKeyPrefix(owner)}`,
+      );
+    }
   }
 }

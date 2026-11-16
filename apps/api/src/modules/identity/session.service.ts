@@ -2,11 +2,13 @@ import { Injectable, type OnApplicationBootstrap } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PinoLogger } from 'nestjs-pino';
 
+import { PrismaErrorCode, prismaErrorCode } from '../../common/errors/prisma-errors.js';
 import { clip } from '../../common/text.js';
 import { DAY_MS, HOUR_MS, MINUTE_MS } from '../../common/time.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 
 import { generateCsrfToken, generateSessionToken, hashSessionToken } from './session-tokens.js';
+import { SignOutHooks } from './sign-out-hooks.js';
 
 import type { AuthSession, Prisma, User } from '../../generated/prisma/client.js';
 
@@ -62,6 +64,7 @@ export class SessionService implements OnApplicationBootstrap {
   constructor(
     private readonly prisma: PrismaService,
     private readonly logger: PinoLogger,
+    private readonly signOutHooks: SignOutHooks,
   ) {
     this.logger.setContext(SessionService.name);
   }
@@ -156,8 +159,27 @@ export class SessionService implements OnApplicationBootstrap {
     );
   }
 
-  async revoke(token: string): Promise<void> {
-    await this.prisma.authSession.deleteMany({ where: { tokenHash: hashSessionToken(token) } });
+  /** Ends one session; returns whose it was, or undefined when there was no such session. */
+  async revoke(token: string): Promise<string | undefined> {
+    try {
+      const { userId } = await this.prisma.authSession.delete({
+        where: { tokenHash: hashSessionToken(token) },
+        select: { userId: true },
+      });
+      return userId;
+    } catch (error) {
+      // Recovered on purpose: an unknown or already ended session is simply nothing to revoke.
+      if (prismaErrorCode(error) === PrismaErrorCode.NOT_FOUND) return undefined;
+      throw error;
+    }
+  }
+
+  /**
+   * Tells other modules that the user signed out (or was signed out everywhere), so they forget
+   * what they keep for them. Call it once the sign-out is committed, never inside a transaction.
+   */
+  async afterSignOut(userId: string): Promise<void> {
+    await this.signOutHooks.run(userId);
   }
 
   /**

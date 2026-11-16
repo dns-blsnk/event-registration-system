@@ -110,7 +110,8 @@ export class UsersService {
   /**
    * Updates name and/or role. The route needs users:edit; an actual role change additionally needs
    * users:change-role, checked here because one PATCH can carry both kinds of change. A role change
-   * signs the user out everywhere in the same transaction, so the new permissions apply at once.
+   * signs the user out everywhere in the same transaction, so the new permissions apply at once;
+   * once it is committed, what other modules keep for the user (their chats) is forgotten.
    */
   async update(id: string, dto: UpdateUserDto, actor: User): Promise<User> {
     const nameData = dto.name === undefined ? {} : { name: dto.name };
@@ -119,14 +120,17 @@ export class UsersService {
     if (id === actor.id && role === undefined) {
       return this.prisma.user.update({ where: { id }, data: nameData });
     }
-    return this.prisma.$transaction(async (tx) => {
+    const { user, isRoleChanged } = await this.prisma.$transaction(async (tx) => {
       const { target, actorNow } = await this.lockAndRead(tx, id, actor.id);
       if (role === undefined || target.role === role) {
         // Any other account only within the rules, checked on the roles as they are now.
         if (id !== actor.id) {
           assertAllowed(userManagementRefusal(actorNow.role, target.role));
         }
-        return tx.user.update({ where: { id }, data: nameData });
+        return {
+          user: await tx.user.update({ where: { id }, data: nameData }),
+          isRoleChanged: false,
+        };
       }
       if (id === actor.id) {
         throw new DomainError(ErrorCode.CONFLICT, 'You cannot change your own role');
@@ -139,11 +143,13 @@ export class UsersService {
       await this.assertNotLastSuperAdmin(tx, target);
       const updated = await tx.user.update({ where: { id }, data: { ...nameData, role } });
       await this.sessions.revokeAllForUser(id, undefined, tx);
-      return updated;
+      return { user: updated, isRoleChanged: true };
     }, LOCKING_TRANSACTION);
+    if (isRoleChanged) await this.sessions.afterSignOut(id);
+    return user;
   }
 
-  /** Deletes the account and its sessions (cascade). */
+  /** Deletes the account and its sessions (cascade), then forgets what other modules keep. */
   async remove(id: string, actor: User): Promise<void> {
     if (id === actor.id) {
       throw new DomainError(ErrorCode.CONFLICT, 'You cannot delete your own account');
@@ -158,6 +164,7 @@ export class UsersService {
       await this.assertHasNoHistory(tx, id);
       await tx.user.delete({ where: { id } });
     }, LOCKING_TRANSACTION);
+    await this.sessions.afterSignOut(id);
   }
 
   /**

@@ -45,7 +45,9 @@ export class AuthService {
     return { user, session: await this.sessions.create(user.id, meta) };
   }
 
+  /** Ends the session; the user's chats and other kept data go with it. */
   async logout(token: string): Promise<void> {
-    await this.sessions.revoke(token);
+    const userId = await this.sessions.revoke(token);
+    if (userId !== undefined) await this.sessions.afterSignOut(userId);
   }
 }

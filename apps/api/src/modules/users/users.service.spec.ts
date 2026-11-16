@@ -25,6 +25,7 @@ function setup(
   service: UsersService;
   tx: { $queryRaw: ReturnType<typeof vi.fn>; user: Record<string, ReturnType<typeof vi.fn>> };
   revokeAllForUser: ReturnType<typeof vi.fn>;
+  afterSignOut: ReturnType<typeof vi.fn>;
 } {
   const tx = {
     $queryRaw: vi.fn().mockResolvedValue([]),
@@ -44,12 +45,13 @@ function setup(
     $transaction: async (run: (client: typeof tx) => Promise<unknown>) => run(tx),
   };
   const revokeAllForUser = vi.fn();
+  const afterSignOut = vi.fn();
   const service = new UsersService(
     prisma as unknown as PrismaService,
     {} as PasswordService,
-    { revokeAllForUser } as unknown as SessionService,
+    { revokeAllForUser, afterSignOut } as unknown as SessionService,
   );
-  return { service, tx, revokeAllForUser };
+  return { service, tx, revokeAllForUser, afterSignOut };
 }
 
 async function messageOf(run: () => Promise<unknown>): Promise<string | undefined> {
@@ -78,6 +80,33 @@ describe('UsersService role changes', () => {
     await service.update('target', { role: 'ORGANIZER' }, actor);
 
     expect(revokeAllForUser).toHaveBeenCalledWith('target', undefined, tx);
+  });
+
+  it('forgets what other modules keep for the user once the role change is committed', async () => {
+    const { service, revokeAllForUser, afterSignOut } = setup(user('target', 'CUSTOMER'), 2);
+
+    await service.update('target', { role: 'ORGANIZER' }, actor);
+
+    expect(afterSignOut).toHaveBeenCalledWith('target');
+    expect(afterSignOut.mock.invocationCallOrder[0]).toBeGreaterThan(
+      revokeAllForUser.mock.invocationCallOrder[0] ?? 0,
+    );
+  });
+
+  it('forgets nothing when the role change is refused', async () => {
+    const { service, afterSignOut } = setup(user('only', 'SUPER_ADMIN'), 1, owner);
+
+    await messageOf(() => service.update('only', { role: 'CUSTOMER' }, owner));
+
+    expect(afterSignOut).not.toHaveBeenCalled();
+  });
+
+  it('forgets nothing on a rename', async () => {
+    const { service, afterSignOut } = setup(user('target', 'CUSTOMER'), 2);
+
+    await service.update('target', { name: 'Renamed' }, actor);
+
+    expect(afterSignOut).not.toHaveBeenCalled();
   });
 
   it('refuses to demote the only super admin', async () => {
@@ -155,6 +184,14 @@ describe('UsersService role changes', () => {
 });
 
 describe('UsersService deletion', () => {
+  it('forgets what other modules keep for a deleted user', async () => {
+    const { service, afterSignOut } = setup(user('target', 'CUSTOMER'), 2);
+
+    await service.remove('target', actor);
+
+    expect(afterSignOut).toHaveBeenCalledWith('target');
+  });
+
   it('refuses to delete the only super admin', async () => {
     const { service } = setup(user('only', 'SUPER_ADMIN'), 1, owner);
 

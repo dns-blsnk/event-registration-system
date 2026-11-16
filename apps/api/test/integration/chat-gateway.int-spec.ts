@@ -314,8 +314,9 @@ describe('chat gateway', () => {
   it('resumes the user’s own chat with what they see, not the tool traffic', async () => {
     const { socket, agent } = await connectAs('CUSTOMER');
     const store = app.get(ChatHistoryStore);
-    const chatId = await store.create(agent.userId);
-    await store.append(agent.userId, chatId, [
+    const me = { userId: agent.userId, role: 'CUSTOMER' as const };
+    const chatId = await store.create(me);
+    await store.append(me, chatId, [
       { role: 'user', content: 'Events in Tallinn?' },
       {
         role: 'assistant',
@@ -340,8 +341,9 @@ describe('chat gateway', () => {
   it('never resumes another user’s chat, even with its id', async () => {
     const owner = await signedInAgent(app, 'CUSTOMER');
     const store = app.get(ChatHistoryStore);
-    const chatId = await store.create(owner.userId);
-    await store.append(owner.userId, chatId, [{ role: 'user', content: 'my private question' }]);
+    const ownerChats = { userId: owner.userId, role: 'CUSTOMER' as const };
+    const chatId = await store.create(ownerChats);
+    await store.append(ownerChats, chatId, [{ role: 'user', content: 'my private question' }]);
     const { socket } = await connectAs('CUSTOMER');
 
     const history = await historyAfter(socket, ChatEvent.RESUME, { chatId });
@@ -361,14 +363,15 @@ describe('chat gateway', () => {
   it('forgets the current chat when the user starts a new one', async () => {
     const { socket, agent } = await connectAs('CUSTOMER');
     const store = app.get(ChatHistoryStore);
-    const old = await store.create(agent.userId);
-    await store.append(agent.userId, old, [{ role: 'user', content: 'old question' }]);
+    const me = { userId: agent.userId, role: 'CUSTOMER' as const };
+    const old = await store.create(me);
+    await store.append(me, old, [{ role: 'user', content: 'old question' }]);
 
     const history = await historyAfter(socket, ChatEvent.NEW_CHAT, { chatId: old });
 
     expect(history.chatId).not.toBe(old);
     expect(history.messages).toEqual([]);
-    expect(await store.load(agent.userId, old)).toBeUndefined();
+    expect(await store.load(me, old)).toBeUndefined();
   });
 
   it('counts starting chats against the message limit, but lets every reconnect resume', async () => {
@@ -386,13 +389,14 @@ describe('chat gateway', () => {
   it('never forgets another user’s chat, even when starting a new one with its id', async () => {
     const owner = await signedInAgent(app, 'CUSTOMER');
     const store = app.get(ChatHistoryStore);
-    const chatId = await store.create(owner.userId);
-    await store.append(owner.userId, chatId, [{ role: 'user', content: 'mine' }]);
+    const ownerChats = { userId: owner.userId, role: 'CUSTOMER' as const };
+    const chatId = await store.create(ownerChats);
+    await store.append(ownerChats, chatId, [{ role: 'user', content: 'mine' }]);
     const { socket } = await connectAs('CUSTOMER');
 
     await historyAfter(socket, ChatEvent.NEW_CHAT, { chatId });
 
-    expect(await store.load(owner.userId, chatId)).toEqual([{ role: 'user', content: 'mine' }]);
+    expect(await store.load(ownerChats, chatId)).toEqual([{ role: 'user', content: 'mine' }]);
   });
 
   it('refuses to resume a chat once the session has ended, and closes the socket', async () => {
