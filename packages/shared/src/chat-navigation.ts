@@ -25,7 +25,7 @@ const FIRST_PRINTABLE_CODE = 0x20;
 const DELETE_CODE = 0x7f;
 
 /** Line breaks and other control characters have no place in a list filter. */
-function hasControlCharacter(text: string): boolean {
+export function hasControlCharacter(text: string): boolean {
   for (let index = 0; index < text.length; index += 1) {
     const code = text.charCodeAt(index);
     if (code < FIRST_PRINTABLE_CODE || code === DELETE_CODE) return true;
@@ -36,7 +36,7 @@ function hasControlCharacter(text: string): boolean {
 const TIME_ZONE_MAX_LENGTH = 64;
 
 /** A real calendar day: 2026-02-30 is refused, not rolled over to 2 March. */
-function isCalendarDay(value: string): boolean {
+export function isCalendarDay(value: string): boolean {
   if (!DAY_PATTERN.test(value)) return false;
   const date = new Date(`${value}T00:00:00Z`);
   return !Number.isNaN(date.getTime()) && date.toISOString().startsWith(value);

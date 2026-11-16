@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import OpenAI from 'openai';
 
 import { APP_CONFIG } from '../../config/config.module.js';
+import { EventsModule } from '../events/events.module.js';
 import { IdentityModule } from '../identity/identity.module.js';
 
 import { ChatAdmission } from './chat-admission.js';
@@ -18,6 +19,7 @@ import { ChatHistoryStore } from './chat-history.store.js';
 import { ChatTicketStore } from './chat-tickets.js';
 import { ChatController } from './chat.controller.js';
 import { ChatGateway } from './chat.gateway.js';
+import { ChatToolbox, TOOL_CLASSES } from './tools/chat-toolbox.js';
 
 import type { Config } from '../../config/config.schema.js';
 
@@ -29,12 +31,14 @@ import type { Config } from '../../config/config.schema.js';
 const ANSWER_MAX_RETRIES = 0;
 
 @Module({
-  imports: [IdentityModule],
+  imports: [IdentityModule, EventsModule],
   controllers: [ChatController],
   providers: [
     ChatTicketStore,
     ChatHistoryStore,
     ChatConversations,
+    ChatToolbox,
+    ...TOOL_CLASSES,
     ChatAdmission,
     ChatAnswerService,
     ChatFailures,

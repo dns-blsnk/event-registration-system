@@ -12,6 +12,6 @@ import { EventsService } from './events.service.js';
   imports: [StorageModule],
   controllers: [EventsController, EventBannerController],
   providers: [EventsService, EventLifecycleService, EventBannerService],
-  exports: [EventBannerService],
+  exports: [EventBannerService, EventsService],
 })
 export class EventsModule {}
