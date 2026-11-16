@@ -7,6 +7,7 @@ import {
 } from '@ers/shared';
 
 import { dayIn } from '../../../domain/zoned-day.js';
+import { isRecord, parseJson } from '../json.js';
 
 import type { WithoutDays } from './tool-filters.js';
 
@@ -52,19 +53,6 @@ export function listToOpen(
 
 /** Where a tool's reply to the model keeps the list it opened, so the chat can show it again. */
 export const OPENED_LIST_FIELD = 'openedList';
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function parseJson(text: string): unknown {
-  try {
-    return JSON.parse(text) as unknown;
-  } catch {
-    // Recovered on purpose: a reply that is not JSON simply opened no list.
-    return undefined;
-  }
-}
 
 /** The kept list, if it is still one the list rules accept; a kept value is never trusted. */
 function toCheckedList(value: unknown): ListToOpen | undefined {

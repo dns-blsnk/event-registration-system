@@ -7,8 +7,8 @@ import { DomainError } from '../../common/errors/domain-error.js';
 import { SECOND_MS } from '../../common/time.js';
 
 import { addUsage, assistantEntry, NO_USAGE, readRound } from './chat-round.js';
+import { toolReply } from './tool-reply.js';
 import { ChatToolbox, type ToolOutcome } from './tools/chat-toolbox.js';
-import { OPENED_LIST_FIELD } from './tools/tool-navigation.js';
 
 import type { AiReasoningEffort } from '../../config/config.schema.js';
 import type { User } from '../../generated/prisma/client.js';
@@ -137,24 +137,6 @@ function argumentsOf(call: ModelToolCall): unknown {
     // Recovered on purpose: the model is told and can call again with proper JSON.
     return undefined;
   }
-}
-
-/** Whether the list a search asked to show was opened, in words the model can relay. */
-function listNote(outcome: { listToOpen?: ListToOpen; notShown?: string }) {
-  if (outcome.listToOpen !== undefined) {
-    return {
-      list: 'Opened in the panel with these filters.',
-      [OPENED_LIST_FIELD]: outcome.listToOpen,
-    };
-  }
-  if (outcome.notShown !== undefined) return { list: `Not opened: ${outcome.notShown}` };
-  return {};
-}
-
-/** What the model reads back from a tool: the data or the error, and whether a list opened. */
-function toolReply(outcome: ToolOutcome): string {
-  if ('error' in outcome) return JSON.stringify({ error: outcome.error });
-  return JSON.stringify({ result: outcome.data, ...listNote(outcome) });
 }
 
 /**
