@@ -1,6 +1,9 @@
 /** Short product name: the ERS logo and the browser tab use it. */
 export const APP_NAME = 'ERS';
 
+/** Full product name, for places with room for it. */
+export const APP_FULL_NAME = 'Event Registration System';
+
 /** The full logo, served from the admin's public folder. */
 export const LOGO_URL = '/logo.svg';
 

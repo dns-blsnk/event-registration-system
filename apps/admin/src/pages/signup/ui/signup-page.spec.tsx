@@ -2,6 +2,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
+import { GITHUB_SIGN_IN_URL } from '@/features/github-sign-in';
 import { mockHttp, type MockRoute } from '@/test/http-mock';
 import { renderAdminPage } from '@/test/render-admin';
 
@@ -144,6 +145,19 @@ describe('SignupPage', () => {
 
     expect(screen.getByLabelText(/^Password/)).toHaveValue(password);
     expect(calls.some((call) => call.url === '/auth/signup')).toBe(false);
+  });
+
+  it('offers sign-up with GitHub when GitHub is enabled', async () => {
+    mockHttp([
+      signedOut,
+      { method: 'get', url: '/auth/providers', status: 200, body: { github: true } },
+    ]);
+    renderSignup();
+
+    expect(await screen.findByRole('link', { name: 'Sign up with GitHub' })).toHaveAttribute(
+      'href',
+      GITHUB_SIGN_IN_URL,
+    );
   });
 
   it('links back to sign in', () => {

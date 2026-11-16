@@ -1,16 +1,17 @@
 import { EMAIL_MAX_LENGTH, NAME_MAX_LENGTH, SIGNUP_FIELDS, type FieldError } from '@ers/shared';
 import Button from '@mui/material/Button';
 import Link from '@mui/material/Link';
-import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
-import Typography from '@mui/material/Typography';
 import { useRegister } from '@refinedev/core';
 import { useForm } from 'react-hook-form';
 import { Link as RouterLink } from 'react-router';
 
+import { GithubSignIn } from '@/features/github-sign-in';
 import { LOGIN_PATH } from '@/shared/config';
 import { EMAIL_RULES, fieldHelp, NEW_PASSWORD_RULES, REQUIRED_TEXT } from '@/shared/lib/forms';
+import { AuthLayout } from '@/shared/ui/auth-layout';
+import { PasswordField } from '@/shared/ui/password-field';
 
 interface SignupValues {
   name: string;
@@ -33,7 +34,8 @@ function detailsOf(error: unknown): FieldError[] {
 /**
  * Self sign-up. Refine's register AuthPage has no name field, which the API requires, so this is a
  * small form of its own. Accounts made here are always customers (the API sets the role). A refusal
- * shows as Refine's error notification, and field details from the API mark the fields.
+ * shows as Refine's error notification, and field details from the API mark the fields. GitHub
+ * sign-up is the same flow as GitHub sign-in.
  */
 export function SignupPage(): React.JSX.Element {
   const { mutateAsync: signUp, isPending } = useRegister<SignupValues>();
@@ -54,51 +56,51 @@ export function SignupPage(): React.JSX.Element {
     }
   });
   return (
-    <Stack alignItems="center" sx={{ mt: 8, px: 2 }}>
-      <Paper sx={{ p: 4, width: '100%', maxWidth: 420 }}>
-        <Stack component="form" noValidate spacing={2} onSubmit={(event) => void submit(event)}>
-          <Typography variant="h5" component="h1">
-            Create an account
-          </Typography>
-          <TextField
-            {...register('name', REQUIRED_TEXT)}
-            label={SIGNUP_FIELDS.name.label}
-            helperText={fieldHelp(errors.name, SIGNUP_FIELDS.name.help)}
-            error={errors.name !== undefined}
-            autoComplete="name"
-            slotProps={{ htmlInput: { maxLength: NAME_MAX_LENGTH } }}
-            required
-          />
-          <TextField
-            {...register('email', EMAIL_RULES)}
-            type="email"
-            label={SIGNUP_FIELDS.email.label}
-            helperText={fieldHelp(errors.email, SIGNUP_FIELDS.email.help)}
-            error={errors.email !== undefined}
-            autoComplete="email"
-            slotProps={{ htmlInput: { maxLength: EMAIL_MAX_LENGTH } }}
-            required
-          />
-          <TextField
-            {...register('password', NEW_PASSWORD_RULES)}
-            type="password"
-            label={SIGNUP_FIELDS.password.label}
-            helperText={fieldHelp(errors.password, SIGNUP_FIELDS.password.help)}
-            error={errors.password !== undefined}
-            autoComplete="new-password"
-            required
-          />
-          <Button type="submit" variant="contained" disabled={isPending}>
-            Sign up
-          </Button>
-          <Typography variant="body2">
-            Already have an account?{' '}
-            <Link component={RouterLink} to={LOGIN_PATH}>
-              Sign in
-            </Link>
-          </Typography>
-        </Stack>
-      </Paper>
-    </Stack>
+    <AuthLayout
+      title="Create an account"
+      subtitle="Book sessions and keep track of your registrations."
+      footer={
+        <>
+          Already have an account?{' '}
+          <Link component={RouterLink} to={LOGIN_PATH}>
+            Sign in
+          </Link>
+        </>
+      }
+    >
+      <Stack component="form" noValidate spacing={2} onSubmit={(event) => void submit(event)}>
+        <TextField
+          {...register('name', REQUIRED_TEXT)}
+          label={SIGNUP_FIELDS.name.label}
+          helperText={fieldHelp(errors.name, SIGNUP_FIELDS.name.help)}
+          error={errors.name !== undefined}
+          autoComplete="name"
+          slotProps={{ htmlInput: { maxLength: NAME_MAX_LENGTH } }}
+          required
+        />
+        <TextField
+          {...register('email', EMAIL_RULES)}
+          type="email"
+          label={SIGNUP_FIELDS.email.label}
+          helperText={fieldHelp(errors.email, SIGNUP_FIELDS.email.help)}
+          error={errors.email !== undefined}
+          autoComplete="email"
+          slotProps={{ htmlInput: { maxLength: EMAIL_MAX_LENGTH } }}
+          required
+        />
+        <PasswordField
+          {...register('password', NEW_PASSWORD_RULES)}
+          label={SIGNUP_FIELDS.password.label}
+          helperText={fieldHelp(errors.password, SIGNUP_FIELDS.password.help)}
+          error={errors.password !== undefined}
+          autoComplete="new-password"
+          required
+        />
+        <Button type="submit" variant="contained" size="large" loading={isPending}>
+          Sign up
+        </Button>
+      </Stack>
+      <GithubSignIn label="Sign up with GitHub" />
+    </AuthLayout>
   );
 }
