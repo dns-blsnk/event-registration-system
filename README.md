@@ -206,12 +206,12 @@ Until the deploy settings exist, the workflow skips itself. If only some setting
 
 ## Tests
 
-| Package           | Tests | What they cover                                                                                                                                                       |
-| ----------------- | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `apps/api`        | 1059  | Unit tests for the domain rules; integration tests for every endpoint against a real Postgres, Redis and S3: each role on each resource, CSRF, cookies, uploads, chat |
-| `apps/admin`      | 432   | Pages, forms, access control and the chat widget with React Testing Library                                                                                           |
-| `packages/shared` | 158   | The permission matrix, field descriptions and shared validation                                                                                                       |
-| `apps/e2e`        | 3     | In a real browser: an admin sees events; a new customer books a session; a customer is kept out of staff pages                                                        |
+| Package           | Tests | What they cover                                                                                                                                                                                |
+| ----------------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/api`        | 1059  | Unit tests for the domain rules; integration tests for every endpoint against a real Postgres, Redis and S3: each role on each resource, CSRF, cookies, uploads, chat                          |
+| `apps/admin`      | 435   | Pages, forms, access control and the chat widget with React Testing Library                                                                                                                    |
+| `packages/shared` | 158   | The permission matrix, field descriptions and shared validation                                                                                                                                |
+| `apps/e2e`        | 5     | In a real browser: an organizer publishes an event with a framed banner and a session; a new customer books a seat; only the super admin manages admins; a customer is kept out of staff pages |
 
 The tests target what would hurt most if it broke: who may see and change what (every role against every resource), the booking rules (a race test sends parallel bookings at the last seat and checks that capacity is never exceeded), and the security edges (CSRF, session revocation, forged tickets, file type by content). Integration tests never mock Prisma: a test that passes against a mock can still fail against a real transaction.
 
@@ -239,7 +239,7 @@ The tests target what would hurt most if it broke: who may see and change what (
 
 ## With more time
 
-1. **More browser tests.** The Playwright suite covers sign-in, roles and booking; it would grow to cover the organizer flow, bulk actions and the banner editor.
+1. **More browser tests.** The Playwright suite covers publishing an event, booking and roles; it would grow to cover the waitlist moving up, bulk actions and the AI chat.
 2. **A paid database and an always-on API instance.** They remove the 30-day database expiry and the cold start, the two things a reviewer is most likely to hit.
 3. **A shared secret between the Vercel rewrite and the API**, so direct calls to Render are refused and per-IP limits cannot be bypassed.
 4. **Email** through a provider: verified sign-ups (which would allow linking GitHub to an existing account), password reset and a message when a waitlisted customer gets a seat.
