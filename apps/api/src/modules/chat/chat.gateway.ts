@@ -24,9 +24,8 @@ import {
   type ChatPrompt,
   type ChatPromptRefusal,
 } from '../../domain/chat-prompt.js';
-import { RateWindow } from '../app-logs/rate-window.js';
-import { SessionService } from '../auth/session.service.js';
 
+import { ChatAdmission } from './chat-admission.js';
 import { ChatAnswerService } from './chat-answer.service.js';
 import { ChatFailures } from './chat-failures.js';
 import { ChatHandshake, HANDSHAKE_REFUSED } from './chat-handshake.js';
@@ -34,9 +33,6 @@ import { parseChatQuestion } from './chat-question.js';
 
 import type { ChatSocket } from './chat-socket.js';
 import type { Namespace } from 'socket.io';
-
-/** A person asks a few questions a minute; more is a script spending the model budget. */
-const MESSAGES_PER_MINUTE = 10;
 
 const REFUSALS: Readonly<Record<ChatPromptRefusal, { code: ErrorCode; message: string }>> = {
   'empty-question': { code: ErrorCode.VALIDATION_FAILED, message: 'Type a question first.' },
@@ -59,11 +55,10 @@ export class ChatGateway implements OnGatewayInit, OnGatewayDisconnect {
   @WebSocketServer() private readonly server!: Namespace;
   /** The answer each connection is waiting for; a new question or a cancel stops it. */
   private readonly answers = new Map<string, AbortController>();
-  private readonly limits = new Map<string, RateWindow>();
 
   constructor(
     private readonly handshake: ChatHandshake,
-    private readonly sessions: SessionService,
+    private readonly admission: ChatAdmission,
     private readonly answerService: ChatAnswerService,
     private readonly failures: ChatFailures,
   ) {}
@@ -97,16 +92,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayDisconnect {
 
   @SubscribeMessage(ChatEvent.ASK)
   async ask(@ConnectedSocket() socket: ChatSocket, @MessageBody() payload: unknown): Promise<void> {
-    // Every message counts, readable or not, before any database work.
-    if (!this.limitFor(socket.data.userId).tryAccept()) {
-      this.fail(
-        socket,
-        idOf(payload),
-        ErrorCode.RATE_LIMITED,
-        'Too many questions. Wait a minute and try again.',
-      );
-      return;
-    }
+    if (await this.isOverLimit(socket, payload)) return;
     const question = parseChatQuestion(payload);
     if (question === undefined) {
       this.fail(
@@ -135,17 +121,15 @@ export class ChatGateway implements OnGatewayInit, OnGatewayDisconnect {
     }
   }
 
-  /** Closes connections whose session ended since they connected, and forgets idle users' limits. */
+  /** Closes connections whose session ended since they connected. */
   @Interval(MINUTE_MS)
   async sweepEndedSessions(): Promise<void> {
     const sockets = [...this.server.sockets.values()] as ChatSocket[];
-    const live = await this.sessions.liveIds(sockets.map((socket) => socket.data.sessionId));
+    const live = await this.admission.liveSessionIds(
+      sockets.map((socket) => socket.data.sessionId),
+    );
     for (const socket of sockets) {
       if (!live.has(socket.data.sessionId)) socket.disconnect(true);
-    }
-    const connectedUsers = new Set(sockets.map((socket) => socket.data.userId));
-    for (const userId of this.limits.keys()) {
-      if (!connectedUsers.has(userId)) this.limits.delete(userId);
     }
   }
 
@@ -154,7 +138,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayDisconnect {
     socket: ChatSocket,
     question: NonNullable<ReturnType<typeof parseChatQuestion>>,
   ): Promise<ChatPrompt | undefined> {
-    const live = await this.sessions.findLiveById(socket.data.sessionId);
+    const live = await this.admission.liveSession(socket.data.sessionId);
     if (live === null) {
       this.fail(
         socket,
@@ -199,13 +183,28 @@ export class ChatGateway implements OnGatewayInit, OnGatewayDisconnect {
     socket.emit(ChatEvent.ERROR, { id, code, message } satisfies ChatError);
   }
 
-  private limitFor(userId: string): RateWindow {
-    let limit = this.limits.get(userId);
-    if (limit === undefined) {
-      limit = new RateWindow(MESSAGES_PER_MINUTE, MINUTE_MS);
-      this.limits.set(userId, limit);
+  /**
+   * Counts this message against the user's limit, readable or not, before any database work.
+   * True after telling the client the message was refused.
+   */
+  private async isOverLimit(socket: ChatSocket, payload: unknown): Promise<boolean> {
+    try {
+      if (await this.admission.isWithinLimit(socket.data.userId)) return false;
+      this.fail(
+        socket,
+        idOf(payload),
+        ErrorCode.RATE_LIMITED,
+        'Too many questions. Wait a minute and try again.',
+      );
+    } catch (error) {
+      const { code, message } = this.failures.record(
+        socket.data.userId,
+        error,
+        'chat message limit check failed',
+      );
+      this.fail(socket, idOf(payload), code, message);
     }
-    return limit;
+    return true;
   }
 }
 

@@ -4,6 +4,7 @@ import OpenAI from 'openai';
 import { APP_CONFIG } from '../../config/config.module.js';
 import { AuthModule } from '../auth/auth.module.js';
 
+import { ChatAdmission } from './chat-admission.js';
 import {
   AI_CLIENT,
   CHAT_MODEL,
@@ -30,6 +31,7 @@ const ANSWER_MAX_RETRIES = 0;
   controllers: [ChatController],
   providers: [
     ChatTicketStore,
+    ChatAdmission,
     ChatAnswerService,
     ChatFailures,
     ChatGateway,

@@ -63,7 +63,8 @@ services:
     # Reachable only from Render services, not from the internet.
     ipAllowList: []
     # Never evict: dropping a login failure counter or a rate limit would quietly lift the limit.
-    # When full, writes fail and the API answers 503 until keys expire.
+    # When full, writes fail until keys expire: sign-in and the chat answer 503, while the broad
+    # per-IP request limit lets requests through.
     maxmemoryPolicy: noeviction
 
 databases:

@@ -34,16 +34,19 @@ export class ChatFailures {
     this.logger.setContext(ChatFailures.name);
   }
 
-  /** A question that failed: logged as its kind deserves, with what to tell the user. */
-  record(userId: string, error: unknown): ChatFailure {
+  /**
+   * A question that failed: logged as its kind deserves, with what to tell the user. `what` names
+   * the step that failed, so the log tells a failed answer from a failed check before it.
+   */
+  record(userId: string, error: unknown, what = 'chat answer failed'): ChatFailure {
     const { body, isServerError } = toErrorResponse(error, NO_REQUEST_ID);
     // Chat errors carry their own safe texts ("took too long"); anything else gets the public one.
     const message = error instanceof DomainError ? error.message : body.message;
     const cause = error instanceof DomainError ? (error.cause ?? error) : error;
     if (isServerError) {
-      this.journalError({ what: 'chat answer failed', cause, errorCode: body.code, userId });
+      this.journalError({ what, cause, errorCode: body.code, userId });
     } else {
-      this.logger.warn({ err: cause, userId, code: body.code }, 'chat answer failed');
+      this.logger.warn({ err: cause, userId, code: body.code }, what);
     }
     return { code: body.code, message };
   }

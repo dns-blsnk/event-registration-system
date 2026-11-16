@@ -1,4 +1,5 @@
 import { Controller, Get, HttpStatus, Res } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
 
 import { Public } from '../../common/auth/access.decorator.js';
 
@@ -12,8 +13,12 @@ export const HEALTH_ROUTE = 'health';
 export class HealthController {
   constructor(private readonly health: HealthService) {}
 
-  /** 200 when every dependency is up, 503 otherwise, so uptime checks and deploy smoke tests fail. */
+  /**
+   * 200 when every dependency is up, 503 otherwise, so uptime checks and deploy smoke tests fail.
+   * Not throttled: the throttle counts in Redis, and the probe must still answer when Redis is down.
+   */
   @Public()
+  @SkipThrottle()
   @Get()
   async check(@Res({ passthrough: true }) res: Response): Promise<HealthStatus> {
     const result = await this.health.check();

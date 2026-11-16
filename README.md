@@ -75,7 +75,7 @@ The chat needs `AI_API_KEY` (a Gemini key from [Google AI Studio](https://aistud
 
 The admin calls the API on its own origin: `/api/*` goes through the Vite proxy locally and a Vercel rewrite in production. The session cookie is therefore first-party, `HttpOnly`, `SameSite=Lax` and, in production, `Secure` with the `__Host-` prefix. Only the SHA-256 of the session token is stored. Sessions last 7 days with a 24-hour idle timeout, and signing in always starts a new one.
 
-Every state-changing request carries the session's CSRF token in `X-CSRF-Token`, compared in constant time. Passwords are hashed with argon2id. Login failures are limited both per client and per account.
+Every state-changing request carries the session's CSRF token in `X-CSRF-Token`, compared in constant time. Passwords are hashed with argon2id. Login failures are limited both per client and per account. Request rate limits, login counters and the chat question limit live in Redis, so they hold across API instances instead of multiplying by their number. If Redis is down, the broad per-IP request limit lets requests through so the admin keeps working, while sign-in and the chat refuse rather than skip their limits. `/api/health` is not throttled, so it still answers.
 
 ### Errors
 
@@ -93,7 +93,7 @@ Expected failures are `DomainError`s with a code from `packages/shared`. A singl
 
 The widget connects to the API over Socket.IO with a one-time ticket from `POST /api/chat/ticket` (60 seconds, bound to the user and session, stored in Redis as a hash and spent atomically, so any API instance accepts it once). The API checks the origin, the ticket and a live session. It re-checks the session and the current role before every question, and closes sockets whose session has ended.
 
-The prompt is built from the shared field descriptions of the screen the user is on, and only from what their role may see. The answer streams back and can be stopped. Each user may ask 10 questions a minute.
+The prompt is built from the shared field descriptions of the screen the user is on, and only from what their role may see. The answer streams back and can be stopped. Each user may ask 10 questions a minute, counted across all their sockets and API instances.
 
 In production the socket connects to the API host directly (`VITE_CHAT_URL`), because Vercel rewrites do not carry WebSockets.
 

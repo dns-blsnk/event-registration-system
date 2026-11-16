@@ -7,6 +7,7 @@ import { AuthGuard } from './common/auth/auth.guard.js';
 import { CsrfGuard } from './common/auth/csrf.guard.js';
 import { HttpThrottlerGuard } from './common/auth/http-throttler.guard.js';
 import { PermissionGuard } from './common/auth/permission.guard.js';
+import { RedisThrottlerStorage } from './common/auth/redis-throttler-storage.js';
 import { AllExceptionsFilter } from './common/errors/all-exceptions.filter.js';
 import { LoggingModule } from './common/logging/logging.module.js';
 import { MINUTE_MS } from './common/time.js';
@@ -27,6 +28,7 @@ import { TagsModule } from './modules/tags/tags.module.js';
 import { UsersModule } from './modules/users/users.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { RedisModule } from './redis/redis.module.js';
+import { RedisService } from './redis/redis.service.js';
 
 /** Generous default per IP; sensitive routes (login, signup, chat) set stricter limits. */
 const REQUESTS_PER_MINUTE_PER_IP = 300;
@@ -36,9 +38,13 @@ const REQUESTS_PER_MINUTE_PER_IP = 300;
     ConfigModule,
     LoggingModule,
     ScheduleModule.forRoot(),
-    ThrottlerModule.forRoot([
-      { name: 'default', ttl: MINUTE_MS, limit: REQUESTS_PER_MINUTE_PER_IP },
-    ]),
+    ThrottlerModule.forRootAsync({
+      inject: [RedisService],
+      useFactory: (redis: RedisService) => ({
+        throttlers: [{ name: 'default', ttl: MINUTE_MS, limit: REQUESTS_PER_MINUTE_PER_IP }],
+        storage: new RedisThrottlerStorage(redis),
+      }),
+    }),
     PrismaModule,
     RedisModule,
     AppLogsModule,

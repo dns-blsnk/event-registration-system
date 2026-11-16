@@ -67,6 +67,14 @@ describe('ChatFailures', () => {
     expect(entries[0]?.errorCode).toBe(ErrorCode.SERVICE_UNAVAILABLE);
   });
 
+  it('names the step that failed, so a failed check is not logged as a failed answer', () => {
+    const { service, entries } = failures();
+
+    service.record('user-1', new Error('Command timed out'), 'chat message limit check failed');
+
+    expect(entries[0]?.message).toBe('chat message limit check failed: Command timed out');
+  });
+
   it('still reports when something that is not an Error was thrown', () => {
     const { service, entries } = failures();
 
