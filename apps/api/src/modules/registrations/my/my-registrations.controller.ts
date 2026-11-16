@@ -1,10 +1,4 @@
-import {
-  Action,
-  ErrorCode,
-  REGISTRATION_STATUSES,
-  Resource,
-  type MyRegistration,
-} from '@ers/shared';
+import { Action, REGISTRATION_STATUSES, Resource, type MyRegistration } from '@ers/shared';
 import {
   Body,
   Controller,
@@ -20,14 +14,12 @@ import {
 
 import { RequirePermission } from '../../../common/auth/access.decorator.js';
 import { CurrentAuth } from '../../../common/auth/current-user.decorator.js';
-import { DomainError } from '../../../common/errors/domain-error.js';
 import {
   dateRangeFilter,
   enumFilter,
   parseListQuery,
 } from '../../../common/pagination/list-query.js';
 import { sendList } from '../../../common/pagination/list-result.js';
-import { BookingService } from '../booking.service.js';
 
 import { BookDto } from './dto/book.dto.js';
 import {
@@ -43,10 +35,7 @@ const SORTABLE: readonly MyRegistrationSortField[] = ['createdAt'];
 /** The customer's own bookings. Every query is limited to the signed-in customer. */
 @Controller(Resource.MY_REGISTRATIONS)
 export class MyRegistrationsController {
-  constructor(
-    private readonly booking: BookingService,
-    private readonly registrations: MyRegistrationsService,
-  ) {}
+  constructor(private readonly registrations: MyRegistrationsService) {}
 
   @RequirePermission(Resource.MY_REGISTRATIONS, Action.LIST)
   @Get()
@@ -72,14 +61,13 @@ export class MyRegistrationsController {
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentAuth() auth: AuthContext,
   ): Promise<MyRegistration> {
-    return this.mine(auth.user.id, id);
+    return this.registrations.getOwn(auth.user.id, id);
   }
 
   @RequirePermission(Resource.MY_REGISTRATIONS, Action.CREATE)
   @Post()
   async book(@Body() dto: BookDto, @CurrentAuth() auth: AuthContext): Promise<MyRegistration> {
-    const registration = await this.booking.book(dto.sessionId, auth.user.id);
-    return this.mine(auth.user.id, registration.id);
+    return this.registrations.book({ customerId: auth.user.id, sessionId: dto.sessionId });
   }
 
   @RequirePermission(Resource.MY_REGISTRATIONS, Action.CANCEL)
@@ -89,15 +77,6 @@ export class MyRegistrationsController {
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentAuth() auth: AuthContext,
   ): Promise<MyRegistration> {
-    await this.booking.cancel(id, { scope: { customerId: auth.user.id }, byStaff: false });
-    return this.mine(auth.user.id, id);
-  }
-
-  private async mine(customerId: string, id: string): Promise<MyRegistration> {
-    const registration = await this.registrations.get(customerId, id);
-    if (registration === null) {
-      throw new DomainError(ErrorCode.NOT_FOUND, 'Registration not found');
-    }
-    return registration;
+    return this.registrations.cancel(auth.user.id, id);
   }
 }

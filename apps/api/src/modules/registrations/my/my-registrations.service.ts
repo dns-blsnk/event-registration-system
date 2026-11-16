@@ -1,6 +1,7 @@
-import { RegistrationStatus } from '@ers/shared';
+import { ErrorCode, RegistrationStatus } from '@ers/shared';
 import { Injectable } from '@nestjs/common';
 
+import { DomainError } from '../../../common/errors/domain-error.js';
 import {
   orderByOf,
   type DateRange,
@@ -8,6 +9,7 @@ import {
 } from '../../../common/pagination/list-query.js';
 import { containsInsensitive } from '../../../common/pagination/search.js';
 import { PrismaService } from '../../../prisma/prisma.service.js';
+import { BookingService } from '../booking.service.js';
 
 import { MY_REGISTRATION_INCLUDE, toMyRegistration } from './my-registration-view.js';
 
@@ -54,10 +56,40 @@ function whereOf(
   };
 }
 
-/** Read side of "My registrations": always limited to the signed-in customer. */
+/** "My registrations": always limited to the signed-in customer. */
 @Injectable()
 export class MyRegistrationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly booking: BookingService,
+  ) {}
+
+  /** Books the session for the customer and returns the booking as the customer sees it. */
+  async book({
+    customerId,
+    sessionId,
+  }: {
+    customerId: string;
+    sessionId: string;
+  }): Promise<MyRegistration> {
+    const registration = await this.booking.book(sessionId, customerId);
+    return this.getOwn(customerId, registration.id);
+  }
+
+  /** Cancels one of the customer's own bookings and returns it as the customer sees it. */
+  async cancel(customerId: string, id: string): Promise<MyRegistration> {
+    await this.booking.cancel(id, { scope: { customerId }, byStaff: false });
+    return this.getOwn(customerId, id);
+  }
+
+  /** One of the customer's own bookings; another customer's answers 404, as if it did not exist. */
+  async getOwn(customerId: string, id: string): Promise<MyRegistration> {
+    const registration = await this.get(customerId, id);
+    if (registration === null) {
+      throw new DomainError(ErrorCode.NOT_FOUND, 'Registration not found');
+    }
+    return registration;
+  }
 
   async list(
     customerId: string,
@@ -80,7 +112,7 @@ export class MyRegistrationsService {
     return { items, total };
   }
 
-  async get(customerId: string, id: string): Promise<MyRegistration | null> {
+  private async get(customerId: string, id: string): Promise<MyRegistration | null> {
     const row = await this.prisma.registration.findFirst({
       where: { id, customerId },
       include: MY_REGISTRATION_INCLUDE,
