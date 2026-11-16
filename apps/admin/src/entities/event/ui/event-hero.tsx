@@ -8,6 +8,11 @@ import { BRAND } from '@/shared/theme';
 
 /** The stored banner's own shape, so the whole picture shows on every screen, nothing cut off. */
 const HERO_ASPECT_RATIO = `${String(BANNER_WIDTH)} / ${String(BANNER_HEIGHT)}`;
+/**
+ * At full width a 2:1 banner fills a wide screen on its own. It stops growing at 960px, and at
+ * 90vh wide (so at most half the window tall), which leaves the event details in view.
+ */
+const HERO_MAX_WIDTH = 'min(960px, 90vh)';
 /** A long title wraps to at most this many lines before it is cut with an ellipsis. */
 const TITLE_MAX_LINES = 3;
 /** Darkens the lower part of a banner so the white title on it stays readable. */
@@ -38,6 +43,11 @@ export function EventHero({
       sx={{
         position: 'relative',
         aspectRatio: HERO_ASPECT_RATIO,
+        width: '100%',
+        maxWidth: HERO_MAX_WIDTH,
+        // A Stack parent resets child margins, so alignSelf centres it there and mx elsewhere.
+        mx: 'auto',
+        alignSelf: 'center',
         // Lets a long title on a narrow screen make the box taller instead of being cut off.
         minHeight: 'min-content',
         display: 'flex',
