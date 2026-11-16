@@ -4,6 +4,7 @@ import Link from '@mui/material/Link';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
+import { AnswerText } from './answer-text';
 import { AssistantAvatar } from './assistant-avatar';
 
 import type { ListToOpen } from '../model/list-to-open';
@@ -39,12 +40,26 @@ const ASSISTANT_BUBBLE = {
 } as const;
 
 /**
- * The bubble's text: what was written so far, "Thinking…" before anything arrives, or nothing
- * while the progress line already says what the assistant is doing.
+ * What the bubble shows: an answer the assistant wrote, formatted (a cut-off one too); plain text
+ * for questions and for an error alone; "Thinking…" before anything arrives; or nothing while the
+ * progress line already says what the assistant is doing.
  */
-function bubbleText(message: ChatMessage): string | undefined {
-  if (message.text !== '' || message.state !== 'streaming') return message.text;
-  return message.progress === undefined ? 'Thinking…' : undefined;
+function bubbleContent(
+  message: ChatMessage,
+): { kind: 'answer' | 'plain'; text: string } | undefined {
+  if (message.text !== '') {
+    const isAnswer = message.role === 'assistant' && message.state !== 'failed';
+    return { kind: isAnswer || hasPartialAnswer(message) ? 'answer' : 'plain', text: message.text };
+  }
+  if (message.state !== 'streaming' || message.progress !== undefined) return undefined;
+  return { kind: 'plain', text: 'Thinking…' };
+}
+
+/** A failed answer that had text before the error (the error follows a blank line). */
+function hasPartialAnswer(message: ChatMessage): boolean {
+  return (
+    message.role === 'assistant' && message.state === 'failed' && message.text.includes('\n\n')
+  );
 }
 
 /** What the assistant is doing while it answers, under the text it has written so far. */
@@ -88,6 +103,22 @@ function OpenedList({
   );
 }
 
+function BubbleText({ message }: { message: ChatMessage }): React.JSX.Element | null {
+  const content = bubbleContent(message);
+  const isFailed = message.state === 'failed';
+  if (content === undefined) return null;
+  if (content.kind === 'answer') return <AnswerText text={content.text} isFailed={isFailed} />;
+  return (
+    <Typography
+      variant="body2"
+      sx={{ whiteSpace: 'pre-wrap' }}
+      color={isFailed ? 'error' : 'inherit'}
+    >
+      {content.text}
+    </Typography>
+  );
+}
+
 function Bubble({
   message,
   links,
@@ -96,7 +127,6 @@ function Bubble({
   links: ListLinks | undefined;
 }): React.JSX.Element {
   const isUser = message.role === 'user';
-  const text = bubbleText(message);
   return (
     <Stack
       direction="row"
@@ -106,15 +136,7 @@ function Bubble({
     >
       {!isUser && <AssistantAvatar />}
       <Box sx={{ px: 1.5, py: 1, borderRadius: 3, ...(isUser ? USER_BUBBLE : ASSISTANT_BUBBLE) }}>
-        {text !== undefined && (
-          <Typography
-            variant="body2"
-            sx={{ whiteSpace: 'pre-wrap' }}
-            color={message.state === 'failed' ? 'error' : 'inherit'}
-          >
-            {text}
-          </Typography>
-        )}
+        <BubbleText message={message} />
         {message.progress !== undefined && <ProgressLine text={message.progress} />}
         {message.list !== undefined && links !== undefined && (
           <OpenedList list={message.list} links={links} />

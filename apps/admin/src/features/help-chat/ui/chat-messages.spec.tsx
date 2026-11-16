@@ -69,4 +69,38 @@ describe('ChatMessages', () => {
     expect(screen.getByText('Searching events…')).toBeInTheDocument();
     expect(screen.queryByText('Thinking…')).not.toBeInTheDocument();
   });
+
+  it('keeps a cut-off answer formatted, with the error after it', () => {
+    render(
+      <ChatMessages
+        messages={[
+          {
+            id: 'q1',
+            role: 'assistant',
+            text: '* **Baltic Days**\n\nThe connection dropped.',
+            state: 'failed',
+          },
+        ]}
+        suggestions={[]}
+        onAsk={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('Baltic Days').tagName).toBe('STRONG');
+    expect(screen.getByText('The connection dropped.')).toBeInTheDocument();
+  });
+
+  it('shows an error alone as plain text', () => {
+    render(
+      <ChatMessages
+        messages={[{ id: 'q1', role: 'assistant', text: '**Not** formatted', state: 'failed' }]}
+        suggestions={[]}
+        onAsk={vi.fn()}
+      />,
+    );
+
+    // Once in the bubble, once in the hidden region that announces finished answers.
+    expect(screen.getAllByText('**Not** formatted')).toHaveLength(2);
+    expect(document.querySelector('strong')).toBeNull();
+  });
 });
