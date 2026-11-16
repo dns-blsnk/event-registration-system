@@ -3,12 +3,13 @@ import {
   can,
   CHAT_FORM_FIELDS,
   CHAT_FORM_RULES,
-  CHAT_QUESTION_MAX_LENGTH,
   isResource,
   ROLE_LABELS,
   type Resource,
   type Role,
 } from '@ers/shared';
+
+import { assistantQuestion } from './assistant-prompt.js';
 
 /** What the model gets: fixed instructions with the screen's context, and the user's question. */
 export interface ChatPrompt {
@@ -49,9 +50,8 @@ export function buildChatPrompt(input: {
   field?: string | undefined;
   question: string;
 }): ChatPrompt | ChatPromptRefusal {
-  const question = input.question.trim();
-  if (question === '') return 'empty-question';
-  if (question.length > CHAT_QUESTION_MAX_LENGTH) return 'question-too-long';
+  const question = assistantQuestion(input.question);
+  if (typeof question !== 'string') return question.refusal;
   if (!isResource(input.resource)) return 'unknown-form';
   if (!can(input.role, input.resource, Action.LIST)) return 'form-not-allowed';
   const rules = CHAT_FORM_RULES[input.resource];
@@ -59,7 +59,7 @@ export function buildChatPrompt(input: {
     INSTRUCTIONS,
     `The user is signed in as: ${ROLE_LABELS[input.role]}.`,
     `Fields and filters on this screen:\n${fieldLines(input.resource, input.field)}`,
-    ...(rules === undefined ? [] : [`Rules: ${rules}`]),
+    ...(rules === undefined ? [] : [`Rules: ${rules.join(' ')}`]),
   ].join('\n\n');
   return { system, question };
 }

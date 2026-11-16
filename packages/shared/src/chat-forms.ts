@@ -52,11 +52,14 @@ function lifecycleText(): string {
   return `Event statuses: ${moves.join('; ')}. Cancelling an event cancels all its bookings.`;
 }
 
-/** The rules a screen needs explained; screens without booking logic get none. */
-export const CHAT_FORM_RULES: Readonly<Partial<Record<Resource, string>>> = {
-  [Resource.EVENTS]: `${lifecycleText()} ${BOOKING_RULES_TEXT}`,
-  [Resource.SESSIONS]: BOOKING_RULES_TEXT,
-  [Resource.REGISTRATIONS]: BOOKING_RULES_TEXT,
-  [Resource.CATALOG]: BOOKING_RULES_TEXT,
-  [Resource.MY_REGISTRATIONS]: BOOKING_RULES_TEXT,
+/**
+ * The rules a screen needs explained, one item per rule, so a text that explains several screens
+ * can be stated once; screens without booking logic get none.
+ */
+export const CHAT_FORM_RULES: Readonly<Partial<Record<Resource, readonly string[]>>> = {
+  [Resource.EVENTS]: [lifecycleText(), BOOKING_RULES_TEXT],
+  [Resource.SESSIONS]: [BOOKING_RULES_TEXT],
+  [Resource.REGISTRATIONS]: [BOOKING_RULES_TEXT],
+  [Resource.CATALOG]: [BOOKING_RULES_TEXT],
+  [Resource.MY_REGISTRATIONS]: [BOOKING_RULES_TEXT],
 };
