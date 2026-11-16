@@ -43,13 +43,18 @@ function countOf(value: unknown): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : 0;
 }
 
-/** Keeps the counts of a piece that has them; most pieces have none. */
+/**
+ * Keeps the counts of a piece that has them; most pieces have none. Providers send running totals,
+ * and some send them on several pieces, so the highest count of each kind wins: a partial early
+ * piece never replaces the final one, whichever order they come in.
+ */
 function keepUsage(result: RoundResult, usage: ChatCompletionChunk['usage']): void {
   if (usage === undefined || usage === null) return;
+  const seen = result.usage ?? NO_USAGE;
   result.usage = {
-    promptTokens: countOf(usage.prompt_tokens),
-    completionTokens: countOf(usage.completion_tokens),
-    cachedTokens: countOf(usage.prompt_tokens_details?.cached_tokens),
+    promptTokens: Math.max(seen.promptTokens, countOf(usage.prompt_tokens)),
+    completionTokens: Math.max(seen.completionTokens, countOf(usage.completion_tokens)),
+    cachedTokens: Math.max(seen.cachedTokens, countOf(usage.prompt_tokens_details?.cached_tokens)),
   };
 }
 
