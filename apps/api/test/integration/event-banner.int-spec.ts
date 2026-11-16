@@ -1,3 +1,5 @@
+import { BANNER_HEIGHT, BANNER_TOO_SMALL_MESSAGE, BANNER_WIDTH } from '@ers/shared';
+import sharp, { type Sharp } from 'sharp';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { StorageService } from '../../src/modules/storage/storage.service.js';
@@ -8,9 +10,11 @@ import { createEvent, createRegistration, createSession } from '../helpers/facto
 
 import type { INestApplication } from '@nestjs/common';
 
-const PNG = Buffer.from('89504e470d0a1a0a0000000d49484452', 'hex');
-const JPEG = Buffer.from('ffd8ffe000104a464946', 'hex');
 const HTTP_NOT_FOUND = 404;
+
+function picture(width: number, height: number): Sharp {
+  return sharp({ create: { width, height, channels: 3, background: '#3366cc' } });
+}
 
 describe('event banner', () => {
   let app: INestApplication;
@@ -18,8 +22,16 @@ describe('event banner', () => {
   let storage: StorageService;
   let admin: SignedInAgent;
   let organizer: SignedInAgent;
+  /** Not 2:1 on purpose: the API cuts the middle out. */
+  let PNG: Buffer;
+  let JPEG: Buffer;
 
   beforeAll(async () => {
+    PNG = await picture(1600, 1200).png().toBuffer();
+    JPEG = await picture(2400, 1200)
+      .jpeg()
+      .withExif({ IFD0: { Artist: 'Someone', Copyright: 'Private' } })
+      .toBuffer();
     app = await createTestApp();
     prisma = app.get(PrismaService);
     storage = app.get(StorageService);
@@ -53,15 +65,61 @@ describe('event banner', () => {
     return (await fetch(await storage.presignedGetUrl(key))).status !== HTTP_NOT_FOUND;
   }
 
-  it('uploads a banner and returns a working link in the event', async () => {
+  it('stores the banner as a 2:1 WebP of the fixed size and returns a working link', async () => {
     const event = await createEvent(prisma, { organizerId: organizer.userId });
 
     await upload(organizer, event.id, PNG, 204);
     const response = await organizer.agent.get(`/api/events/${event.id}`).expect(200);
     const image = await fetch(response.body.bannerUrl as string);
+    const stored = await sharp(Buffer.from(await image.arrayBuffer())).metadata();
 
-    expect(image.headers.get('content-type')).toBe('image/png');
-    expect(Buffer.from(await image.arrayBuffer())).toEqual(PNG);
+    expect(image.headers.get('content-type')).toBe('image/webp');
+    expect(stored).toMatchObject({ format: 'webp', width: BANNER_WIDTH, height: BANNER_HEIGHT });
+  });
+
+  it('drops the metadata of the uploaded photo', async () => {
+    const event = await createEvent(prisma, { organizerId: organizer.userId });
+
+    await upload(organizer, event.id, JPEG, 204, 'banner.jpg');
+    const stored = await fetch(await storage.presignedGetUrl((await keyOf(event.id)) ?? ''));
+
+    expect((await sharp(Buffer.from(await stored.arrayBuffer())).metadata()).exif).toBeUndefined();
+  });
+
+  it('rejects an image smaller than the minimum and stores nothing', async () => {
+    const event = await createEvent(prisma, { organizerId: organizer.userId });
+
+    const response = await upload(
+      organizer,
+      event.id,
+      await picture(1199, 600).png().toBuffer(),
+      400,
+    );
+
+    expect(response.body.details).toEqual([
+      { field: 'file', messages: [BANNER_TOO_SMALL_MESSAGE] },
+    ]);
+    expect(await keyOf(event.id)).toBeNull();
+  });
+
+  it('rejects an image with more pixels than the decoder takes', async () => {
+    const event = await createEvent(prisma, { organizerId: organizer.userId });
+    const huge = await picture(9000, 5000).png().toBuffer();
+
+    const response = await upload(organizer, event.id, huge, 400);
+
+    expect(response.body.details[0].messages[0]).toMatch(/at most 40 megapixels/);
+    expect(await keyOf(event.id)).toBeNull();
+  });
+
+  it('rejects a file with an image header but no readable picture', async () => {
+    const event = await createEvent(prisma, { organizerId: organizer.userId });
+    const broken = Buffer.from('89504e470d0a1a0a0000000d49484452', 'hex');
+
+    const response = await upload(organizer, event.id, broken, 415);
+
+    expect(response.body.code).toBe('UNSUPPORTED_MEDIA_TYPE');
+    expect(await keyOf(event.id)).toBeNull();
   });
 
   it('replaces a banner and removes the previous file', async () => {
@@ -78,7 +136,7 @@ describe('event banner', () => {
   });
 
   it('removes a banner', async () => {
-    const event = await createEvent(prisma, { organizerId: organizer.userId });
+    const event = await createEvent(prisma, { organizerId: organizer.userId, status: 'DRAFT' });
     await upload(organizer, event.id, PNG, 204);
     const key = await keyOf(event.id);
 
@@ -195,7 +253,7 @@ describe('event banner', () => {
   });
 
   it('removing a banner that does not exist changes nothing', async () => {
-    const event = await createEvent(prisma, { organizerId: organizer.userId });
+    const event = await createEvent(prisma, { organizerId: organizer.userId, status: 'DRAFT' });
 
     await organizer.agent
       .delete(`/api/events/${event.id}/banner`)

@@ -2,7 +2,8 @@ import { crc32, deflateSync } from 'node:zlib';
 
 const PNG_SIGNATURE = Buffer.from('89504e470d0a1a0a', 'hex');
 const WIDTH = 64;
-const HEIGHT = 24;
+/** 2:1, the shape every stored banner has. */
+const HEIGHT = 32;
 const BIT_DEPTH = 8;
 const COLOR_TYPE_RGB = 2;
 const BYTES_PER_PIXEL = 3;

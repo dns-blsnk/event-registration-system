@@ -11,6 +11,8 @@ import { StorageService } from '../../storage/index.js';
 import { EVENT_NOT_FOUND_MESSAGE, lockScopedEvent } from '../event-lock.js';
 import { eventScope } from '../event-scope.js';
 
+import { toStoredBanner } from './banner-image.js';
+
 import type { User } from '../../../generated/prisma/client.js';
 
 /**
@@ -28,11 +30,13 @@ export class EventBannerService {
     this.logger.setContext(EventBannerService.name);
   }
 
-  async replace(eventId: string, image: Uint8Array, actor: User): Promise<void> {
-    // Checked before uploading, so nothing is stored for someone else's event or a locked one.
+  async replace(eventId: string, upload: Uint8Array, actor: User): Promise<void> {
+    // Checked before decoding or uploading, so nothing is processed or stored for someone else's
+    // event or a locked one.
     await this.assertWritable(eventId, actor);
+    const banner = await toStoredBanner(upload);
     const key = `events/${eventId}/banner-${randomUUID()}`;
-    await this.storage.putImage(key, image);
+    await this.storage.putImage(key, banner);
     let previousKey: string | null;
     try {
       previousKey = await this.prisma.$transaction(async (tx) => {

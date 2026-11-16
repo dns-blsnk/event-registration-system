@@ -13,12 +13,12 @@ describe('bannerPng', () => {
     expect(detectImageType(png)).toBe('image/png');
   });
 
-  it('holds 64x24 RGB pixels in the requested colour', () => {
+  it('holds 64x32 (2:1) RGB pixels in the requested colour', () => {
     expect(png.readUInt32BE(16)).toBe(64);
-    expect(png.readUInt32BE(20)).toBe(24);
+    expect(png.readUInt32BE(20)).toBe(32);
     const idatLength = png.readUInt32BE(33);
     const pixels = inflateSync(png.subarray(41, 41 + idatLength));
-    expect(pixels.length).toBe(24 * (1 + 64 * 3));
+    expect(pixels.length).toBe(32 * (1 + 64 * 3));
     expect([...pixels.subarray(1, 4)]).toEqual([200, 100, 50]);
   });
 

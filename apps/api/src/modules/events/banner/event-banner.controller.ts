@@ -1,4 +1,4 @@
-import { Action, BANNER_MAX_BYTES, Resource } from '@ers/shared';
+import { Action, BANNER_FILE_FIELD, BANNER_MAX_BYTES, Resource } from '@ers/shared';
 import {
   Controller,
   Delete,
@@ -20,8 +20,6 @@ import { EventBannerService } from './event-banner.service.js';
 
 import type { AuthContext } from '../../../common/auth/auth-context.js';
 
-const FILE_FIELD = 'file';
-
 /** The part of Multer's in-memory file this endpoint reads. */
 interface UploadedImage {
   buffer: Buffer;
@@ -39,7 +37,7 @@ export class EventBannerController {
   @Put()
   @HttpCode(HttpStatus.NO_CONTENT)
   @UseInterceptors(
-    FileInterceptor(FILE_FIELD, {
+    FileInterceptor(BANNER_FILE_FIELD, {
       limits: { fileSize: BANNER_MAX_BYTES, files: 1, fields: 0, parts: 1 },
     }),
   )
@@ -49,7 +47,7 @@ export class EventBannerController {
     @CurrentAuth() auth: AuthContext,
   ): Promise<void> {
     if (file === undefined) {
-      throw fieldError(FILE_FIELD, 'Attach the image as the "file" field');
+      throw fieldError(BANNER_FILE_FIELD, `Attach the image as the "${BANNER_FILE_FIELD}" field`);
     }
     await this.banners.replace(id, file.buffer, auth.user);
   }
