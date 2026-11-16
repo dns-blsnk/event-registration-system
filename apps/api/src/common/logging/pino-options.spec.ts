@@ -56,6 +56,16 @@ describe('log redaction', () => {
     expect(lines.join('')).not.toMatch(/top-secret|key-1/);
   });
 
+  it('never writes the arguments of a failed Redis command, which can hold chat text', () => {
+    const { logger, lines } = captureLogger();
+
+    logger.error({
+      err: { message: 'OOM', command: { name: 'rpush', args: ['chat:u:c', 'my question'] } },
+    });
+
+    expect(lines.join('')).not.toContain('my question');
+  });
+
   it('hides sensitive keys nested several levels deep', () => {
     const { logger, lines } = captureLogger();
 

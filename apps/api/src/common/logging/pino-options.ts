@@ -26,6 +26,8 @@ export const REDACTED_PATHS = [
   'req.headers["x-csrf-token"]',
   'res.headers["set-cookie"]',
   ...SENSITIVE_KEYS.flatMap(atAnyDepth),
+  // ioredis puts the failed command's arguments on its errors: chat text, keys, values.
+  ...atAnyDepth('command.args'),
 ];
 
 /** Path without query string: queries can carry personal data. Uses originalUrl because mounted middleware rewrites url. */

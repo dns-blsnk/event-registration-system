@@ -1,0 +1,39 @@
+import { describe, expect, it } from 'vitest';
+
+import { toDisplayMessages, type ChatEntry } from './chat-history.store.js';
+
+const question = (text: string): ChatEntry => ({ role: 'user', content: text });
+const answer = (text: string): ChatEntry => ({ role: 'assistant', content: text });
+const toolCall: ChatEntry = {
+  role: 'assistant',
+  content: null,
+  tool_calls: [
+    { id: 'c1', type: 'function', function: { name: 'search_events', arguments: '{}' } },
+  ],
+};
+const toolResult: ChatEntry = { role: 'tool', tool_call_id: 'c1', content: '{"total":0}' };
+
+/** Turns of four entries: question, tool call, tool result, answer. */
+function turns(count: number): ChatEntry[] {
+  return Array.from({ length: count }, (_, index) => [
+    question(`q${String(index)}`),
+    toolCall,
+    toolResult,
+    answer(`a${String(index)}`),
+  ]).flat();
+}
+
+describe('toDisplayMessages', () => {
+  it('shows the questions and the final answers, not the tool traffic', () => {
+    expect(toDisplayMessages(turns(1))).toEqual([
+      { role: 'user', text: 'q0' },
+      { role: 'assistant', text: 'a0' },
+    ]);
+  });
+
+  it('skips an empty answer and the system prompt', () => {
+    expect(
+      toDisplayMessages([{ role: 'system', content: 'rules' }, question('q'), answer('')]),
+    ).toEqual([{ role: 'user', text: 'q' }]);
+  });
+});

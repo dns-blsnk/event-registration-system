@@ -13,6 +13,7 @@ import {
 } from './chat-answer.service.js';
 import { ChatFailures } from './chat-failures.js';
 import { ChatHandshake } from './chat-handshake.js';
+import { ChatHistoryStore } from './chat-history.store.js';
 import { ChatTicketStore } from './chat-tickets.js';
 import { ChatController } from './chat.controller.js';
 import { ChatGateway } from './chat.gateway.js';
@@ -31,6 +32,7 @@ const ANSWER_MAX_RETRIES = 0;
   controllers: [ChatController],
   providers: [
     ChatTicketStore,
+    ChatHistoryStore,
     ChatAdmission,
     ChatAnswerService,
     ChatFailures,
