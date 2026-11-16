@@ -17,6 +17,7 @@ import {
   blocker,
   reachabilityOf,
   starterQuestions,
+  viewerCity,
   type ChatAvailability,
 } from '../model/chat-state';
 import { useHelpChat } from '../model/help-chat-context';
@@ -31,6 +32,8 @@ import { ChatMessages, type ListLinks } from './chat-messages';
 
 import type { SxProps, Theme } from '@mui/material/styles';
 
+/** The browser's time zone does not change while the page is open; read it once. */
+const VIEWER_CITY = viewerCity();
 const PANEL_SIZE = { width: 380, height: 520 } as const;
 /** Refine's side menu widths, open and collapsed. */
 const SIDER_WIDTH = { open: 240, collapsed: 56 } as const;
@@ -217,7 +220,7 @@ export function ChatWidget(): React.JSX.Element | null {
       availability={availability}
       screen={screen}
       field={field}
-      suggestions={starterQuestions(user?.role, field?.label)}
+      suggestions={starterQuestions(user?.role, field?.label, VIEWER_CITY)}
       links={links}
       isSiderCollapsed={siderCollapsed}
       onClose={close}

@@ -12,7 +12,7 @@ describe('ChatMessages', () => {
     render(
       <ChatMessages
         messages={[]}
-        suggestions={starterQuestions('ADMIN', 'Capacity')}
+        suggestions={starterQuestions('ADMIN', 'Capacity', undefined)}
         onAsk={onAsk}
       />,
     );
@@ -26,7 +26,7 @@ describe('ChatMessages', () => {
     render(
       <ChatMessages
         messages={[]}
-        suggestions={starterQuestions('CUSTOMER', undefined)}
+        suggestions={starterQuestions('CUSTOMER', undefined, undefined)}
         onAsk={undefined}
       />,
     );
@@ -39,7 +39,7 @@ describe('ChatMessages', () => {
     render(
       <ChatMessages
         messages={[{ id: 'q1', role: 'user', text: 'Hello?', state: 'done' }]}
-        suggestions={starterQuestions('CUSTOMER', undefined)}
+        suggestions={starterQuestions('CUSTOMER', undefined, undefined)}
         onAsk={vi.fn()}
       />,
     );
