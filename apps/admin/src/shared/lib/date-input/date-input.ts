@@ -20,6 +20,3 @@ const PLACEHOLDER_LOOK = { color: 'text.disabled' } as const;
 
 /** For a required date field: the browser marks it :invalid while it is empty (or half typed). */
 export const REQUIRED_DATE_SX = { '& input:invalid:not(:focus)': PLACEHOLDER_LOOK } as const;
-
-/** For an optional date field whose emptiness the caller knows. */
-export const EMPTY_DATE_SX = { '& input:not(:focus)': PLACEHOLDER_LOOK } as const;
