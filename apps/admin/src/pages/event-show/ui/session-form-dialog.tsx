@@ -27,6 +27,8 @@ export type SessionDialogTarget =
 
 interface SessionFormDialogProps {
   target: SessionDialogTarget;
+  /** After a successful save, before the dialog closes. */
+  onSaved: () => void;
   onClose: () => void;
 }
 
@@ -34,7 +36,11 @@ interface SessionFormDialogProps {
  * Session create and edit in a dialog on the event page, where sessions are managed. Editing starts
  * from the table row, so nothing is fetched again; the server re-checks every rule on save.
  */
-export function SessionFormDialog({ target, onClose }: SessionFormDialogProps): React.JSX.Element {
+export function SessionFormDialog({
+  target,
+  onSaved,
+  onClose,
+}: SessionFormDialogProps): React.JSX.Element {
   const { session, eventId } = target;
   const original = session === undefined ? EMPTY_SESSION_FORM : toSessionFormValues(session);
   const {
@@ -50,7 +56,10 @@ export function SessionFormDialog({ target, onClose }: SessionFormDialogProps): 
       ...(session === undefined ? {} : { id: session.id }),
       queryOptions: { enabled: false },
       redirect: false,
-      onMutationSuccess: onClose,
+      onMutationSuccess: () => {
+        onSaved();
+        onClose();
+      },
     },
     warnWhenUnsavedChanges: false,
   });

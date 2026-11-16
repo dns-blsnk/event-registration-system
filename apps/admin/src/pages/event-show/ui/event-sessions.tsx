@@ -8,6 +8,8 @@ import { SESSION_COLUMNS } from '@/entities/session';
 import { ACTIONS_COLUMN_HEADER } from '@/shared/lib/grid';
 import { ListGrid, useListGrid } from '@/shared/ui/list-grid';
 
+import { useRefreshEvent } from '../model/use-refresh-event';
+
 import { SessionFormDialog, type SessionDialogTarget } from './session-form-dialog';
 
 interface EventSessionsProps {
@@ -36,6 +38,7 @@ export function EventSessions({ eventId, canChange }: EventSessionsProps): React
     sorters: { initial: [{ field: 'startsAt', order: 'asc' }] },
     syncWithLocation: false,
   });
+  const refreshEvent = useRefreshEvent(eventId);
   // Memoized so the grid keeps its column state (widths) across re-renders.
   const columns = useMemo<GridColDef<SessionListItem>[]>(() => {
     if (!canChange) return SESSION_COLUMNS;
@@ -63,13 +66,14 @@ export function EventSessions({ eventId, canChange }: EventSessionsProps): React
               resource={Resource.SESSIONS}
               recordItemId={row.id}
               aria-label={`Delete ${row.title}`}
+              onSuccess={refreshEvent}
             />
           )}
         </>
       ),
     };
     return [...SESSION_COLUMNS, actions];
-  }, [canChange, eventId]);
+  }, [canChange, eventId, refreshEvent]);
   return (
     <>
       {canChange && (
@@ -88,6 +92,7 @@ export function EventSessions({ eventId, canChange }: EventSessionsProps): React
       {dialog !== undefined && (
         <SessionFormDialog
           target={dialog}
+          onSaved={refreshEvent}
           onClose={() => {
             setDialog(undefined);
           }}
