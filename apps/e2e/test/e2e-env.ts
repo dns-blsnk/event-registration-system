@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { randomBytes } from 'node:crypto';
 
 import { TEST_ENV, testDatabaseUrl, testRedisUrl } from '../../api/test/helpers/test-env.ts';
 
@@ -12,6 +12,8 @@ export const ADMIN_ORIGIN = 'http://localhost:5174';
 export const DEMO_PASSWORD = 'e2e-demo-password';
 export const E2E_DATABASE = 'ers_e2e';
 export const E2E_BUCKET = 'ers-uploads-e2e';
+/** Random bytes in this run's Redis namespace: enough that two runs never share one. */
+const RUN_ID_BYTES = 8;
 
 const testServer = new URL(testDatabaseUrl(process.env));
 
@@ -33,7 +35,8 @@ export const E2E_ENV: Readonly<Record<string, string>> = {
   S3_BUCKET: E2E_BUCKET,
   REDIS_URL: testRedisUrl(process.env),
   // A fresh namespace each run, like the fresh database: no counters or tickets from the last one.
-  REDIS_KEY_PREFIX: `e2e:${randomUUID()}:`,
+  // Short on purpose: the API refuses a prefix over 40 characters, and a whole UUID makes it 41.
+  REDIS_KEY_PREFIX: `e2e:${randomBytes(RUN_ID_BYTES).toString('hex')}:`,
   SEED_DEMO_PASSWORD: DEMO_PASSWORD,
   // Set explicitly, so a developer's .env (which Vite also reads) cannot point the admin elsewhere.
   VITE_CHAT_URL: '',
