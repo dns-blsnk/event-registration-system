@@ -34,14 +34,26 @@ function renderLayout(path: string): void {
 }
 
 describe('admin layout', () => {
-  it('links to the dashboard from the side menu and marks it on the dashboard', async () => {
+  it('links to the dashboard from every copy of the side menu', async () => {
+    mockHttp([ADMIN_SESSION]);
+    renderLayout('/events');
+
+    const links = await screen.findAllByRole('link', { name: 'Dashboard' });
+
+    links.forEach((link) => {
+      expect(link).toHaveAttribute('href', '/');
+    });
+  });
+
+  it('marks the dashboard entry as the current page on the dashboard', async () => {
     mockHttp([ADMIN_SESSION]);
     renderLayout('/');
 
     const links = await screen.findAllByRole('link', { name: 'Dashboard' });
 
-    expect(links[0]).toHaveAttribute('href', '/');
-    expect(links[0]).toHaveAttribute('aria-current', 'page');
+    links.forEach((link) => {
+      expect(link).toHaveAttribute('aria-current', 'page');
+    });
   });
 
   it('does not mark the dashboard entry on another screen', async () => {
@@ -50,7 +62,9 @@ describe('admin layout', () => {
 
     const links = await screen.findAllByRole('link', { name: 'Dashboard' });
 
-    expect(links[0]).not.toHaveAttribute('aria-current');
+    links.forEach((link) => {
+      expect(link).not.toHaveAttribute('aria-current');
+    });
   });
 
   it('signs out only from the user menu, not from the side menu', async () => {
