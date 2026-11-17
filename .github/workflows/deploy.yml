@@ -91,7 +91,7 @@ jobs:
           done
           echo "::error::API $COMMIT did not become live and healthy at $API_URL/api/health"; exit 1
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         if: steps.settings.outputs.ready == 'true'
 
       - uses: actions/setup-node@v5
