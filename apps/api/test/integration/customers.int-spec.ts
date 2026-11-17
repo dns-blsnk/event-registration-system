@@ -131,8 +131,17 @@ describe('customers API', () => {
     ['createdAt', 'asc'],
   ] as const)('sorts by %s %s', async (field, order) => {
     const tag = marker();
-    const first = await createUser(prisma, { name: `S ${tag}`, email: `a-${tag}@test.local` });
-    const second = await createUser(prisma, { name: `S ${tag}`, email: `b-${tag}@test.local` });
+    // Explicit timestamps: two rows created back to back can share a millisecond.
+    const first = await createUser(prisma, {
+      name: `S ${tag}`,
+      email: `a-${tag}@test.local`,
+      createdAt: new Date(Date.now() - 60_000),
+    });
+    const second = await createUser(prisma, {
+      name: `S ${tag}`,
+      email: `b-${tag}@test.local`,
+      createdAt: new Date(),
+    });
 
     const response = await admin.agent
       .get('/api/customers')
