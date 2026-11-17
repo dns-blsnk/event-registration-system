@@ -3,6 +3,8 @@ import { useSyncExternalStore } from 'react';
 
 import { hasSignedOut, subscribeToSignOut } from '@/entities/viewer';
 
+import { SessionCheckScreen } from './session-check-screen';
+
 /**
  * Shows `children` to a signed-in user and `fallback` otherwise. Unlike Refine's <Authenticated>,
  * a background re-check (window focus, a refreshed session) keeps a signed-in screen in place.
@@ -23,13 +25,13 @@ export function AuthGate({
    * The signed-in area leaves it off and waits instead, since its fallback is a redirect.
    */
   keepsFallbackWhileChecking?: boolean;
-}): React.JSX.Element | null {
+}): React.JSX.Element {
   const { isLoading, isFetching, data } = useIsAuthenticated();
   // Sign-out (or a 401) is known here at once, before Refine re-checks the session: the signed-in
   // screen goes immediately, so none of its queries refetch into 401s.
   const signedOut = useSyncExternalStore(subscribeToSignOut, hasSignedOut);
   const isSignedIn = data?.authenticated === true && !signedOut;
-  if (isLoading) return null;
-  if (isFetching && !isSignedIn && !keepsFallbackWhileChecking) return null;
+  const isWaiting = isLoading || (isFetching && !isSignedIn && !keepsFallbackWhileChecking);
+  if (isWaiting) return <SessionCheckScreen />;
   return <>{isSignedIn ? children : fallback}</>;
 }
