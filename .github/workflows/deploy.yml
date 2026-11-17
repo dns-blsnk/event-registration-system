@@ -59,7 +59,7 @@ jobs:
 
       - name: Check out the commit CI tested
         if: steps.settings.outputs.ready == 'true'
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           ref: ${{ env.COMMIT }}
           # Build scripts run later; they have no use for the repository token.
