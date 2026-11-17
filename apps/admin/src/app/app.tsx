@@ -73,6 +73,8 @@ export function App(): React.JSX.Element {
               syncWithLocation: true,
               warnWhenUnsavedChanges: true,
               reactQuery: { clientConfig: queryClient },
+              // Refine pings telemetry.refine.dev on load; our CSP blocks it and we do not send usage data to third parties.
+              disableTelemetry: true,
             }}
           >
             {/* Last resort for crashes outside a page: the layout, menu or the sign-in pages. */}

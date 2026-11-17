@@ -13,7 +13,8 @@ export function DashboardPage(): React.JSX.Element | null {
   const { data: user } = useGetIdentity<PublicUser | null>();
   if (user === undefined || user === null) return null;
   return (
-    <Card sx={{ p: 3 }}>
+    // Same inner padding as the cards Refine's <List>, <Show> and <Edit> give every other page.
+    <Card sx={{ p: 2 }}>
       <Stack spacing={3}>
         <Typography variant="h5" component="h1">
           Welcome, {user.name}
