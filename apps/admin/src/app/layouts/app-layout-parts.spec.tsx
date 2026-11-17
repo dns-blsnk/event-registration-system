@@ -9,7 +9,50 @@ import { renderAdminPage } from '@/test/render-admin';
 
 import { AppHeader, AppSider } from './app-layout-parts';
 
+const ADMIN_SESSION = {
+  method: 'get',
+  url: '/auth/session',
+  status: 200,
+  body: {
+    user: { id: 'a1', email: 'a@demo.test', name: 'Ada', role: 'ADMIN' },
+    csrfToken: 't',
+  },
+} as const;
+
+function renderLayout(path: string): void {
+  renderAdminPage({
+    path,
+    route: '*',
+    element: (
+      <HelpChatProvider>
+        <ThemedLayout Header={AppHeader} Sider={AppSider}>
+          <p>Page</p>
+        </ThemedLayout>
+      </HelpChatProvider>
+    ),
+  });
+}
+
 describe('admin layout', () => {
+  it('links to the dashboard from the side menu and marks it on the dashboard', async () => {
+    mockHttp([ADMIN_SESSION]);
+    renderLayout('/');
+
+    const links = await screen.findAllByRole('link', { name: 'Dashboard' });
+
+    expect(links[0]).toHaveAttribute('href', '/');
+    expect(links[0]).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('does not mark the dashboard entry on another screen', async () => {
+    mockHttp([ADMIN_SESSION]);
+    renderLayout('/events');
+
+    const links = await screen.findAllByRole('link', { name: 'Dashboard' });
+
+    expect(links[0]).not.toHaveAttribute('aria-current');
+  });
+
   it('signs out only from the user menu, not from the side menu', async () => {
     mockHttp([
       {

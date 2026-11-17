@@ -5,6 +5,7 @@ import { HamburgerMenu, ThemedSider } from '@refinedev/mui';
 
 import { ChatMenuItem } from '@/features/help-chat';
 
+import { DashboardMenuItem } from './dashboard-menu-item';
 import { UserMenu } from './user-menu';
 
 import type { RefineThemedLayoutHeaderProps, RefineThemedLayoutSiderProps } from '@refinedev/mui';
@@ -26,8 +27,8 @@ export function AppHeader({ sticky = true }: RefineThemedLayoutHeaderProps): Rea
 const SIDER_TOP = { title: 64, padding: 16 } as const;
 
 /**
- * Refine's side menu without its Logout entry (signing out lives in the user menu), with the help
- * chat's entry kept at the bottom, apart from the screens.
+ * Refine's side menu without its Logout entry (signing out lives in the user menu): the dashboard
+ * first, then the screens, with the help chat's entry kept at the bottom, apart from them.
  */
 export function AppSider(props: RefineThemedLayoutSiderProps): React.JSX.Element {
   return (
@@ -42,7 +43,10 @@ export function AppSider(props: RefineThemedLayoutSiderProps): React.JSX.Element
           }}
         >
           {/* One block: the entries themselves must not stretch to fill the column. */}
-          <Box>{items}</Box>
+          <Box>
+            <DashboardMenuItem isCollapsed={collapsed} />
+            {items}
+          </Box>
           <Box sx={{ mt: 'auto', pb: 1 }}>
             <ChatMenuItem isCollapsed={collapsed} />
           </Box>
